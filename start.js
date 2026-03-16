@@ -3,10 +3,12 @@ const path = require('path');
 
 console.log("🚀 Initializing MYLUCKYROULETTE Cloud Stack...");
 
+const port = process.env.PORT || 3000;
+
 const { result } = concurrently(
   [
     { command: 'node server.js', name: 'API', prefixColor: 'blue' },
-    { command: 'node crawler.js --table 1 --interval 30000', name: 'BOT', prefixColor: 'magenta' }
+    { command: `node crawler.js --table 1 --interval 30000 --api http://localhost:${port}/api/spin`, name: 'BOT', prefixColor: 'magenta' }
   ],
   {
     prefix: 'name',
