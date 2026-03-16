@@ -5,9 +5,6 @@
   "main": "app.js",
   "scripts": {
     "start": "node start.js",
-    "build": "npx puppeteer browsers install chrome",
-    "server": "node server.js",
-    "bot": "node crawler.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
