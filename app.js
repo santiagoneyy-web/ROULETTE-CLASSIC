@@ -154,14 +154,18 @@ function drawWheel(highlightNum = null) {
 // ── History strip ─────────────────────────────────────────────
 function renderHistory() {
     historyEl.innerHTML = '';
-    // Show only last 15 balls to prevent overflow
-    history.slice(-15).forEach((n, i, arr) => {
+    // Show last 12 balls to prevent overflow and keep clean layout
+    const slice = history.slice(-12);
+    slice.forEach((n, i) => {
         const ball = document.createElement('div');
         ball.className = `hist-ball hist-${numColor(n)}`;
         ball.textContent = n;
-        if (i === arr.length - 1) ball.classList.add('hist-latest');
+        ball.style.flexShrink = '0';
+        if (i === slice.length - 1) ball.classList.add('hist-latest');
         historyEl.appendChild(ball);
     });
+    // Auto-scroll to show the latest
+    historyEl.scrollLeft = historyEl.scrollWidth;
 }
 
 // ── Strategy tabs ─────────────────────────────────────────────
@@ -658,16 +662,23 @@ async function submitNumber(nOverride = null, skipApi = false) {
     drawWheel(n);
     renderHistory();
 
-    // 3. Detección de HIT para SEÑALES IA (3 slots)
+    // 3. Detección de HIT para SEÑALES IA (evaluación por zona específica de cada agente)
     lastIaSignals.forEach((s, idx) => {
         if (!s) return;
         
-        // ── Step A: Check win/loss for the Dots ──
+        // ── Step A: Check win/loss using the agent's OWN zone ──
         let tpWin = false;
-        if (s.betZone) {
-            tpWin = new Set(s.betZone).has(n);
-        } else if (s.number !== null) {
-            tpWin = new Set([s.number, ...wheelNeighbors(s.number, 9)]).has(n);
+        const sName = s.name || '';
+        
+        if (s.betZone && Array.isArray(s.betZone) && s.betZone.length > 0) {
+            // SIX STRATEGIE and agents that provide an explicit betZone (most precise)
+            tpWin = s.betZone.includes(n);
+        } else if (sName === 'FISICA STUDIO' || sName === 'SOPORTE PRO') {
+            // Physical agents use N9 (9 pocket radius around their target number)
+            tpWin = s.number !== null && wheelDistance(n, s.number) <= 9;
+        } else if (s.number !== null && s.number !== undefined) {
+            // Generic fallback: N9 radius
+            tpWin = wheelDistance(n, s.number) <= 9;
         }
         
         if (tpWin) {
@@ -680,14 +691,13 @@ async function submitNumber(nOverride = null, skipApi = false) {
         if (iaSignalsHistory[idx].length > 15) iaSignalsHistory[idx].shift();
 
         // ── Step B: Check classification for the GOLD badge (SMALL/BIG) ──
-        const isSmall = s.small !== null && new Set([s.small, ...wheelNeighbors(s.small, 4)]).has(n);
-        const isBig = s.big !== null && new Set([s.big, ...wheelNeighbors(s.big, 4)]).has(n);
+        const isSmall = s.small !== null && wheelDistance(n, s.small) <= 4;
+        const isBig   = s.big   !== null && wheelDistance(n, s.big)   <= 4;
         
         let hitType = null;
         if (isSmall) hitType = 'SMALL';
         else if (isBig) hitType = 'BIG';
-        else if (tpWin) {
-            // If it hit Top Number but not the focal N4 of Small/Big, classify by proximity
+        else if (tpWin && s.small !== null && s.big !== null) {
             const distS = wheelDistance(n, s.small);
             const distB = wheelDistance(n, s.big);
             hitType = distS <= distB ? 'SMALL' : 'BIG';
@@ -928,6 +938,25 @@ if(clearTableBtn) clearTableBtn.addEventListener('click', async () => {
     if (!confirm('¿Borrar TODAS las tiradas de esta mesa en la base de datos?')) return;
     await apiClearHistory(currentTableId);
     await loadTableHistory(currentTableId);
+});
+
+// Wipe ALL data across all tables
+const wipeAllBtn = document.getElementById('wipe-all-btn');
+if(wipeAllBtn) wipeAllBtn.addEventListener('click', async () => {
+    if (!confirm('⚠ ¿BORRAR TODOS LOS DATOS de TODAS las mesas?\n\nEsta acción es irreversible. Úsala solo para empezar de cero con datos limpios.')) return;
+    try {
+        const r = await fetch(`${API_BASE}/wipe-all`, { method: 'DELETE' });
+        const data = await r.json();
+        if (data.success) {
+            wipeData();
+            statusMsg.textContent = '✅ Todo el historial fue borrado. Base de datos limpia.';
+            statusMsg.className = 'status-msg status-ok';
+            await loadTables();
+        }
+    } catch(e) {
+        statusMsg.textContent = '⚠ Error al borrar datos.';
+        statusMsg.className = 'status-msg status-error';
+    }
 });
 
 if(addTableBtn) addTableBtn.addEventListener('click', () => {

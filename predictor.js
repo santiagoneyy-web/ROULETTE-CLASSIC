@@ -640,7 +640,8 @@ function getIAMasterSignals(prox, sig, history) {
         strategy: bestStrat.strategy,
         tp: bestStrat.tp,
         cor: bestStrat.cor,
-        betZone: bestStrat.betZone, // IMPORTANT for tracking N
+        betZone: bestStrat.betZone, // CRITICAL: pass betZone for correct win/loss eval
+        number: bestStrat.tp,       // also expose as .number so generic evaluator works
         confidence: bestStrat.momentum > 0 ? "92%" : "85%",
         reason: "MOMENTUM MATEMÁTICO",
         rule: bestStrat.rule,

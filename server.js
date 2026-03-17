@@ -260,10 +260,29 @@ app.get('/api/admin/wipe-all-spins-securely', async (req, res) => {
             const result = await Spin.deleteMany({});
             res.send(`✅ [ADMIN] MongoDB: Historial borrado. Se eliminaron ${result.deletedCount} registros.`);
         } else {
+            // Wipe local JSON too
+            db.wipeAllSpins(() => {});
             res.send('✅ [ADMIN] Local JSON: Historial borrado.');
         }
     } catch (e) {
         res.status(500).send(`❌ Error en el wipe: ${e.message}`);
+    }
+});
+
+// DELETE all spins for all tables (frontend "Wipe All" button)
+app.delete('/api/wipe-all', async (req, res) => {
+    try {
+        if (db.getUseMongo()) {
+            const result = await Spin.deleteMany({});
+            res.json({ success: true, deleted: result.deletedCount, message: `Borrados ${result.deletedCount} registros de todas las mesas.` });
+        } else {
+            db.wipeAllSpins((err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ success: true, message: 'Historial local vaciado.' });
+            });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

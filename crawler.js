@@ -115,10 +115,12 @@ async function startScraper() {
 
     try {
         console.log("⏳ Navigating to stats page...");
-        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
+        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await new Promise(r => setTimeout(r, 5000)); // extra wait for JS-rendered content
         console.log("✅ Page loaded. Beginning extraction loop...");
 
         let errorCount = 0;
+        let lastHistoryStr = ''; // closure variable — avoids the 'this' scope bug
         
         async function poll() {
             try {
@@ -132,10 +134,19 @@ async function startScraper() {
                     try {
                         const frameData = await frame.evaluate(() => {
                             let extracted = [];
+                            // Priority selectors: gamblingcounting.com specific first, then generic
                             const selectors = [
-                                '.roulette-number', '.number-box', '.last-numbers .number',
-                                '[data-slot="badge"]', '.roulette-history-item', '.recent-numbers .num',
-                                '.history-item', '.stats-number', '.ball-number', '.last-spin'
+                                '.roulette-tracker__number',
+                                '.number-tracker .number',
+                                '.tracker-numbers .num',
+                                '.roulette-results .result',
+                                '.game-results__item',
+                                '.recent-results .number',
+                                '.roulette-number', '.number-box',
+                                '.last-numbers .number',
+                                '[data-slot="badge"]', '.roulette-history-item',
+                                '.history-item', '.stats-number',
+                                '.ball-number', '.last-spin'
                             ];
                             
                             let elements = [];
@@ -149,20 +160,24 @@ async function startScraper() {
                                 } catch(e) {}
                             }
 
-                            if (elements.length > 0) {
-                                for (let el of elements.slice(0, 15)) {
-                                    const text = (el.innerText || el.textContent || '').trim();
-                                    // Strict Number extraction (0-36)
-                                    const numMatch = text.match(/^([0-9]|[12][0-9]|3[0-6])$/);
-                                    if (numMatch) {
-                                        extracted.push(parseInt(numMatch[1]));
-                                    }
-                                }
+                            // Fallback: scan ALL elements for standalone numbers 0-36
+                            if (elements.length === 0) {
+                                const allEls = document.querySelectorAll('td, li, span, div');
+                                elements = Array.from(allEls).filter(el => {
+                                    const t = (el.innerText || el.textContent || '').trim();
+                                    return /^(3[0-6]|[12][0-9]|[0-9])$/.test(t) && !el.querySelector('*');
+                                }).slice(0, 20);
+                            }
+
+                            for (let el of elements.slice(0, 20)) {
+                                const text = (el.innerText || el.textContent || '').trim();
+                                const numMatch = text.match(/^(3[0-6]|[12][0-9]|[0-9])$/);
+                                if (numMatch) extracted.push(parseInt(numMatch[1]));
                             }
                             return extracted;
                         });
 
-                        if (frameData && frameData.length > 0) {
+                        if (frameData && frameData.length >= 3) {
                             data = frameData;
                             break; 
                         }
@@ -170,15 +185,15 @@ async function startScraper() {
                 }
 
                 if (data && data.length > 0) {
-                    errorCount = 0; 
+                    errorCount = 0;
                     const latestNumber = data[0];
                     const historyStr = data.slice(0, 5).join(',');
 
-                    if (historyStr !== this.lastHistoryStr) {
-                        console.log(`✨ NEW DATA DETECTED [Table ${TABLE_ID}] -> Numbers: ${historyStr}`);
+                    if (historyStr !== lastHistoryStr) {
+                        console.log(`✨ NEW DATA [Table ${TABLE_ID}] -> ${historyStr}`);
                         
-                        if (latestNumber !== lastKnownNumber || historyStr !== this.lastHistoryStr) {
-                             console.log(`🚀 POSTING NEW SPIN: ${latestNumber}`);
+                        if (latestNumber !== lastKnownNumber || historyStr !== lastHistoryStr) {
+                             console.log(`🚀 POSTING: ${latestNumber}`);
                              try {
                                  await axios.post(API_URL, {
                                     table_id: parseInt(TABLE_ID),
@@ -190,26 +205,29 @@ async function startScraper() {
                                  console.error("❌ API Post Error:", postErr.message);
                              }
                         }
-                        this.lastHistoryStr = historyStr;
+                        lastHistoryStr = historyStr;
+                    } else {
+                        console.log(`⏳ [Table ${TABLE_ID}] Same data, waiting for next spin...`);
                     }
                 } else {
                     errorCount++;
-                    if (errorCount > 8) { // Aggressive reload for speed roulette
-                        console.log("⚠️ No numbers detected for a while. Reloading page...");
-                        await page.reload({ waitUntil: 'networkidle2' });
+                    console.log(`⚠️ [Table ${TABLE_ID}] No numbers found (attempt ${errorCount})`);
+                    if (errorCount > 6) {
+                        console.log("🔄 Reloading page...");
+                        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                        await new Promise(r => setTimeout(r, 5000));
                         errorCount = 0;
                     }
                 }
             } catch (e) {
-                console.error("❌ Extraction Poll Error:", e.message);
-                if (e.message.includes('detached') || e.message.includes('Protocol error')) {
-                    console.log("🔄 Frame detached or protocol error. Attempting to reload page...");
+                console.error("❌ Poll Error:", e.message);
+                if (e.message.includes('detached') || e.message.includes('Protocol') || e.message.includes('Target closed')) {
+                    console.log("🔄 Critical error — reloading...");
                     try {
-                        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 60000 });
+                        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                        await new Promise(r => setTimeout(r, 4000));
                         errorCount = 0;
-                    } catch (navErr) {
-                        console.error("❌ Reload failed:", navErr.message);
-                    }
+                    } catch (navErr) { console.error("❌ Reload failed:", navErr.message); }
                 }
             }
             setTimeout(poll, INTERVAL);
