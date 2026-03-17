@@ -4,7 +4,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node server.js",
-    "build": "node render-build.js",
+    "build": "npm install && node render-build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "commonjs",
