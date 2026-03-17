@@ -79,6 +79,14 @@ app.post('/api/spin', async (req, res) => {
         }
         
         const numsOnly = currentHistory.map(s => s.number);
+        const lastNumber = numsOnly.length > 0 ? numsOnly[numsOnly.length - 1] : null;
+
+        // --- DUPLICATE GUARD ---
+        if (number === lastNumber && source === 'public_scraper') {
+            console.log(`[DUPLICATE IGNORED] Table ${table_id}, Number ${number} (Source: ${source})`);
+            return res.json({ id: 'ignored', table_id, number, source, note: 'Duplicate ignored' });
+        }
+
         const prevSpin = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
         
         // ── NODO 2: PROCESAMIENTO FÍSICO ──

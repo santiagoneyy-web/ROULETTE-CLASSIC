@@ -94,19 +94,19 @@ function postSpin(number) {
 
 // --- Extract roulette number from OCR text ---
 function extractRouletteNumber(text) {
-    // Find all standalone numbers 0-36 in the text
-    const matches = text.match(/\b([0-9]|[12][0-9]|3[0-6])\b/g);
-    if (!matches) return null;
-    
-    // In Betano/Olimpo, the newest number is usually on the LEFT.
-    // Tesseract reads left-to-right, so the first match is likely the newest.
-    // Return the first valid number found.
-    return parseInt(matches[0]);
+    if (!text) return null;
+    const lines = text.split('\n');
+    for (let line of lines) {
+        const clean = line.trim();
+        // Strict match: the entire line (or word) must BE a number 0-36
+        const match = clean.match(/^([0-9]|[12][0-9]|3[0-6])$/);
+        if (match) return parseInt(match[1]);
+    }
+    return null;
 }
 
 // --- Main loop ---
 let lastNumber = null;
-let consecutiveSame = 0;
 
 async function captureLoop(worker) {
     try {
@@ -118,19 +118,13 @@ async function captureLoop(worker) {
 
         const ts = new Date().toLocaleTimeString();
         if (detected === null) {
-            process.stdout.write(`\r[${ts}] Scanning... (no number detected)     `);
-            consecutiveSame = 0;
+            process.stdout.write(`\r[${ts}] Scanning... (no clear number)     `);
         } else if (detected === lastNumber) {
-            consecutiveSame++;
-            process.stdout.write(`\r[${ts}] Same number: ${detected} (stable: ${consecutiveSame}x)      `);
-            // If number has been stable for 3+ captures, reset so we can capture it again next change
-            if (consecutiveSame >= 3) lastNumber = null;
+            process.stdout.write(`\r[${ts}] Observed: ${detected} (already saved)      `);
         } else {
-            console.log(`\n[${ts}] ✅ NEW NUMBER DETECTED: ${detected} → Saving to table ${TABLE_ID}...`);
+            console.log(`\n[${ts}] ✨ NEW NUMBER DETECTED: ${detected} → Saving...`);
             await postSpin(detected);
-            console.log(`[${ts}] ✅ Saved ${detected} to database.`);
             lastNumber = detected;
-            consecutiveSame = 0;
         }
     } catch (e) {
         console.error('\n[OCR] Error during capture cycle:', e.message);

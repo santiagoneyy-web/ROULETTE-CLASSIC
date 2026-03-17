@@ -101,73 +101,105 @@ async function startScraper() {
 
     try {
         console.log("⏳ Navigating to stats page...");
-        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
         console.log("✅ Page loaded. Beginning extraction loop...");
 
-        setInterval(async () => {
+        let errorCount = 0;
+        
+        async function poll() {
             try {
                 if (page.isClosed()) return;
                 
-                // Extract spins from the DOM based on the site structure
+                // Extract spins from the DOM
                 const data = await page.evaluate(() => {
                     let extracted = [];
-
-                    // 1. Try GamblingCounting format
-                    const gcNumbers = document.querySelectorAll('.roulette-number');
-                    if (gcNumbers && gcNumbers.length > 0) {
-                        for (let el of Array.from(gcNumbers).slice(0, 5)) { // Only need recent ones
-                            const text = el.innerText.trim();
-                            const numMatch = text.match(/\b([0-9]|[12][0-9]|3[0-6])\b/);
-                            if (numMatch) {
-                                extracted.push({ number: parseInt(numMatch[1]), direction: null, timestamp_str: new Date().toISOString() });
-                            }
+                    // Try various selectors used by common stats sites
+                    const selectors = [
+                        '.roulette-number', 
+                        '.number-box', 
+                        '.last-numbers .number',
+                        '[data-slot="badge"]',
+                        '.roulette-history-item',
+                        '.recent-numbers .num'
+                    ];
+                    
+                    let elements = [];
+                    for (const sel of selectors) {
+                        const found = document.querySelectorAll(sel);
+                        if (found && found.length > 0) {
+                            elements = Array.from(found);
+                            break;
                         }
-                        if (extracted.length > 0) return extracted;
                     }
 
-                    // 2. Try CasinoScores (casino.org) format
-                    const csNumbers = document.querySelectorAll('[data-slot="badge"]');
-                    if (csNumbers && csNumbers.length > 0) {
-                        for (let el of Array.from(csNumbers).slice(0, 5)) {
+                    if (elements.length > 0) {
+                        for (let el of elements.slice(0, 10)) {
                             const text = el.innerText.trim();
-                            const numMatch = text.match(/\b([0-9]|[12][0-9]|3[0-6])\b/);
+                            // Precise match: must be only a number 0-36
+                            const numMatch = text.match(/^([0-9]|[12][0-9]|3[0-6])$/);
                             if (numMatch) {
-                                extracted.push({ number: parseInt(numMatch[1]), direction: null, timestamp_str: new Date().toISOString() });
+                                extracted.push(parseInt(numMatch[1]));
                             }
                         }
-                        if (extracted.length > 0) return extracted;
                     }
-
                     return extracted;
                 });
 
                 if (data && data.length > 0) {
-                    // Usually the first valid item is the newest
-                    const latest = data[0]; 
-                    
-                    // Prevent duplicate submissions
-                    if (latest.timestamp_str !== lastKnownTimestamp || (latest.number !== lastKnownNumber && lastKnownTimestamp === null)) {
-                        console.log(`✨ NEW SPIN EXTRACTED -> Number: ${latest.number} | Dir: ${latest.direction} | Time: ${latest.timestamp_str}`);
+                    errorCount = 0; // Reset error count on success
+                    const latestNumber = data[0];
+                    const historyStr = data.slice(0, 5).join(',');
+
+                    // Only update if the sequence changed (handles same-number-twice case)
+                    if (historyStr !== this.lastHistoryStr) {
+                        console.log(`✨ NEW DATA DETECTED [Table ${TABLE_ID}] -> Numbers: ${historyStr}`);
                         
-                        await axios.post(API_URL, {
-                            table_id: parseInt(TABLE_ID),
-                            number: latest.number,
-                            source: 'public_scraper',
-                            direction: latest.direction
-                        });
-                        
-                        lastKnownTimestamp = latest.timestamp_str;
-                        lastKnownNumber = latest.number;
+                        // We only post if the newest number is different or the sequence shifted
+                        if (latestNumber !== lastKnownNumber || historyStr !== this.lastHistoryStr) {
+                             console.log(`🚀 POSTING NEW SPIN: ${latestNumber}`);
+                             try {
+                                 await axios.post(API_URL, {
+                                    table_id: parseInt(TABLE_ID),
+                                    number: latestNumber,
+                                    source: 'public_scraper'
+                                 });
+                                 lastKnownNumber = latestNumber;
+                             } catch (postErr) {
+                                 console.error("❌ API Post Error:", postErr.message);
+                             }
+                        }
+                        this.lastHistoryStr = historyStr;
+                    }
+                } else {
+                    errorCount++;
+                    if (errorCount > 5) {
+                        console.log("⚠️ No numbers detected for a while. Reloading page...");
+                        await page.reload({ waitUntil: 'networkidle2' });
+                        errorCount = 0;
                     }
                 }
             } catch (e) {
                 console.error("❌ Extraction Poll Error:", e.message);
+                if (e.message.includes('detached') || e.message.includes('Protocol error')) {
+                    console.log("🔄 Frame detached or protocol error. Attempting to reload page...");
+                    try {
+                        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 60000 });
+                        errorCount = 0;
+                    } catch (navErr) {
+                        console.error("❌ Reload failed:", navErr.message);
+                    }
+                }
             }
-        }, INTERVAL);
+            setTimeout(poll, INTERVAL);
+        }
+
+        poll();
 
     } catch (err) {
         console.error("💥 Fatal Bot Error:", err.message);
-        await browser.close();
+        if (browser) await browser.close();
+        // Restart after a delay
+        setTimeout(startScraper, 30000);
     }
 }
 
