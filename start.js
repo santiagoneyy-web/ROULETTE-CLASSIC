@@ -8,8 +8,8 @@ const port = process.env.PORT || 3000;
 const { result } = concurrently(
   [
     { command: 'node server.js', name: 'API', prefixColor: 'blue' },
-    { command: `node crawler.js --table 1 --url "https://www.betano.pe/casino/live/games/immersive-roulette-deluxe/23563/tables/" --interval 30000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-1', prefixColor: 'magenta' },
-    { command: `node crawler.js --table 2 --url "https://www.olimpo.bet/casino-en-vivo?machine=5002830" --interval 35000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-2', prefixColor: 'cyan' }
+    { command: `node crawler.js --table 1 --url "https://www.betano.pe/casino/live/games/immersive-roulette-deluxe/23563/tables/" --interval 30000 --delay 8000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-1', prefixColor: 'magenta' },
+    { command: `node crawler.js --table 2 --url "https://www.olimpo.bet/casino-en-vivo?machine=5002830" --interval 35000 --delay 15000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-2', prefixColor: 'cyan' }
   ],
   {
     prefix: 'name',

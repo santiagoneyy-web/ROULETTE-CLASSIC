@@ -50,6 +50,10 @@ const getExecutablePath = () => {
 };
 
 async function startScraper() {
+    const delay = parseInt(getArg('--delay', '5000'));
+    console.log(`⏳ Waiting ${delay/1000}s for API server to stabilize...`);
+    await new Promise(r => setTimeout(r, delay));
+
     console.log(`\n🤖 Starting Public Scraper for Table ${TABLE_ID}...`);
     console.log(`🔗 Target: ${TARGET_URL}`);
     
@@ -102,6 +106,8 @@ async function startScraper() {
 
         setInterval(async () => {
             try {
+                if (page.isClosed()) return;
+                
                 // Extract spins from the DOM
                 const data = await page.evaluate(() => {
                     const rowElements = Array.from(document.querySelectorAll('tr, .row, .spin-item, [class*="history"]'));
