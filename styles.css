@@ -823,31 +823,32 @@ body::after {
 /* ── IA AGENTS (STRATEGY TABS) UI ──────────────────────────── */
 .ia-tabs-strip {
     display: flex;
-    overflow-x: auto;
     gap: 8px;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    overflow-x: auto;
     padding-bottom: 5px;
 }
 .ia-tab {
-    flex: 0 0 auto;
+    flex: 1;
     background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: var(--text-dim);
-    padding: 6px 12px;
+    border: 1px solid var(--border);
     border-radius: 8px;
+    padding: 6px 4px;
+    color: var(--text-dim);
     font-family: var(--mono);
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 0.7rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 .ia-tab:hover { background: rgba(255,255,255,0.06); }
 .ia-tab.active {
-    background: rgba(74,124,255,0.15);
-    border-color: var(--accent);
+    background: var(--accent);
     color: #fff;
-    box-shadow: 0 0 10px rgba(74,124,255,0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(76, 130, 255, 0.4);
 }
+.ia-tab.tab-win { color: var(--green); border-color: rgba(0,255,162,0.3); }
+.ia-tab.tab-loss { color: var(--red); border-color: rgba(255,75,125,0.3); }
 
 .ia-active-slot {
     background: var(--surface2);

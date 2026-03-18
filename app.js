@@ -85,33 +85,49 @@ function buildStratTabs(results) {
         return `<button class="strat-tab ${isActive ? 'active' : ''} ${cls}" onclick="activeTab='${r.strategy}'; submitNumber(null,true,false)">${r.strategy}</button>`;
     }).join('');
 }
-
 function renderTargetPanel(results) {
     if (!targetPanel) return;
     if (!results || results.length === 0) { targetPanel.innerHTML = '<p class="muted">Ingresa datos...</p>'; return; }
     const r = results.find(x => x.strategy === activeTab) || results[0];
-    const hitRate = r.hitRate || 0;
-    const barClass = hitRate > 50 ? 'bar-high' : (hitRate > 35 ? 'bar-mid' : 'bar-low');
     
-    targetPanel.innerHTML = `<div class="target-header">
-        <span class="target-strat-name">Estrategia ${r.strategy}</span>
-        <span class="badge ${hitRate > 45 ? 'badge-win' : 'badge-neutral'}">${hitRate.toFixed(1)}% HIT</span>
+    const mainNum = (r.betZone && r.betZone.length > 0) ? r.betZone[0] : null;
+    if (mainNum === null) { targetPanel.innerHTML = '<p class="muted">Calculando terminales...</p>'; return; }
+
+    const terminalDigit = mainNum % 10;
+    const allTerminals = [terminalDigit, terminalDigit + 10, terminalDigit + 20, terminalDigit + 30].filter(n => n <= 36);
+    
+    const WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+    const idx = WHEEL_ORDER.indexOf(mainNum);
+    const neighbors = [
+        WHEEL_ORDER[(idx - 1 + 37) % 37],
+        WHEEL_ORDER[(idx + 1) % 37]
+    ];
+
+    targetPanel.innerHTML = `
+    <div class="target-header" style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
+        <span class="target-strat-name" style="color:var(--accent);">Estrategia ${r.strategy}</span>
+        <span class="badge badge-neutral" style="font-size:0.7rem;">Sess: W:${iaWins[activeIaTab]} L:${iaLosses[activeIaTab]}</span>
     </div>
-    <div class="hit-bar-wrap">
-        <div class="hit-bar ${barClass}" style="width: ${hitRate}%"></div>
-        <span class="hit-label">${hitRate.toFixed(1)}%</span>
-    </div>
-    <div class="detail-row"><span class="det-lbl">ZONA DE APUESTA:</span> <span class="tp-num">${r.betZone.join(', ')}</span></div>
-    <div class="pattern-row">
-        ${(r.outcomes || []).slice(-12).map(o => `<div class="dot ${o ? 'dot-w' : 'dot-l'}">${o ? 'W' : 'L'}</div>`).join('')}
+    <div class="terminal-logic-view" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div class="term-box" style="background:rgba(255,190,0,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,190,0,0.15);">
+            <div style="color:var(--gold); font-size:0.6rem; text-transform:uppercase; margin-bottom:5px;">Terminal Principal</div>
+            <div style="font-size:1.8rem; font-weight:900; color:#fff;">T-${terminalDigit}</div>
+            <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Nums: ${allTerminals.join(', ')}</div>
+        </div>
+        <div class="vec-box" style="background:rgba(76,130,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(76,130,255,0.15);">
+            <div style="color:var(--accent); font-size:0.6rem; text-transform:uppercase; margin-bottom:5px;">Vecinos (Wheel)</div>
+            <div style="font-size:1.4rem; font-weight:900; color:#fff;">${neighbors.join(' | ')}</div>
+            <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Base: ${mainNum}</div>
+        </div>
     </div>`;
 }
 
 function renderNextPanel(prox) {
     if (!nextPanel) return;
+    // Simplified: Just show the session hit rates
     const top = prox.slice(0, 3);
-    nextPanel.innerHTML = `<div class="stats-row">
-        ${top.map(p => `<div><span class="stat-lbl">${p.strategy}:</span> ${p.hitRate.toFixed(1)}%</div>`).join('')}
+    nextPanel.innerHTML = `<div class="stats-row" style="display:flex; gap:15px; font-size:0.75rem;">
+        ${top.map(p => `<div><span style="color:var(--text-dim);">${p.strategy}:</span> ${p.hitRate.toFixed(1)}%</div>`).join('')}
     </div>`;
 }
 
@@ -119,7 +135,7 @@ function renderTravelPanel(sig) {
     if (!travelPanel) return;
     const hist = sig.travelHistory || [];
     const rows = [];
-    const maxEntries = 12;
+    const maxEntries = 100; // Expanded to 100 as requested
     
     for (let i = 0; i < Math.min(history.length, maxEntries); i++) {
         const idx = history.length - 1 - i;
@@ -138,15 +154,17 @@ function renderTravelPanel(sig) {
     }
 
     travelPanel.innerHTML = `
-        <div class="travel-header-row">
-            <div class="dir-state-badge ${sig.directionState === 'stable' ? 'state-stable' : 'state-unstable'}">
+        <div class="travel-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div class="dir-state-badge ${sig.directionState === 'stable' ? 'state-stable' : 'state-unstable'}" style="padding:4px 10px; border-radius:10px;">
                 ${sig.directionState === 'stable' ? '▶ ESTABLE' : '▶ VOLÁTIL'}
             </div>
-            <div class="last-hit-badge">LAST: ${sig.recommendedPlay}</div>
+            <div class="last-hit-badge" style="font-family:var(--mono); font-size:0.7rem;">LAST REC: ${sig.recommendedPlay}</div>
         </div>
-        <div class="travel-scroll-container">
+        <div class="travel-scroll-container" style="max-height: 400px; overflow-y: auto; padding-right:5px;">
             <table class="travel-table" style="width:100%; font-size:0.75rem; border-collapse:collapse;">
-                <thead><tr style="border-bottom:1px solid var(--border); color:var(--text-dim);"><th>N°</th><th>DIST</th><th>DIR</th><th>PHASE</th></tr></thead>
+                <thead style="position:sticky; top:0; background:var(--bg2); z-index:10; border-bottom:1px solid var(--border);">
+                    <tr style="color:var(--text-dim); text-align:left;"><th>N°</th><th>DIST</th><th>DIR</th><th>PHASE</th></tr>
+                </thead>
                 <tbody>${rows.join('')}</tbody>
             </table>
         </div>`;
@@ -160,58 +178,51 @@ function renderSignalsPanel(signals) {
             const h = iaSignalsHistory[idx] || [];
             const last = h[h.length-1];
             const cls = last === 'win' ? 'tab-win' : (last === 'loss' ? 'tab-loss' : '');
-            return `<button class="ia-tab ${idx === activeIaTab ? 'active' : ''} ${cls}" onclick="setActiveIaTab(${idx})">${name}</button>`;
+            const w = iaWins[idx], l = iaLosses[idx];
+            return `<button class="ia-tab ${idx === activeIaTab ? 'active' : ''} ${cls}" onclick="setActiveIaTab(${idx})">
+                ${name} <span style="opacity:0.6; font-size:0.55rem; margin-left:4px;">${w}-${l}</span>
+            </button>`;
         }).join('');
 
         const s = signals[activeIaTab];
         let content = '<p class="muted">Buscando señal...</p>';
 
         if (s) {
-            const isPerfect = (s.name === 'IA' && s.confidence === 'PERFECTION');
-            const slotClass = s.mode === 'FISICA' ? 'slot-escudo' : (s.mode === 'ATAQUE' ? 'slot-lanza' : (s.mode === 'MATH' ? 'slot-math' : (s.mode === 'SOPORTE' ? 'slot-lanza' : '')));
+            const isPerfect = (activeIaTab === 4 && s.confidence === 'PERFECTION');
+            const slotClass = s.mode === 'FISICA' ? 'slot-escudo' : 'slot-lanza';
             
-            if (activeIaTab === 0) { // FISICA STUDIO
-                content = `<div class="ia-active-slot slot-escudo">
-                    <div class="ia-slot-header"><span class="ia-slot-name">🎯 FÍSICA STUDIO</span><span class="ia-slot-conf">${s.confidence || '0%'} CONF.</span></div>
-                    <div class="ia-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; align-items: center; margin: 15px 0;">
-                        <div class="ia-side-box" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; text-align:center;">
-                            <div class="ia-side-lbl" style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px;">SMALL</div>
-                            <div class="ia-side-num" style="font-size:1.4rem; font-weight:800; color:#fff;">${s.small || '0'}<sup>n4</sup></div>
-                        </div>
-                        <div class="ia-center-box" style="text-align:center;">
-                            <div class="ia-main-num" style="font-size:3.5rem; font-weight:900; color:var(--gold); line-height:1; text-shadow: 0 0 20px rgba(245,200,66,0.4);">${s.number || '...'}<sup>n9</sup></div>
-                            <div class="ia-dir-lbl" style="font-size:0.75rem; color:#fff; margin-top:8px;">TENDENCIA: ${s.rule || 'MOMENTUM'}</div>
-                        </div>
-                        <div class="ia-side-box" style="background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; text-align:center;">
-                            <div class="ia-side-lbl" style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px;">BIG</div>
-                            <div class="ia-side-num" style="font-size:1.4rem; font-weight:800; color:#fff;">${s.big || '0'}<sup>n4</sup></div>
-                        </div>
+            // Fixed Agent Layout (Simplified as requested: Top Number + Big/Small)
+            const smallNum = s.small !== undefined ? s.small : '...';
+            const bigNum = s.big !== undefined ? s.big : '...';
+            
+            content = `<div class="ia-active-slot ${slotClass} ${isPerfect ? 'slot-perfect' : ''}" style="padding:20px; border-radius:16px;">
+                <div class="ia-slot-header" style="margin-bottom:10px;">
+                    <span class="ia-slot-name">${activeIaTab === 4 ? '🤖 IA AUTÓNOMA' : (s.name || 'AGENTE')}</span>
+                    <span class="ia-slot-conf" style="color:var(--green); font-weight:800; font-size:0.9rem;">${s.confidence || '0%'}</span>
+                </div>
+                
+                <div class="ia-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 15px; align-items: center; margin: 10px 0;">
+                    <div style="text-align:center;">
+                        <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px;">SMALL</div>
+                        <div style="font-size:1.3rem; font-weight:900; color:#fff;">${smallNum}<sup>n4</sup></div>
                     </div>
-                    <div class="ia-slot-footer" style="display:flex; justify-content:space-between; font-size:0.65rem; border-top:1px solid var(--border); padding-top:10px;">
-                        <div class="ia-reason" style="color:var(--text-dim);">RUPTURA DETECTADA - POLO MATH</div>
-                        <div class="ia-reason" style="color:var(--gold);">SOPORTE BIG N9</div>
+                    <div style="text-align:center;">
+                        <div class="ia-main-num" style="font-size:3.8rem; font-weight:900; color:var(--gold); line-height:1; margin:5px 0;">${s.number !== null && s.number !== undefined ? s.number : (s.tp || '...')}</div>
+                        <div style="font-size:0.7rem; color:var(--text-dim); letter-spacing:1px;">TOP TARGET</div>
                     </div>
-                </div>`;
-            } else { // OTHER AGENTS & IA AUTÓNOMA
-                content = `<div class="ia-active-slot ${slotClass} ${isPerfect ? 'slot-perfect' : ''}" style="min-height: 180px; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div class="ia-slot-header">
-                        <span class="ia-slot-name">${activeIaTab === 4 ? '🤖 IA AUTÓNOMA' : (s.name || 'AGENTE')}</span>
-                        <span class="ia-slot-conf" style="color:var(--green); font-weight:700;">${s.confidence || '0%'}</span>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px;">BIG</div>
+                        <div style="font-size:1.3rem; font-weight:900; color:#fff;">${bigNum}<sup>n4</sup></div>
                     </div>
-                    <div class="ia-center-box" style="text-align:center; padding: 10px 0;">
-                        <div class="ia-rule-pro" style="color:var(--gold); font-size:0.8rem; letter-spacing:2px; text-transform:uppercase;">${s.rule || 'ANALIZANDO'}</div>
-                        <div class="ia-main-num" style="font-size:3.2rem; font-weight:900; color:#fff; line-height:1; margin:10px 0;">${s.number !== null && s.number !== undefined ? s.number : (s.tp || '...')}</div>
-                        <div class="ia-dir-lbl" style="font-size:0.65rem; color:var(--text-dim);">SINCRONIZANDO BDD...</div>
-                    </div>
-                    <div class="ia-slot-footer" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:10px;">
-                        <div class="badge ${s.mode === 'ATAQUE' ? 'via-tp' : 'via-cor'}" style="font-size:0.65rem; padding:2px 8px;">MODO: ${s.mode || 'ESCUDO'}</div>
-                        <div class="ia-reason" style="font-family:var(--mono); font-size:0.75rem;"><span style="color:var(--green);">W:${iaWins[activeIaTab]}</span> <span style="color:var(--red);">L:${iaLosses[activeIaTab]}</span></div>
-                    </div>
-                </div>`;
-            }
+                </div>
+
+                <div class="ia-slot-footer" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
+                    <div style="font-family:var(--mono); color:var(--gold); font-size:0.75rem;">RECOMENDACIÓN: ${s.rule || 'ESTÁNDAR'}</div>
+                    <div style="font-family:var(--mono); font-size:0.8rem;"><span style="color:var(--green);">W:${iaWins[activeIaTab]}</span> <span style="color:var(--red);">L:${iaLosses[activeIaTab]}</span></div>
+                </div>
+            </div>`;
         }
-        const dots = (iaSignalsHistory[activeIaTab] || []).slice(-10).map(h => `<span class="m-hist-badge ${h === 'win' ? 'm-hist-w' : 'm-hist-l'}">${h === 'win' ? 'W' : 'L'}</span>`).join('');
-        topPanel.innerHTML = `<div class="ia-tabs-strip" style="display:flex; gap:5px; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:5px;">${tabButtons}</div>${content}<div class="ia-pattern-strip" style="display:flex; gap:4px; margin-top:15px; justify-content:center;">${dots}</div>`;
+        topPanel.innerHTML = `<div class="ia-tabs-strip" style="display:flex; gap:5px; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:5px;">${tabButtons}</div>${content}`;
     } catch (e) { console.error(e); }
 }
 
@@ -225,8 +236,10 @@ async function submitNumber(val, silent = false, batch = false) {
             try { 
                 const resp = await apiPostSpin(currentTableId, n); 
                 if (resp && resp.predictions) {
-                    if (resp.predictions.agent5_top !== undefined) latestAgent5Top = resp.predictions.agent5_top;
-                    if (resp.predictions.agent5_dna !== undefined) latestAgent5Dna = resp.predictions.agent5_dna;
+                    // Fix: Ensure we only take the number value if it's an object
+                    const ag5 = resp.predictions.agent5_top;
+                    latestAgent5Top = (typeof ag5 === 'object' && ag5 !== null) ? ag5.number : ag5;
+                    latestAgent5Dna = resp.predictions.agent5_dna || false;
                 }
             } catch(e) { console.error("Error posting spin:", e); }
         }
@@ -237,10 +250,12 @@ async function submitNumber(val, silent = false, batch = false) {
             
             if (s.betZone && s.betZone.length > 0) {
                 win = s.betZone.includes(n);
-            } else if (s.number !== null && s.number !== undefined) {
-                const dist = wheelDistance(n, s.number);
-                const maxDist = (idx === 0 || idx === 4) ? 2 : 4; 
-                win = (dist <= maxDist);
+            } else {
+                const target = s.number !== null && s.number !== undefined ? s.number : s.tp;
+                if (target !== null && target !== undefined) {
+                    const dist = wheelDistance(n, target);
+                    win = (dist <= ((idx === 0 || idx === 4) ? 2 : 4));
+                }
             }
             
             if (win) iaWins[idx]++; else iaLosses[idx]++;
@@ -257,16 +272,17 @@ async function submitNumber(val, silent = false, batch = false) {
     
     const finalSigs = [
         { ...sigs[1], name: 'FISICA', mode: 'FISICA', small: sig.casilla5, big: sig.casilla14 },
-        { ...sigs[0], name: 'SIX', mode: 'MATH' },
-        { ...sigs[2], name: 'COMBINATION', mode: 'ATAQUE' },
-        { ...sigs[3], name: 'SOPORTE', mode: 'SOPORTE' },
+        { ...sigs[0], name: 'SIX', mode: 'MATH', small: sig.casilla10, big: sig.casilla19 },
+        { ...sigs[2], name: 'COMBINATION', mode: 'ATAQUE', small: sig.casilla5, big: sig.casilla14 },
+        { ...sigs[3], name: 'SOPORTE', mode: 'SOPORTE', small: sig.casilla1, big: sig.casilla19 },
         { 
             name: 'IA', 
             mode: latestAgent5Dna ? 'ATAQUE' : 'MATH',
             number: latestAgent5Top,
             confidence: latestAgent5Top !== null ? (latestAgent5Dna ? 'PERFECTION' : 'MAX') : '0%',
             rule: latestAgent5Dna ? 'PERFECT DNA' : (latestAgent5Top !== null ? 'BDD Master' : 'APRENDIENDO'),
-            reason: latestAgent5Top !== null ? (latestAgent5Dna ? 'SINCRONIA TOTAL' : 'AUTÓNOMO') : (history.length < 50 ? `GRABANDO ${history.length}/50` : 'ANALIZANDO...')
+            small: sig.casilla5,
+            big: sig.casilla14
         }
     ];
     
