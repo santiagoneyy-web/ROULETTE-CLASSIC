@@ -32,25 +32,27 @@ const WHEEL_NUMS = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 
 const RED_NUMS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 function numColor(n) { if (n === 0) return 'green'; if (RED_NUMS.has(n)) return 'red'; return 'black'; }
 
-function wheelDistance(a, b) {
-    const WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
-    const iA = WHEEL_ORDER.indexOf(a), iB = WHEEL_ORDER.indexOf(b);
-    if (iA === -1 || iB === -1) return 0;
-    let dist = Math.abs(iA - iB);
-    return dist > 18 ? 37 - dist : dist;
+function calcDist(from, to) {
+    const i1 = WHEEL_NUMS.indexOf(from);
+    const i2 = WHEEL_NUMS.indexOf(to);
+    if (i1 === -1 || i2 === -1) return 0;
+    let d = i2 - i1;
+    if (d > 18) d -= 37;
+    if (d < -18) d += 37;
+    return d;
 }
 
 function drawWheel(highlightNum = null) {
     if (!wheelCtx) return;
     const ctx = wheelCtx;
-    const cx = 110, cy = 110, r = 90;
+    const cx = 110, cy = 110, r = 85;
     ctx.clearRect(0,0,220,220);
 
-    // Outer ring
+    // Track
     ctx.beginPath();
     ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
-    ctx.strokeStyle = '#1a1a2e';
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#0a0d1a';
+    ctx.lineWidth = 12;
     ctx.stroke();
 
     WHEEL_NUMS.forEach((n, i) => {
@@ -58,29 +60,27 @@ function drawWheel(highlightNum = null) {
         const x = cx + Math.cos(ang) * r;
         const y = cy + Math.sin(ang) * r;
 
-        // Pocket color
+        // Slot
         ctx.beginPath();
-        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.arc(x, y, 9, 0, Math.PI * 2);
         ctx.fillStyle = (n === 0) ? '#00ff00' : (RED_NUMS.has(n) ? '#ff3b5c' : '#111');
         ctx.fill();
         
-        // Highlight hit
         if (n === highlightNum) {
             ctx.beginPath();
-            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.arc(x, y, 12, 0, Math.PI * 2);
             ctx.strokeStyle = '#f5c842';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.stroke();
             
-            // Ball
             ctx.beginPath();
-            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#fff';
             ctx.fill();
         }
 
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.font = '7px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 9px var(--mono)';
         ctx.textAlign = 'center';
         ctx.fillText(n, x, y + 3);
     });
@@ -189,8 +189,8 @@ function renderTravelPanel(sig) {
     const rows = history.slice(-100).reverse().map((n, i) => {
         const isLatest = i === 0;
         const colorClass = RED_NUMS.has(n) ? 'val-down' : (n === 0 ? 'val-up' : 'val-neutral');
-        const d = (sig.travelHistory && sig.travelHistory[history.length - 1 - i]) || 0;
-        const rpm = (21.0 + Math.random()).toFixed(1);
+        const prev = history[history.length - 2 - i];
+        const dist = prev !== undefined ? calcDist(prev, n) : 0;
         
         // Define Small/Big for Travel Data
         const isSmall = n > 0 && n <= 18;
@@ -200,10 +200,9 @@ function renderTravelPanel(sig) {
         return `<tr class="${isLatest ? 'travel-row-last' : ''}">
             <td>${history.length - i}</td>
             <td class="${colorClass}" style="font-weight:900;">${n}</td>
-            <td class="${Math.abs(d) > 9 ? 'val-down' : 'val-up'}">${Math.abs(d)}p</td>
-            <td>${d > 0 ? 'DER' : (d < 0 ? 'IZQ' : '---')}</td>
-            <td>${rpm} RPM</td>
-            <td><span class="badge ${phaseClass}" style="font-size:0.6rem; padding:2px 8px;">${phaseLabel}</span></td>
+            <td class="${Math.abs(dist) > 9 ? 'val-down' : 'val-up'}">${Math.abs(dist)}p</td>
+            <td>${dist > 0 ? 'DER' : (dist < 0 ? 'IZQ' : '---')}</td>
+            <td><span class="badge ${phaseClass}" style="font-size:0.65rem; padding:4px 12px; width:70px; display:inline-block; text-align:center;">${phaseLabel}</span></td>
         </tr>`;
     }).join('');
 
