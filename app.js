@@ -258,7 +258,14 @@ tableSelect.addEventListener('change', async () => {
 
 async function loadTables() { 
     const ts = await apiFetchTables(); 
-    if (tableSelect) tableSelect.innerHTML = '<option value="">-- MESA --</option>' + ts.map(t => `<option value="${t.id}">${t.name}</option>`).join(''); 
+    if (tableSelect) {
+        tableSelect.innerHTML = '<option value="">-- MESA --</option>' + ts.map(t => `<option value="${t.id}">${t.name}</option>`).join(''); 
+        // Auto-select first table if none selected
+        if (ts.length > 0 && !currentTableId) {
+            tableSelect.value = ts[0].id;
+            tableSelect.dispatchEvent(new Event('change'));
+        }
+    }
 }
 
 // Real-time synchronization interval
