@@ -15,7 +15,12 @@ let currentTableId = null;
 
 // Pro v3.1 Selectors
 const activeAgentLabel = document.getElementById('active-agent-name');
-const numInput = { value: '', focus: () => {} }; // Dummy as manual entry is gone
+const historyEl       = document.getElementById('history-strip');
+const tableSelect     = document.getElementById('table-select');
+const travelTbody     = document.getElementById('travel-tbody');
+const topPanel        = document.getElementById('top-content'); // In case it's used elsewhere
+
+const numInput = { value: '', focus: () => {} }; 
 
 const wheelCanvas = document.getElementById('wheel-canvas');
 const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
@@ -147,7 +152,7 @@ function renderSignalsPanel(signals) {
 }
 
 function renderTravelPanel(sig) {
-    const cont = document.getElementById('travel-tbody');
+    const cont = travelTbody;
     if (!cont) return;
 
     if (!history || history.length < 2) {
