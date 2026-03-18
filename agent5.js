@@ -35,9 +35,12 @@ function getPhysics(prev, current) {
     if (dist > 18) dist -= 37;
     if (dist < -18) dist += 37;
     
-    const direction = dist > 0 ? 'CW' : 'CCW';
+    const direction = dist > 0 ? 'DERECHA' : 'IZQUIERDA';
     const absDist = Math.abs(dist);
-    const distanceClass = absDist <= 9 ? 'Small' : 'Big';
+    
+    let distanceClass = 'ULTRA';
+    if (absDist >= 1 && absDist <= 9) distanceClass = 'Small';
+    else if (absDist >= 10 && absDist <= 18) distanceClass = 'Big';
     
     return { distance: distanceClass, direction };
 }
