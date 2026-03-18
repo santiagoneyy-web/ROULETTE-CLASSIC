@@ -160,7 +160,7 @@ function renderTravelPanel() {
         return `<tr>
             <td>${idx + 1}</td>
             <td class="${color}" style="font-weight:900;">${n}</td>
-            <td style="color:${dist >= 0 ? 'var(--green)' : 'var(--red)'}">${dist >= 0 ? '+' : ''}${dist}</td>
+            <td style="color:var(--text);">${Math.abs(dist)}</td>
             <td style="color:var(--accent); font-weight:800;">${dist >= 0 ? 'DERECHA' : 'IZQUIERDA'}</td>
             <td style="font-weight:900; color:${phase === 'SMALL' ? 'var(--green)' : (phase === 'BIG' ? 'var(--red)' : '#fff')}">${phase}</td>
         </tr>`;

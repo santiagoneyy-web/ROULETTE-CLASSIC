@@ -182,23 +182,21 @@ function getIAMasterSignals(prox, sig, history) {
     });
 
     // 2. Android n17 (SOPORTE + HIBRIDO)
-    // Combines Physicality (C1) with Directional Support (C10)
     let target17 = sig.casilla1;
-    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) target17 = sig.casilla10; // Shifts to Hybrid if stable
+    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) target17 = sig.casilla10; 
     signals.push({
         name: 'Android n17',
         number: target17,
         confidence: "88%",
-        reason: target17 === sig.casilla10 ? "HIBRIDO ESTABLE" : "SOPORTE FISICO",
+        reason: target17 === sig.casilla10 ? "HIBRIDO" : "SOPORTE",
         rule: "FISICA/SOPORTE",
         mode: "ESCUDO",
-        betZone: getWheelNeighbors(target17, 6) // Balanced range
+        betZone: getWheelNeighbors(target17, 9) // Top targets use N9
     });
 
     // 3. Android 1717 (SOPORTE + HIBRIDO + ZIG ZAG)
-    // The most versatile pattern matcher
-    let target1717 = sig.casilla10; // Hybrid base
-    if (isDirZigZag || isZoneZigZag) target1717 = sig.casilla19; // Shifts to Support/Opposite if unstable
+    let target1717 = sig.casilla10; 
+    if (isDirZigZag || isZoneZigZag) target1717 = sig.casilla19; 
     signals.push({
         name: 'Android 1717',
         number: target1717,
@@ -206,7 +204,7 @@ function getIAMasterSignals(prox, sig, history) {
         reason: (isDirZigZag || isZoneZigZag) ? "ZIGZAG SOPORTE" : "ATAQUE HIBRIDO",
         rule: "HIBRIDO/ZIGZAG",
         mode: 'ATAQUE',
-        betZone: getWheelNeighbors(target1717, 9)
+        betZone: getWheelNeighbors(target1717, 9) // Top targets use N9
     });
 
     // 4. N18 (SOPORTE PURO)
@@ -218,12 +216,12 @@ function getIAMasterSignals(prox, sig, history) {
         reason: isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL",
         rule: "SOPORTE",
         mode: 'SOPORTE',
-        betZone: getWheelNeighbors(targetSoporte, 9)
+        betZone: getWheelNeighbors(targetSoporte, 9) // Top targets use N9
     });
 
     // 5. CELULA (COMBINADO TOTAL)
     let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
-    if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10) ? sig.casilla5 : sig.casilla14;
+    if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casilla5 : sig.casilla14;
     
     signals.push({
         name: 'CELULA',
@@ -232,7 +230,7 @@ function getIAMasterSignals(prox, sig, history) {
         reason: "SNIPE COMBINADO",
         rule: "SNIPER",
         mode: 'GANANCIA',
-        betZone: getWheelNeighbors(targetSnipe, 4)
+        betZone: getWheelNeighbors(targetSnipe, 4) // Snipes use N4
     });
 
     return signals;
