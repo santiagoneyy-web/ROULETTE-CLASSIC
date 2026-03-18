@@ -110,12 +110,12 @@ function drawWheel(highlightNum = null) {
     const canvas = document.getElementById('wheel-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const cx = 50, cy = 50;
-    ctx.clearRect(0, 0, 100, 100);
+    const cx = 65, cy = 65; // Updated center for 130x130
+    ctx.clearRect(0, 0, 130, 130);
 
     const goldColor = '#f5c842';
 
-    ctx.beginPath(); ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(cx, cy, 63, 0, Math.PI * 2);
     ctx.fillStyle = '#1a1a1a'; ctx.fill();
     ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.stroke();
 
@@ -125,38 +125,38 @@ function drawWheel(highlightNum = null) {
         const midAng   = (i * (360 / 37) - 90) * (Math.PI / 180);
 
         ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(startAng) * 25, cy + Math.sin(startAng) * 25);
-        ctx.arc(cx, cy, 45, startAng, endAng);
-        ctx.lineTo(cx + Math.cos(endAng) * 25, cy + Math.sin(endAng) * 25);
+        ctx.moveTo(cx + Math.cos(startAng) * 35, cy + Math.sin(startAng) * 35);
+        ctx.arc(cx, cy, 60, startAng, endAng);
+        ctx.lineTo(cx + Math.cos(endAng) * 35, cy + Math.sin(endAng) * 35);
         ctx.closePath();
         
         ctx.fillStyle = (n === 0) ? '#008b00' : (RED_NUMS.has(n) ? '#c41e3a' : '#000');
         ctx.fill();
         ctx.strokeStyle = '#222'; ctx.lineWidth = 0.5; ctx.stroke();
 
-        const rx = cx + Math.cos(midAng) * 36;
-        const ry = cy + Math.sin(midAng) * 36;
+        const rx = cx + Math.cos(midAng) * 48;
+        const ry = cy + Math.sin(midAng) * 48;
         
         ctx.save();
         ctx.translate(rx, ry); ctx.rotate(midAng + Math.PI/2);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 5px Inter';
-        ctx.textAlign = 'center'; ctx.fillText(n, 0, 2);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Inter';
+        ctx.textAlign = 'center'; ctx.fillText(n, 0, 3);
         ctx.restore();
 
         if (n === highlightNum) {
-            ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI * 2);
-            ctx.strokeStyle = goldColor; ctx.lineWidth = 1.5; ctx.stroke();
-            const bx = cx + Math.cos(midAng) * 48;
-            const by = cy + Math.sin(midAng) * 48;
-            ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI*2);
-            ctx.fillStyle = '#fff'; ctx.shadowBlur = 4; ctx.shadowColor = '#fff';
+            ctx.beginPath(); ctx.arc(rx, ry, 9, 0, Math.PI * 2);
+            ctx.strokeStyle = goldColor; ctx.lineWidth = 2; ctx.stroke();
+            const bx = cx + Math.cos(midAng) * 63;
+            const by = cy + Math.sin(midAng) * 63;
+            ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2);
+            ctx.fillStyle = '#fff'; ctx.shadowBlur = 6; ctx.shadowColor = '#fff';
             ctx.fill(); ctx.shadowBlur = 0;
         }
     });
 
-    const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, 25);
+    const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, 35);
     gr.addColorStop(0, '#333'); gr.addColorStop(1, '#000');
-    ctx.beginPath(); ctx.arc(cx, cy, 25, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI*2);
     ctx.fillStyle = gr; ctx.fill();
 }
 

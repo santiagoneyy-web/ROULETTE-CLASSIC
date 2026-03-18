@@ -281,8 +281,8 @@ function getIAMasterSignals(prox, sig, history) {
 
     // Populate secondary snipes for all agents to fill the 3-column UI
     signals.forEach(s => {
-        if (!s.smallSnipe) s.smallSnipe = sig.casilla5;
-        if (!s.bigSnipe) s.bigSnipe = sig.casilla14;
+        s.smallSnipe = sig.casilla5 !== undefined ? sig.casilla5 : '--';
+        s.bigSnipe = sig.casilla14 !== undefined ? sig.casilla14 : '--';
     });
 
     return signals;
