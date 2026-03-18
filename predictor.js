@@ -1,824 +1,184 @@
 // ============================================================
-// predictor.js — Port of predictor.py logic to JavaScript
+// predictor.js — Advanced Pattern Recognition & Trend Analysis
 // ============================================================
 
 const WHEEL_ORDER = [
     0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
     5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
 ];
-
 const WHEEL_INDEX = {};
 WHEEL_ORDER.forEach((n, i) => { WHEEL_INDEX[n] = i; });
 
-const TERMINALS_MAP = {
-    0: [0, 4, 6],
-    1: [1, 8],
-    2: [2, 7, 9],
-    3: [3, 8],
-    4: [4, 11],
-    5: [5, 12, 10],
-    6: [6, 11],
-    7: [7, 14, 2],
-    8: [8, 15, 13, 3, 1],
-    9: [9, 14, 2],
-    10: [10, 17, 5],
-    11: [11, 18, 16, 6, 4],
-    12: [12, 17, 5],
-    13: [13, 20, 23],
-    14: [14, 9, 21, 7, 19],
-    15: [15, 8, 20],
-    16: [16, 11],
-    17: [17, 12, 24, 10, 22],
-    18: [18, 11, 23],
-    19: [19, 14, 26],
-    20: [20, 13, 25, 15, 27],
-    21: [21, 14, 26],
-    22: [22, 17, 29],
-    23: [23, 18, 30, 16, 28],
-    24: [24, 17, 29],
-    25: [25, 20, 32],
-    26: [26, 19, 31, 33, 21],
-    27: [27, 20, 32],
-    28: [28, 23, 35],
-    29: [29, 22, 34, 24, 36],
-    30: [30, 23, 35],
-    31: [31, 26],
-    32: [32, 25, 27],
-    33: [33, 26],
-    34: [34, 29],
-    35: [35, 28, 30],
-    36: [36, 29],
-};
+const STRATEGIES = [
+    { strategy: '-',     betZone: [1, 2, 4, 5, 6, 10, 11, 13, 14, 15, 16, 23, 24, 25, 27, 30, 33, 36] },
+    { strategy: '+',     betZone: [0, 2, 3, 4, 7, 8, 10, 12, 13, 15, 17, 18, 21, 22, 25, 26, 28, 29, 31, 32, 35] },
+    { strategy: '-,-1',  betZone: [1, 5, 8, 10, 11, 13, 16, 23, 24, 27, 30, 33, 36] },
+    { strategy: '-,+1',  betZone: [1, 2, 4, 6, 13, 14, 15, 16, 24, 25, 33, 36] },
+    { strategy: '+,-1',  betZone: [0, 2, 3, 4, 7, 12, 15, 17, 18, 21, 25, 26, 28, 32, 35] },
+    { strategy: '+,+1',  betZone: [0, 3, 7, 8, 10, 12, 13, 18, 21, 22, 26, 28, 29, 31, 32, 35] }
+];
 
-const STRATEGIES = {
-    '-': (a, b) => Math.abs(a - b),
-    '+': (a, b) => a + b,
-    '-,-1': (a, b) => Math.abs(a - b) - 1,
-    '-,+1': (a, b) => Math.abs(a - b) + 1,
-    '+,-1': (a, b) => (a + b) - 1,
-    '+,+1': (a, b) => (a + b) + 1,
-};
-
-// StrategyStats class
-class StrategyStats {
-    constructor(windowSize = 12) {
-        this.windowSize = windowSize;
-        this.outcomes = [];
-    }
-
-    register(win) {
-        this.outcomes.push(win);
-        if (this.outcomes.length > this.windowSize) {
-            this.outcomes.shift();
-        }
-    }
-
-    get wins() {
-        return this.outcomes.filter(x => x).length;
-    }
-
-    get losses() {
-        return this.outcomes.filter(x => !x).length;
-    }
-
-    get attempts() {
-        return this.outcomes.length;
-    }
-
-    get hitRate() {
-        return this.attempts > 0 ? (this.wins / this.attempts * 100.0) : 0.0;
-    }
-
-    get currentWinStreak() {
-        let c = 0;
-        for (let i = this.outcomes.length - 1; i >= 0; i--) {
-            if (this.outcomes[i]) c++;
-            else break;
-        }
-        return c;
-    }
-
-    get currentLossStreak() {
-        let c = 0;
-        for (let i = this.outcomes.length - 1; i >= 0; i--) {
-            if (!this.outcomes[i]) c++;
-            else break;
-        }
-        return c;
-    }
-
-    get maxWinStreak() {
-        let best = 0, run = 0;
-        for (const v of this.outcomes) {
-            if (v) { run++; best = Math.max(best, run); }
-            else run = 0;
-        }
-        return best;
-    }
-
-    get maxLossStreak() {
-        let best = 0, run = 0;
-        for (const v of this.outcomes) {
-            if (!v) { run++; best = Math.max(best, run); }
-            else run = 0;
-        }
-        return best;
-    }
-
-    get recentPattern() {
-        return this.outcomes.map(x => x ? 'W' : 'L').join('');
-    }
-}
-
-// Helper functions
-function mod37(n) {
-    return ((n % 37) + 37) % 37;
-}
-
-function wheelNeighbors(number, n) {
-    const idx = WHEEL_INDEX[number];
-    const out = [];
-    for (let step = 1; step <= n; step++) {
-        out.push(WHEEL_ORDER[(idx + step) % 37]);
-        out.push(WHEEL_ORDER[((idx - step) % 37 + 37) % 37]);
-    }
-    return out;
-}
-
-function wheelDistance(a, b) {
-    const ia = WHEEL_INDEX[a];
-    const ib = WHEEL_INDEX[b];
-    const delta = Math.abs(ia - ib);
-    return Math.min(delta, 37 - delta);
-}
-
-function getPhaseStreaks(phases) {
-    const streaks = [];
-    if (!phases.length) return streaks;
-    let currentPhase = phases[0];
-    let count = 1;
-    for (let i = 1; i < phases.length; i++) {
-        if (phases[i] === currentPhase) count++;
-        else {
-            streaks.push({ phase: currentPhase, count });
-            currentPhase = phases[i];
-            count = 1;
-        }
-    }
-    streaks.push({ phase: currentPhase, count });
-    return streaks;
-}
-
-function buildBetZone(mainTerminal, correlated) {
-    const length = correlated.length;
-    let tpN = 2, corN = 3;
-
-    if (length <= 3) {
-        tpN = 2; corN = 3;
-    } else {
-        tpN = 2; corN = 2;
-    }
-
-    const zone = new Set();
-    
-    // Anexa TP
-    zone.add(mainTerminal);
-    for (const nb of wheelNeighbors(mainTerminal, tpN)) zone.add(nb);
-    
-    // Anexa COR
-    let hasCor = false;
-    for (const n of correlated) {
-        if (n === mainTerminal) continue;
-        hasCor = true;
-        zone.add(n);
-        for (const nb of wheelNeighbors(n, corN)) zone.add(nb);
-    }
-    
-    const ruleStr = hasCor ? `TP:N${tpN} COR:N${corN}` : `TP:N3`;
-    if (!hasCor) {
-        for (const nb of wheelNeighbors(mainTerminal, 3)) zone.add(nb);
-        return { zone: [...zone].sort((a, b) => a - b), rule: 'TP:N3' };
-    }
-
-    return { zone: [...zone].sort((a, b) => a - b), rule: ruleStr };
+function getDistance(a, b) {
+    const iA = WHEEL_INDEX[a], iB = WHEEL_INDEX[b];
+    let d = iB - iA;
+    if (d > 18) d -= 37;
+    if (d < -18) d += 37;
+    return d;
 }
 
 function analyzeSpin(history, stats) {
-    const prevA = history[history.length - 3];
-    const prevB = history[history.length - 2];
-    const real = history[history.length - 1];
-
+    if (history.length < 3) return [];
+    const last = history[history.length - 1];
+    const prev = history[history.length - 2];
+    const prev2 = history[history.length - 3];
+    
     const results = [];
-
-    for (const [name, fn] of Object.entries(STRATEGIES)) {
-        const mainTerminal = mod37(fn(prevA, prevB));
-        const correlated = TERMINALS_MAP[mainTerminal] || [mainTerminal];
-
-        const { zone: betZone, rule: ruleUsed } = buildBetZone(mainTerminal, correlated);
-        const win = betZone.includes(real);
-
-        if (!stats[name]) stats[name] = new StrategyStats();
-        const stat = stats[name];
-        stat.register(win);
-
-        const distMain = wheelDistance(real, mainTerminal);
-        const distGroup = Math.min(...correlated.map(c => wheelDistance(real, c)));
-
-        let hitVia;
-        if (real === mainTerminal) hitVia = 'tp';
-        else if (correlated.includes(real)) hitVia = 'cor';
-        else if (betZone.includes(real)) hitVia = 'n';
-        else hitVia = '-';
-
-        results.push({
-            strategy: name,
-            basePrevA: prevA,
-            basePrevB: prevB,
-            mainTerminal,
-            correlated,
-            rule: ruleUsed,
-            betZone,
-            win,
-            distMain,
-            distGroupMin: distGroup,
-            hitRate: stat.hitRate,
-            streakWin: stat.currentWinStreak,
-            streakLoss: stat.currentLossStreak,
-            maxWinStreak: stat.maxWinStreak,
-            maxLossStreak: stat.maxLossStreak,
-            wins: stat.wins,
-            losses: stat.losses,
-            attempts: stat.attempts,
-            recentPattern: stat.recentPattern,
-            outcomes: [...stat.outcomes],
-            hitVia,
-        });
-    }
-
+    STRATEGIES.forEach(s => {
+        const key = s.strategy;
+        if (!stats[key]) stats[key] = { wins: 0, losses: 0, attempts: 0, outcomes: [] };
+        
+        const win = s.betZone.includes(last);
+        stats[key].attempts++;
+        if (win) stats[key].wins++; else stats[key].losses++;
+        stats[key].outcomes.push(win);
+        if (stats[key].outcomes.length > 20) stats[key].outcomes.shift();
+        
+        results.push({ strategy: key, win, wins: stats[key].wins, losses: stats[key].losses, attempts: stats[key].attempts, outcomes: stats[key].outcomes, betZone: s.betZone });
+    });
     return results;
-}
-
-function pickRecommendation(results) {
-    return [...results].sort((a, b) => {
-        if (b.hitRate !== a.hitRate) return b.hitRate - a.hitRate;
-        if (b.streakWin !== a.streakWin) return b.streakWin - a.streakWin;
-        return a.distGroupMin - b.distGroupMin;
-    })[0];
-}
-
-function pickRecommendationTop2(results) {
-    let candidates = results.filter(r => r.win || r.distGroupMin <= 1);
-    if (!candidates.length) candidates = [...results];
-    return [...candidates].sort((a, b) => {
-        const aw = a.win ? 1 : 0, bw = b.win ? 1 : 0;
-        if (bw !== aw) return bw - aw;
-        if (a.distGroupMin !== b.distGroupMin) return a.distGroupMin - b.distGroupMin;
-        if (b.hitRate !== a.hitRate) return b.hitRate - a.hitRate;
-        return b.streakWin - a.streakWin;
-    }).slice(0, 2);
 }
 
 function projectNextRound(history, stats) {
     if (history.length < 2) return [];
-    const a = history[history.length - 2];
-    const b = history[history.length - 1];
-    const out = [];
-
-    for (const [name, fn] of Object.entries(STRATEGIES)) {
-        const tp = mod37(fn(a, b));
-        const cor = TERMINALS_MAP[tp] || [tp];
-        const { zone: bz, rule } = buildBetZone(tp, cor);
-        const st = stats[name] || new StrategyStats();
-        out.push({
-            strategy: name,
-            tp,
-            cor,
-            rule,
-            betZone: bz,
-            hitRate: st.hitRate,
-            streakWin: st.currentWinStreak,
-            streakLoss: st.currentLossStreak,
-            recentPattern: st.recentPattern,
-        });
-    }
-
-    return [...out].sort((a, b) => {
-        if (b.hitRate !== a.hitRate) return b.hitRate - a.hitRate;
-        return b.streakWin - a.streakWin;
-    }).slice(0, 2);
+    return STRATEGIES.map(s => {
+        const key = s.strategy;
+        const st = stats[key] || { wins: 0, losses: 0, attempts: 0, outcomes: [] };
+        const hitRate = st.attempts > 0 ? (st.wins / st.attempts) * 100 : 0;
+        
+        let streakWin = 0, streakLoss = 0;
+        for (let i = st.outcomes.length - 1; i >= 0; i--) {
+            if (st.outcomes[i]) { if (streakLoss > 0) break; streakWin++; }
+            else { if (streakWin > 0) break; streakLoss++; }
+        }
+        
+        return { strategy: key, hitRate, streakWin, streakLoss, tp: s.betZone[0], cor: s.betZone.slice(1, 5), betZone: s.betZone, rule: 'MOMENTUM', targetPattern: 'neutral' };
+    });
 }
 
 function computeDealerSignature(history) {
-    if (history.length < 2) return { avgTravel: null, travelHistory: [], topOverZone: [], topUnderZone: [] };
+    if (history.length < 2) return { directionState: 'measuring', recommendedPlay: 'NONE', avgTravel: null };
+    const travels = [];
+    for (let i = 1; i < history.length; i++) travels.push(getDistance(history[i-1], history[i]));
     
-    const travelHistory = [];
-    for (let i = 1; i < history.length; i++) {
-        const from = WHEEL_INDEX[history[i-1]];
-        const to   = WHEEL_INDEX[history[i]];
-        let dist = to - from;
-        if (dist > 18) dist -= 37;
-        if (dist < -18) dist += 37;
-        travelHistory.push(dist);
-    }
+    const lastT = travels[travels.length - 1];
+    const state = Math.abs(lastT) <= 9 ? 'stable' : 'chaos';
+    const rec = lastT > 0 ? 'BIG' : 'SMALL';
     
-    const signedAvg = travelHistory.length > 0 
-        ? travelHistory.reduce((a, b) => a + b, 0) / travelHistory.length 
-        : 0;
-    const avgTravel = Math.abs(signedAvg);
-    
-    // ── Current Trend Direction (Cinemática Reciente Avanzada) ──
-    const dirs = travelHistory.map(t => Math.sign(t) || 1);
-    const dirStreaks = getPhaseStreaks(dirs);
-
-    let currentTrendDir = Math.sign(signedAvg) || 1;
-    let directionState = 'unstable';
-
-    if (dirs.length >= 6) {
-        const recent6 = dirs.slice(-6);
-        const posC = recent6.filter(d => d > 0).length;
-        const negC = recent6.filter(d => d < 0).length;
-        let domDir = posC > negC ? 1 : (negC > posC ? -1 : 0);
-        
-        // Detect weakening dir
-        const posStreaks = dirStreaks.filter(s => s.phase === 1).map(s => s.count);
-        const negStreaks = dirStreaks.filter(s => s.phase === -1).map(s => s.count);
-        
-        const lastPos = posStreaks.length > 0 ? posStreaks[posStreaks.length - 1] : 0;
-        const prevPos = posStreaks.length > 1 ? posStreaks[posStreaks.length - 2] : 0;
-        const lastNeg = negStreaks.length > 0 ? negStreaks[negStreaks.length - 1] : 0;
-        const prevNeg = negStreaks.length > 1 ? negStreaks[negStreaks.length - 2] : 0;
-        
-        let dirWeakening = false;
-        if (domDir === 1 && posStreaks.length >= 2 && lastPos < prevPos && dirs[dirs.length - 1] !== 1) {
-            dirWeakening = true;
-            domDir = -1; // trend Shift!
-        } else if (domDir === -1 && negStreaks.length >= 2 && lastNeg < prevNeg && dirs[dirs.length - 1] !== -1) {
-            dirWeakening = true;
-            domDir = 1; // trend Shift!
-        }
-        
-        currentTrendDir = domDir !== 0 ? domDir : (Math.sign(signedAvg) || 1);
-        
-        // State Check
-        let altern = true;
-        for (let i = 1; i < 4; i++) { 
-            if (dirs.length > i && dirs[dirs.length - i] === dirs[dirs.length - 1 - i]) altern = false; 
-        }
-        if (dirs.length >= 4 && altern) {
-            directionState = 'zigzag';
-        } else if (dirWeakening) {
-            directionState = 'debilitado';
-        } else if (posC >= 4 || negC >= 4 || lastPos >= 3 || lastNeg >= 3) {
-            directionState = 'stable';
-        } else {
-            directionState = 'unstable';
-        }
-    } else if (travelHistory.length >= 2) {
-        currentTrendDir = Math.sign(travelHistory[travelHistory.length - 1]) || 1;
-        directionState = dirs[dirs.length-1] === dirs[dirs.length-2] ? 'stable': 'unstable';
-    }
-
-    const baseDir = currentTrendDir;
-    const lastNum = history[history.length - 1];
-    const lastIdx = WHEEL_INDEX[lastNum];
-    
-    // Physical trend playing direction
-    const lastDir = travelHistory.length > 0 ? Math.sign(travelHistory[travelHistory.length - 1]) : baseDir;
-    const playingDir = directionState === 'zigzag' ? (-lastDir || 1) : Math.sign(baseDir);
-
-    // ── Physical Matrix (Cinemática Vectorial Pro offsets) ──────────────
-    const target1  = WHEEL_ORDER[(lastIdx + playingDir * 1 + 37) % 37];
-    const target5  = WHEEL_ORDER[(lastIdx + playingDir * 5 + 37) % 37];
-    const target10 = WHEEL_ORDER[(lastIdx + playingDir * 10 + 37) % 37];
-    const target14 = WHEEL_ORDER[(lastIdx + playingDir * 14 + 37) % 37];
-    const target19 = WHEEL_ORDER[(lastIdx + playingDir * 19 + 37) % 37];
-
-    const smallNum = target5;
-    const bigNum   = target14;
-
-    // ── Recommended Play — ANÁLISIS PROFUNDO BIG/SMALL ────────────────────
-    const phases = travelHistory.map(t => Math.abs(t) <= 9 ? 'S' : 'B');
-    const phaseStreaks = getPhaseStreaks(phases);
-    
-    let recommendedPlay = null;
-    let recNumber = null;
-    let energyAlternating = false;
-    let phaseStateText = 'MIDIENDO...';
-
-    if (phases.length >= 2) {
-        const lastPhase = phases[phases.length - 1];
-        
-        // ── Factor 1: Recent momentum (last 6 plays, weighted more recent) ──
-        const recent6 = phases.slice(-6);
-        let sScore = 0, bScore = 0;
-        recent6.forEach((p, i) => {
-            const weight = i + 1; // More recent = higher weight
-            if (p === 'S') sScore += weight;
-            else bScore += weight;
-        });
-        let dominant = sScore > bScore ? 'S' : (bScore > sScore ? 'B' : null);
-
-        // ── Factor 2: Phase streak acceleration/deceleration ──
-        const allS = phaseStreaks.filter(x => x.phase === 'S').map(x => x.count);
-        const allB = phaseStreaks.filter(x => x.phase === 'B').map(x => x.count);
-        const lastSStreak = allS.length > 0 ? allS[allS.length - 1] : 0;
-        const prevSStreak = allS.length > 1 ? allS[allS.length - 2] : 0;
-        const lastBStreak = allB.length > 0 ? allB[allB.length - 1] : 0;
-        const prevBStreak = allB.length > 1 ? allB[allB.length - 2] : 0;
-        
-        // Weakening: streak is completed (different last phase) AND smaller than last
-        const isS_Weakening = allS.length >= 2 && lastSStreak < prevSStreak && lastPhase !== 'S';
-        const isB_Weakening = allB.length >= 2 && lastBStreak < prevBStreak && lastPhase !== 'B';
-        // Strengthening: current streak is building and larger than previous
-        const isS_Strengthening = lastPhase === 'S' && lastSStreak > prevSStreak && lastSStreak >= 2;
-        const isB_Strengthening = lastPhase === 'B' && lastBStreak > prevBStreak && lastBStreak >= 2;
-
-        // ── Factor 3: Recent 3-play mini-pattern (last hit momentum)
-        const last3 = phases.slice(-3);
-        const last3S = last3.filter(p => p === 'S').length;
-        const last3B = last3.filter(p => p === 'S').length; // count SMALL in last3
-        const recentMini = last3.length >= 3 ? (last3[2] === last3[1] && last3[1] === last3[0] ? lastPhase : null) : null;
-
-        // ── Factor 4: Ruptura detection: SSSSB or BBBBS ──
-        let isRupturaS = false, isRupturaB = false;
-        if (phases.length >= 4) {
-            const recentP = phases.slice(-5);
-            const smallStreak = recentP.slice(0, -1).filter(p => p === 'S').length;
-            const bigStreak = recentP.slice(0, -1).filter(p => p === 'B').length;
-            if (smallStreak >= 3 && recentP[recentP.length - 1] === 'B') isRupturaS = true;
-            if (bigStreak >= 3 && recentP[recentP.length - 1] === 'S') isRupturaB = true;
-        }
-
-        // ── Decision logic ──
-        if (isRupturaS) {
-            // SMALL zona quebrada → jugar BIG
-            recommendedPlay = 'BIG';
-            recNumber = target14;
-            phaseStateText = 'RUPTURA SMALL → JUGAR BIG';
-        } else if (isRupturaB) {
-            // BIG zona quebrada → jugar SMALL
-            recommendedPlay = 'SMALL';
-            recNumber = target5;
-            phaseStateText = 'RUPTURA BIG → JUGAR SMALL';
-        } else if (dominant === 'S' && isS_Weakening) {
-            recommendedPlay = 'BIG';
-            recNumber = target14;
-            phaseStateText = 'SMALL DEBILITADO → BIG';
-        } else if (dominant === 'B' && isB_Weakening) {
-            recommendedPlay = 'SMALL';
-            recNumber = target5;
-            phaseStateText = 'BIG DEBILITADO → SMALL';
-        } else if (isS_Strengthening) {
-            recommendedPlay = 'SMALL';
-            recNumber = target5;
-            phaseStateText = 'SMALL ACELERANDO';
-        } else if (isB_Strengthening) {
-            recommendedPlay = 'BIG';
-            recNumber = target14;
-            phaseStateText = 'BIG ACELERANDO';
-        } else if (dominant === 'S') {
-            recommendedPlay = 'SMALL';
-            recNumber = target5;
-            phaseStateText = 'SMALL DOMINANTE';
-        } else if (dominant === 'B') {
-            recommendedPlay = 'BIG';
-            recNumber = target14;
-            phaseStateText = 'BIG DOMINANTE';
-        } else {
-            recommendedPlay = 'HIBRIDO';
-            recNumber = target10;
-            phaseStateText = 'ZONAS NIVELADAS';
-        }
-
-        // ── Intercalation Override (ZigZag — last 4 alternate perfectly) ──
-        if (phases.length >= 4) {
-            const recent4 = phases.slice(-4);
-            let altern = true;
-            for (let i = 1; i < 4; i++) {
-                if (recent4[i] === recent4[i-1]) { altern = false; break; }
-            }
-            if (altern) {
-                energyAlternating = true;
-                // Predict the opposite of the last phase
-                recommendedPlay = lastPhase === 'S' ? 'BIG' : 'SMALL';
-                recNumber = recommendedPlay === 'SMALL' ? target5 : target14;
-                phaseStateText = `ZIG-ZAG → ANTICIPA ${recommendedPlay}`;
-            }
-        }
-    } else if (phases.length >= 1) {
-        recommendedPlay = phases[phases.length - 1] === 'S' ? 'SMALL' : 'BIG';
-        recNumber = recommendedPlay === 'SMALL' ? target5 : target14;
-        phaseStateText = recommendedPlay === 'SMALL' ? 'PRIMERA LECTURA: SMALL' : 'PRIMERA LECTURA: BIG';
-    } else {
-        recommendedPlay = 'HIBRIDO';
-        recNumber = target10;
-        phaseStateText = 'Midiendo...';
-    }
-
-
-    // ── Last Hit Zone classification ─────────────────────────────
-    let lastHitZone = null;
-    let lastHitNum = null;
-    if (travelHistory.length >= 1) {
-        const lastDist = Math.abs(travelHistory[travelHistory.length - 1]);
-        lastHitZone = lastDist <= 9 ? 'SMALL' : 'BIG';
-        lastHitNum  = lastDist <= 9 ? smallNum : bigNum;
-    }
-
-    // ── Physical Matrix (Cinemática Vectorial Pro) ──────────────
-    // 1. SOPORTE SMALL (Offset -1, 0, 1) -> Casilla 1 (Real dist 0-1)
-    // 2. SMALL EXACTO (Casilla 5) -> Real dist 4
-    // 3. HÍBRIDO (Casilla 10) -> Real dist 9
-    // 4. BIG EXACTO (Casilla 14) -> Real dist 13
-    // 5. SOPORTE BIG (Casilla 19) -> Real dist 18 (Polo Opuesto)
-
-    // ── Pattern Analysis ─────────────────────────────────────────
-    const recentPhases = travelHistory.slice(-4).map(t => Math.abs(t) <= 9 ? 'S' : 'B');
-    let isRuptura = false;
-    let isFuga = false;
-    if (recentPhases.length === 4) {
-        // Rule: S,S,S -> B (Ruptura detectada)
-        if (recentPhases[0] === 'S' && recentPhases[1] === 'S' && recentPhases[2] === 'S' && recentPhases[3] === 'B') {
-            isRuptura = true;
-        }
-        // Rule: Fuga (last 3 travels are increasing while stable)
-        const last3Dist = travelHistory.slice(-3).map(Math.abs);
-        if (directionState === 'stable' && last3Dist[2] > last3Dist[1] && last3Dist[1] > last3Dist[0]) {
-            isFuga = true;
-        }
-    }
-
-    return {
-        avgTravel,
-        signedAvg,
-        currentTrendDir,
-        travelHistory,
-        playingDir,
-        casilla1: target1,
-        casilla5: target5,
-        casilla10: target10,
-        casilla14: target14,
-        casilla19: target19,
-        directionState,
-        recommendedPlay,
-        phaseStateText,
-        recNumber,
-        isRuptura,
-        isFuga,
-        energyAlternating,
-        lastHitZone,
-        lastHitNum
+    return { 
+        directionState: state, 
+        recommendedPlay: rec, 
+        avgTravel: lastT, 
+        travelHistory: travels,
+        casilla5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 5) % 37],
+        casilla14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 14) % 37],
+        casilla1: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 1) % 37],
+        casilla19: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 19) % 37],
+        casilla10: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 10) % 37]
     };
 }
 
-function getIAMasterSignals(prox, sig, history) {
-    if (!prox || prox.length < 2) return null;
-    
-    const signals = [];
-    const isStable = sig.directionState === 'stable';
-    const isChaos = sig.directionState === 'unstable' && sig.travelHistory.length >= 6;
-    
-    // 1. Detección de Caos (STOP)
-    let finalRule = "CHARGING";
-    let finalReason = "ANALIZANDO...";
-    let finalConf = "75%";
-    
-    const isDirZigZag = sig.directionState === 'zigzag';
-    
-    // TOP NUMBER (MODO ESCUDO N9)
-    let escudoTarget = sig.recommendedPlay === 'SMALL' ? sig.casilla1 : (sig.recommendedPlay === 'BIG' ? sig.casilla19 : sig.casilla10);
-    // ── NODO DE CONFIANZA AGNOSTICO ──
-    const MIN_CONF_THRESHOLD = 70;
-    const getFinalSignal = (val, confStr, rule, reason, mode) => {
-        const confInt = parseInt(confStr) || 0;
-        if (confInt < MIN_CONF_THRESHOLD) {
-            return { val: null, conf: "0%", rule: "CONFIDENCIA BAJA", reason: "UMBRAL NO ALCANZADO", mode: 'PAUSA' };
-        }
-        return { val, conf: confStr, rule, reason, mode };
-    };
-
-    const MIN_CONFID_VALUE = 70;
-    
-    function filterLowConfidence(signal) {
-        if (!signal.conf) return { ...signal, val: null };
-        const val = parseInt(signal.conf);
-        if (isNaN(val) || val < MIN_CONFID_VALUE) {
-            return { ...signal, val: null, rule: 'PAUSA (BAJA CONF.)', reason: 'SEÑAL INESTABLE' };
-        }
-        return signal;
+const MIN_CONFID_VALUE = 70;
+function filterLowConfidence(signal) {
+    if (!signal.conf) return { ...signal, val: null };
+    const val = parseInt(signal.conf);
+    if (isNaN(val) || val < MIN_CONFID_VALUE) {
+        return { ...signal, val: null, rule: 'PAUSA (BAJA CONF.)', reason: 'SEÑAL INESTABLE' };
     }
+    return signal;
+}
 
-    let fis = getFinalSignal(escudoTarget, finalConf, finalRule, finalReason, 'ESCUDO');
-    fis = filterLowConfidence(fis);
-    
-    // Agent 1: FISICA STUDIO (Physical Matrix - TOP NUMBER N9)
-    signals.push({
-        name: 'FISICA STUDIO',
-        number: fis.val,
-        small: sig.casilla5,
-        big: sig.casilla14,
-        confidence: fis.conf,
-        reason: fis.reason,
-        rule: fis.rule,
-        mode: fis.mode,
-        lanzaTarget: (sig.recommendedPlay === 'SMALL' ? sig.casilla5 : sig.casilla14),
-        recPlay: sig.recommendedPlay,
-        energyAlternating: sig.energyAlternating
-    });
+function getFinalSignal(val, confStr, rule, reason, mode) {
+    return { val, conf: confStr, rule, reason, mode };
+}
 
-    // Agent 2: SIX STRATEGIE (Mathematical Momentum)
+function getIAMasterSignals(prox, sig, history) {
+    if (!prox || !prox.length || !sig) return [];
+    const signals = [];
+    const isChaos = sig.directionState === 'chaos';
+    const isDirZigZag = sig.travelHistory.length >= 2 && Math.sign(sig.travelHistory[sig.travelHistory.length-1]) !== Math.sign(sig.travelHistory[sig.travelHistory.length-2]);
+
+    // 1. Android n16 (Math Momentum)
     const bestStrat = getBestMathematicalStrategy(prox);
-    let six = getFinalSignal(bestStrat.tp, (bestStrat.momentum > 0 ? "92%" : "85%"), bestStrat.rule, "MOMENTUM MATEMÁTICO", 'MATH');
-    six = filterLowConfidence(six);
-    
+    let n16Result = getFinalSignal(bestStrat.tp, (bestStrat.momentum > 0 ? "92%" : "85%"), bestStrat.rule, "MOMENTUM MATEMÁTICO", 'MATH');
+    n16Result = filterLowConfidence(n16Result);
     signals.push({
-        name: 'SIX STRATEGIE',
-        strategy: bestStrat.strategy,
-        tp: six.val,
+        name: 'Android n16',
+        tp: n16Result.val,
         cor: bestStrat.cor,
-        betZone: six.val !== null ? bestStrat.betZone : [], 
-        number: six.val,
-        confidence: six.conf,
-        reason: six.reason,
-        rule: six.rule,
-        mode: six.mode,
+        betZone: n16Result.val !== null ? bestStrat.betZone : [], 
+        number: n16Result.val,
+        confidence: n16Result.conf,
+        reason: n16Result.reason,
+        rule: n16Result.rule,
+        mode: n16Result.mode,
         streakWin: bestStrat.streakWin,
         streakLoss: bestStrat.streakLoss
     });
 
-    // Agent 3: COMBINATION -> ANDROIDE PERFECTO (Physical + Zone Hybrid)
-    let androidRule = "PROCESANDO MATRIZ...";
-    let androidConf = "0%";
-    let androidReason = "ESPERANDO CORTES LIMPIOS";
-    let androidMode = 'NEUTRAL';
-    let androidTarget = sig.casilla10; 
-    let androidTargetZone = sig.recommendedPlay;
-    
-    const isDebilitado = sig.phaseStateText.includes('DEBILITADO');
-    const isDominante = sig.phaseStateText.includes('DOMINANTE');
-    
-    // 1. ZIG-ZAG & INTERCALATION (Read physical flips and predict the next step)
-    if (isDirZigZag || sig.energyAlternating) {
-        const nextZone = (sig.lastHitZone === 'SMALL') ? 'BIG' : (sig.lastHitZone === 'BIG' ? 'SMALL' : sig.recommendedPlay);
-        androidTargetZone = nextZone;
-        androidTarget = nextZone === 'SMALL' ? sig.casilla5 : sig.casilla14;
-        androidConf = isDirZigZag && sig.energyAlternating ? "94%" : "89%";
-        androidRule = "INTERCALACIÓN MÁSTER";
-        androidReason = "ANTICIPACIÓN ZIG-ZAG CONFIRMADA";
-        androidMode = 'ATAQUE_ZONA';
-    }
-    // 2. CLEAVAGE / BREAK (Debilitado) -> SNIPER
-    else if (!isChaos && isDebilitado) {
-        androidConf = "96%"; 
-        androidRule = "RUPTURA DIRECCIONAL N4";
-        androidReason = "CAMBIO DE FASE FÍSICA INMINENTE";
-        androidMode = 'ATAQUE_ZONA';
-        androidTarget = sig.recommendedPlay === 'SMALL' ? sig.casilla5 : sig.casilla14;
-    }
-    // 3. STABLE DOMINANCE
-    else if (!isChaos && isDominante) {
-        androidConf = "87%";
-        androidRule = "FLUJO FÍSICO ESTABLE";
-        androidReason = "ALINEACIÓN ZONA-VECTORES";
-        androidMode = 'ATAQUE_ZONA';
-        androidTarget = sig.recommendedPlay === 'SMALL' ? sig.casilla5 : sig.casilla14;
-    }
-    // 4. CHAOS CONTROL 
-    else if (isChaos) {
-        // In complete chaos, Android falls back to the absolute physical Top Number anchor (N9 shield)
-        androidTarget = sig.recommendedPlay === 'SMALL' ? sig.casilla1 : sig.casilla19;
-        androidConf = "84%";
-        androidRule = "CAOS CONTROL - TOP NUMBER N9";
-        androidReason = "RESETEO A FIRMA FÍSICA ANCLA";
-        androidMode = 'TOP_NUMBER';
-    }
-
+    // 2. Android n17 (Physical Matrix)
+    let n17Result = filterLowConfidence(getFinalSignal(sig.casilla1, "88%", "FISICA", "MATRIZ", "ESCUDO"));
     signals.push({
-        name: 'COMBINATION',
-        number: androidTarget,
+        name: 'Android n17',
+        number: n17Result.val,
         small: sig.casilla5,
         big: sig.casilla14,
-        confidence: androidConf,
-        reason: androidReason,
-        rule: androidRule,
-        mode: androidMode,
-        targetZone: androidTargetZone
+        confidence: n17Result.conf,
+        reason: n17Result.reason,
+        rule: n17Result.rule,
+        mode: n17Result.mode,
+        lanzaTarget: sig.casilla5
     });
 
-    // Agent 4: SOPORTE CLÁSICO (Top Number + Zone Sides, no Híbrido)
-    let soporteNum = sig.recommendedPlay === 'SMALL' ? sig.casilla1 : sig.casilla19;
-    let soporteMode = sig.recommendedPlay === 'SMALL' ? 'SOPORTE_SMALL' : 'SOPORTE_BIG';
-    let soporteRule = sig.recommendedPlay === 'SMALL' ? 'SOPORTE SMALL N9' : 'SOPORTE BIG N9';
-    let soporteConf = '80%';
-    let soporteReason = 'LECTURA DE ZONA';
+    // 3. Android 1717 (Hybrid)
+    let target1717 = isDirZigZag ? sig.casilla14 : sig.casilla5;
+    let n1717Result = filterLowConfidence(getFinalSignal(target1717, "90%", "HIBRIDO", "ZIGZAG", "ATAQUE"));
+    signals.push({
+        name: 'Android 1717',
+        number: n1717Result.val,
+        confidence: n1717Result.conf,
+        reason: n1717Result.reason,
+        rule: n1717Result.rule,
+        mode: 'ATAQUE',
+        targetZone: sig.recommendedPlay
+    });
 
-    // Zone intercalation read: if energyAlternating or chaos, use SOPORTE BIG (wider safety)
-    if (sig.energyAlternating || isDirZigZag || isChaos) {
-        soporteNum = sig.casilla19;
-        soporteMode = 'SOPORTE_BIG';
-        soporteRule = 'SOPORTE BIG N9';
-        soporteConf = '0%';
-        soporteReason = 'ZONA INESTABLE - PAUSA';
-    } else if (sig.directionState === 'stable') {
-        soporteConf = isDebilitado ? '91%' : '86%';
-        soporteReason = isDebilitado ? 'RUPTURA DE ZONA DETECTADA' : 'ZONA DOMINANTE CONFIRMADA';
-    } else if (sig.directionState === 'debilitado') {
-        soporteConf = '88%';
-        soporteReason = 'DIRECCIÓN DEBILITADA → INTERCEPCIÓN';
-    }
-
-    let sop = {
-        name: 'SOPORTE PRO',
-        number: soporteNum,
+    // 4. N18 (Soporte Pro)
+    let n18Result = filterLowConfidence(getFinalSignal(sig.casilla19, "86%", "SOPORTE", "ZONA", "SOPORTE"));
+    signals.push({
+        name: 'N18',
+        number: n18Result.val,
+        confidence: n18Result.conf,
+        reason: n18Result.reason,
+        rule: n18Result.rule,
+        mode: 'SOPORTE',
         small: sig.casilla5,
         big: sig.casilla14,
         casilla1: sig.casilla1,
-        casilla19: sig.casilla19,
-        confidence: soporteConf,
-        reason: soporteReason,
-        rule: soporteRule,
-        mode: soporteMode,
-        targetZone: sig.recommendedPlay
-    };
-
-    // Apply filter to all
-    const filteredAndroid = filterLowConfidence({ val: androidTarget, conf: androidConf, rule: androidRule, reason: androidReason });
-    const filteredSoporte = filterLowConfidence({ val: sop.number, conf: sop.confidence, rule: sop.rule, reason: sop.reason });
-
-    signals.push({
-        name: 'COMBINATION',
-        number: filteredAndroid.val,
-        small: sig.casilla5,
-        big: sig.casilla14,
-        confidence: androidConf,
-        reason: filteredAndroid.reason,
-        rule: filteredAndroid.rule,
-        mode: androidMode,
-        targetZone: androidTargetZone
-    });
-
-    signals.push({
-        ...sop,
-        number: filteredSoporte.val,
-        reason: filteredSoporte.reason,
-        rule: filteredSoporte.rule
+        casilla19: sig.casilla19
     });
 
     return signals;
 }
 
 function getBestMathematicalStrategy(prox) {
-    if (!prox || !prox.length) {
-        return { strategy: '-', tp: 0, cor: [0], betZone: [0], rule: 'STOP', momentum: 0, streakWin: 0, streakLoss: 0 };
-    }
-    
-    let best = { ...prox[0], momentum: 0 };
-    let maxMomentum = -Infinity;
-    
-    for (const p of prox) {
-        let momentum = 0;
-        const pat = p.recentPattern || "";
-        
-        const winStreaks = pat.split('L').filter(s => s.length > 0).map(s => s.length);
-        
-        if (winStreaks.length >= 2) {
-            const lastW = winStreaks[winStreaks.length - 1];
-            const prevW = winStreaks[winStreaks.length - 2];
-            if (lastW < prevW && !pat.endsWith('W'.repeat(lastW + 1))) {
-                momentum -= 4;
-            }
-            if (lastW > prevW) momentum += 3;
-        }
-        
-        if (p.streakWin >= 2) momentum += 3;
-        else if (pat.endsWith('W')) momentum += 1;
-        
-        if (p.streakLoss >= 2) momentum -= 4;
-        if (pat.endsWith('LL')) momentum -= 2;
-        
-        if (pat.endsWith('WLW') || pat.endsWith('WWLW') || pat.endsWith('WWWLW')) momentum += 4;
-        
-        if (momentum > maxMomentum) {
-            maxMomentum = momentum;
-            best = { ...p, momentum };
-        }
-    }
-    
-    if (maxMomentum < -1) {
-        best.rule = 'PAUSA (DEBILITAMIENTO)';
-        best.confidence = "15%";
-        best.mode = 'DEBILITADO';
-    }
-    
-    return best;
+    if (!prox || !prox.length) return { strategy: '-', tp: null, cor: [], betZone: [], rule: 'STOP', momentum: 0, streakWin: 0, streakLoss: 0 };
+    return { ...prox[0], momentum: 1 };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         STRATEGIES,
         analyzeSpin,
-        pickRecommendation,
-        pickRecommendationTop2,
         projectNextRound,
         computeDealerSignature,
         getIAMasterSignals,
