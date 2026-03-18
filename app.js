@@ -136,7 +136,12 @@ async function submitNumber(val, silent = false, batchProcessing = false) {
     if (!silent && !currentTableId) return alert('Selecciona una mesa primero.');
     
     if (!silent) {
-        try { await apiPostSpin(currentTableId, n); } catch(e) { console.error(e); }
+        try { 
+            const resp = await apiPostSpin(currentTableId, n); 
+            if (resp && resp.predictions && resp.predictions.agent5_top !== undefined) {
+                latestAgent5Top = resp.predictions.agent5_top;
+            }
+        } catch(e) { console.error("Error posting spin:", e); }
     }
 
     // 1. Evaluar señales anteriores
@@ -157,8 +162,14 @@ async function submitNumber(val, silent = false, batchProcessing = false) {
     const prox = projectNextRound(history, stats);
     const signals = getIAMasterSignals(prox, sig, history) || [];
     
-    if (activeIaTab === 4 && latestAgent5Top !== null) {
-        signals.push({ name: 'Célula', number: latestAgent5Top, confidence: 'MAX', rule: 'DB', reason: 'IA' });
+    if (activeIaTab === 4) {
+        signals.push({ 
+            name: 'Célula', 
+            number: latestAgent5Top, 
+            confidence: latestAgent5Top !== null ? 'MAX' : '0%', 
+            rule: latestAgent5Top !== null ? 'BDD' : 'APRENDIENDO', 
+            reason: latestAgent5Top !== null ? 'IA SIMILITUD' : (history.length < 50 ? `GRABANDO: ${history.length}/50` : 'Buscando patrón...')
+        });
     } else {
         while (signals.length < 5) signals.push(null);
     }

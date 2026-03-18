@@ -93,8 +93,23 @@ async function predictAgent5(tableId, currentHistoryNumbers) {
             }
         }
         
+        // If still no matches, fallback to 1 number (last number)
+        if (matches === 0) {
+            for (let i = 0; i < nums.length - 1; i++) {
+                if (nums[i] === seq[2]) {
+                    const nextNum = nums[i+1];
+                    if (!nextNumberFrequencies[nextNum]) nextNumberFrequencies[nextNum] = 0;
+                    nextNumberFrequencies[nextNum]++;
+                    matches++;
+                }
+            }
+        }
+
         // If still no matches, we can't predict
-        if (matches === 0) return null;
+        if (matches === 0) {
+            console.log(`❌ [Agent 5] No pattern matches found in ${nums.length} records.`);
+            return null;
+        }
         
         // Find the most frequent next number
         let topNum = null;
