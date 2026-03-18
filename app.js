@@ -86,6 +86,9 @@ function renderSignalsPanel(signals) {
         const h15 = (iaSignalsHistory[activeIaTab] || []).slice(-15);
         const w15 = h15.filter(x => x === 'win').length;
         const hit15 = h15.length > 0 ? Math.round((w15 / h15.length) * 100) : 0;
+        
+        // Pattern detection strip (WWWWLL...)
+        const patternStrip = h15.map(x => x === 'win' ? '<span style="color:var(--green); font-weight:900;">W</span>' : '<span style="color:var(--red); opacity:0.6;">L</span>').join('');
 
         const hTotal = iaSignalsHistory[activeIaTab] || [];
         const wTotal = hTotal.filter(x => x === 'win').length;
@@ -97,6 +100,7 @@ function renderSignalsPanel(signals) {
                 <span class="card-title-pro">${names[activeIaTab]} ANALYSIS</span>
                 <div style="text-align:right;">
                     <div class="hit-rate-major">${hit15}% <small>HIT RATE</small></div>
+                    <div class="hit-rate-pattern" style="font-family:var(--mono); font-size:0.7rem; margin-top:4px; letter-spacing:2px;">${patternStrip}</div>
                     <div class="hit-rate-minor">HISTORICAL: ${hitTotal}%</div>
                 </div>
             </div>
@@ -257,7 +261,25 @@ async function loadTables() {
     if (tableSelect) tableSelect.innerHTML = '<option value="">-- MESA --</option>' + ts.map(t => `<option value="${t.id}">${t.name}</option>`).join(''); 
 }
 
+// Real-time synchronization interval
+async function syncData() {
+    if (!currentTableId) return;
+    try {
+        const spins = await apiFetchHistory(currentTableId);
+        // Only trigger full update if new spins arrived
+        if (spins.length !== history.length) {
+            wipeData();
+            for (const s of spins) {
+                if (s && s.number !== undefined) await submitNumber(s.number, true, true);
+            }
+            submitNumber(null, true, false);
+        }
+    } catch (e) { console.error("Sync Error:", e); }
+}
+
 document.addEventListener('DOMContentLoaded', () => { 
     loadTables(); 
     updateClock();
+    // Start auto-sync polling
+    setInterval(syncData, 5000); 
 });
