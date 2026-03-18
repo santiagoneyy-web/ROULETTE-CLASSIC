@@ -30,7 +30,10 @@
     <!-- ════════ MAIN CONTENT ════════ -->
     <main class="main-view">
         <header class="top-bar">
-            <div class="breadcrumb">Active Agent: <span id="active-agent-name" style="color:var(--gold);">N17</span></div>
+            <div class="top-left">
+                <div class="breadcrumb">Active Agent: <span id="active-agent-name" style="color:var(--gold);">N17</span></div>
+                <div id="history-strip" class="history-strip-top"></div>
+            </div>
             <div class="clock" id="live-clock">00:00:00</div>
         </header>
 
@@ -53,7 +56,20 @@
                     </div>
                 </div>
                 <div class="table-container-pro" id="travel-content" style="height:400px; overflow-y:auto; padding:0 15px;">
-                    <p class="muted" style="padding:20px;">Select a table to see history...</p>
+                    <table class="pro-table">
+                        <thead>
+                            <tr>
+                                <th>N</th>
+                                <th>NUMBER</th>
+                                <th>DISTANCE</th>
+                                <th>DIR</th>
+                                <th>SPEED</th>
+                                <th>PHASE</th>
+                                <th>ANGLE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="travel-tbody"></tbody>
+                    </table>
                 </div>
             </section>
         </div>
@@ -61,7 +77,7 @@
 
     <!-- ════════ INPUT SIDEBAR (Right) ════════ -->
     <aside class="input-panel">
-        <div class="manual-input" style="padding:20px; border-bottom:1px solid var(--border);">
+        <div class="manual-input" style="padding:20px;">
             <div style="font-size:0.6rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px;">Manual Entry</div>
             <div style="display:flex; gap:5px;">
                 <input id="num-input" type="number" placeholder="#" style="width:60px; height:40px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:#fff; text-align:center; font-size:1.2rem; font-weight:700;" />
@@ -69,12 +85,6 @@
                 <button id="clear-btn" class="pro-btn btn-secondary" style="width:40px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:var(--text-dim);">✕</button>
             </div>
             <div id="status-msg" class="status-banner" style="margin-top:10px; font-size:0.65rem; color:var(--accent); text-align:center;">System Online</div>
-        </div>
-
-        <!-- History Strip moved up -->
-        <div style="padding:20px;">
-            <div style="font-size:0.6rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px;">Recent Numbers</div>
-            <div id="history-strip" class="history-balls" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;"></div>
         </div>
     </aside>
 </div>

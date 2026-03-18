@@ -129,21 +129,25 @@ function renderSignalsPanel(signals) {
 }
 
 function renderTravelPanel(sig) {
-    const cont = document.getElementById('travel-content');
+    const cont = document.getElementById('travel-tbody');
     if (!cont) return;
 
     if (!history || history.length < 2) {
-        cont.innerHTML = '<p class="muted" style="padding:20px;">Analyzing patterns (min 2 spins required)...</p>';
+        cont.innerHTML = '<tr><td colspan="7" class="muted" style="padding:20px; text-align:center;">Analyzing patterns (min 2 spins required)...</td></tr>';
         return;
     }
 
     const rows = history.slice(-100).reverse().map((n, i) => {
         const isLatest = i === 0;
-        const colorClass = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(n) ? 'val-down' : (n === 0 ? 'val-up' : 'val-neutral');
+        const colorClass = RED_NUMS.has(n) ? 'val-down' : (n === 0 ? 'val-up' : 'val-neutral');
         const d = (sig.travelHistory && sig.travelHistory[history.length - 1 - i]) || 0;
         const rpm = (21.0 + Math.random()).toFixed(1);
-        const time = new Date().toLocaleTimeString();
         const angle = Math.floor(Math.random() * 360);
+        
+        // Define Small/Big for Travel Data
+        const isSmall = n > 0 && n <= 18;
+        const phaseLabel = isSmall ? 'SMALL' : 'BIG';
+        const phaseClass = isSmall ? 'badge-win' : 'badge-loss';
 
         return `<tr class="${isLatest ? 'travel-row-last' : ''}">
             <td>${history.length - i}</td>
@@ -151,26 +155,12 @@ function renderTravelPanel(sig) {
             <td class="${Math.abs(d) > 9 ? 'val-down' : 'val-up'}">${Math.abs(d)}p</td>
             <td>${d > 0 ? 'DER' : (d < 0 ? 'IZQ' : '---')}</td>
             <td>${rpm} RPM</td>
-            <td>${time}</td>
+            <td><span class="badge ${phaseClass}" style="font-size:0.6rem; padding:2px 8px;">${phaseLabel}</span></td>
             <td>${angle}°</td>
         </tr>`;
     }).join('');
 
-    cont.innerHTML = `
-        <table class="pro-table">
-            <thead>
-                <tr>
-                    <th>N</th>
-                    <th>NUMBER</th>
-                    <th>DISTANCE</th>
-                    <th>DIR</th>
-                    <th>SPEED</th>
-                    <th>TIME</th>
-                    <th>ANGLE</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+    cont.innerHTML = rows;
 }
 
 async function apiFetchTables() { const r = await fetch(`${API_BASE}/tables`); return r.json(); }

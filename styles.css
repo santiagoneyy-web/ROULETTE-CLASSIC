@@ -107,7 +107,7 @@ body {
 }
 
 .top-bar {
-    height: 64px;
+    height: 70px;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -116,6 +116,58 @@ body {
     background: rgba(4, 8, 24, 0.3);
     backdrop-filter: blur(10px);
 }
+
+.top-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.history-strip-top {
+    display: flex;
+    gap: 6px;
+}
+
+.history-strip-top .hist-ball {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+    border-width: 1px;
+}
+
+.pro-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.pro-table th {
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(4, 8, 24, 0.8);
+    backdrop-filter: blur(5px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+}
+
+.pro-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    vertical-align: middle;
+}
+
+.val-up      { color: var(--green); }
+.val-down    { color: var(--red); }
+.val-neutral { color: var(--text); }
 /* ── Hit Rate Patterns ───────────────────────────────────── */
 .hit-rate-pattern {
     font-family: var(--mono);
