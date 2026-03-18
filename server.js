@@ -126,22 +126,20 @@ app.post('/api/spin', async (req, res) => {
             const signature = predictor.computeDealerSignature(numsOnly);
             const masterSignals = predictor.getIAMasterSignals(nextRound, signature, numsOnly);
 
-            if (masterSignals && masterSignals.length > 0) {
-                const ag1 = masterSignals.find(s => s.name === 'FISICA STUDIO');
-                const ag2 = masterSignals.find(s => s.name === 'SIX STRATEGIE');
-                const ag3 = masterSignals.find(s => s.name === 'COMBINATION');
-                const ag4 = masterSignals.find(s => s.name === 'SOPORTE PRO');
-                
-                if (ag1) newPredictions.agent1_top = ag1.number;
-                // Agent 2 provides TP (Top probability core)
-                if (ag2 && ag2.tp !== undefined) newPredictions.agent2_top = ag2.tp;
-                if (ag3) newPredictions.agent3_top = ag3.number;
-                if (ag4) newPredictions.agent4_top = ag4.number;
-            }
+    if (masterSignals && masterSignals.length > 0) {
+        const ag1 = masterSignals.find(s => s.name === 'Android n17');
+        const ag2 = masterSignals.find(s => s.name === 'Android n16');
+        const ag3 = masterSignals.find(s => s.name === 'Android 1717');
+        const ag4 = masterSignals.find(s => s.name === 'N18');
+        
+        if (ag1) newPredictions.agent1_top = ag1.number;
+        if (ag2 && ag2.tp !== undefined) newPredictions.agent2_top = ag2.tp;
+        if (ag3) newPredictions.agent3_top = ag3.number;
+        if (ag4) newPredictions.agent4_top = ag4.number;
+    }
 
-            // Agent 5 (Historical Similarity)
-            // It now works with both Mongo and JSON as fallback
-            const ag5Top = await agent5.predictAgent5(table_id, numsOnly);
+    // Agent 5 (Historical Similarity) - DNA Absorption enabled
+    const ag5Top = await agent5.predictAgent5(table_id, numsOnly, masterSignals);
             if (ag5Top !== null) {
                 newPredictions.agent5_top = ag5Top;
                 console.log(`🤖 [Agent 5] Generated prediction based on ${numsOnly.length} spins.`);

@@ -42,9 +42,10 @@ function getPhysics(prev, current) {
     return { distance: distanceClass, direction };
 }
 
-// Agent 5: Similarity Search
-// Looks for historical instances where the exact same sequence of the last N physical parameters occurred.
-async function predictAgent5(tableId, currentHistoryNumbers) {
+// Agent 5: Similarity Search + DNA Absorption
+// Looks for historical instances where the exact same sequence occurred.
+// Also 'absorbs' DNA from other agents to check for alignment.
+async function predictAgent5(tableId, currentHistoryNumbers, otherAgentsDNA = []) {
     // CRITICAL: We need at least 50 spins to have a statistically relevant base for similarity search
     if (currentHistoryNumbers.length < 50) return null;
     
@@ -121,6 +122,14 @@ async function predictAgent5(tableId, currentHistoryNumbers) {
             }
         }
         
+        // DNA ABSORPTION: Check if our top Num aligns with other elite agents
+        if (topNum !== null && otherAgentsDNA.length > 0) {
+            const dnaMatch = otherAgentsDNA.find(a => a.number === topNum || a.tp === topNum);
+            if (dnaMatch) {
+                console.log(`🧬 [Célula] DNA Match detected! Prediction ${topNum} aligns with ${dnaMatch.name}. Perfection achieved.`);
+            }
+        }
+
         return topNum;
         
     } catch (e) {
