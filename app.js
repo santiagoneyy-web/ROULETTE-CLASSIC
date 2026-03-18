@@ -65,13 +65,21 @@ function renderSignalsPanel(signals) {
         const names = ['N17', 'N16', 'N17PLUS', 'N18', 'CELULA'];
         
         tabStrip.innerHTML = names.map((name, idx) => {
-            const h = (iaSignalsHistory[idx] || []).slice(-15);
+            const h = iaSignalsHistory[idx] || [];
+            const h15 = h.slice(-15);
             const last = h[h.length-1];
             const cls = last === 'win' ? 'tab-win' : (last === 'loss' ? 'tab-loss' : '');
-            const w = h.filter(x => x === 'win').length;
-            const l = h.filter(x => x === 'loss').length;
+            
+            const wTotal = h.filter(x => x === 'win').length;
+            const hitTotal = h.length > 0 ? Math.round((wTotal / h.length) * 100) : 0;
+            
+            const w15 = h15.filter(x => x === 'win').length;
+            const l15 = h15.filter(x => x === 'loss').length;
+            
             return `<button class="nav-item ${idx === activeIaTab ? 'active' : ''} ${cls}" onclick="setActiveIaTab(${idx})">
-                ${name} <span class="status-pill">${w}-${l}</span>
+                <span style="font-weight:900;">${name}</span>
+                <span class="status-pill" style="margin-left:5px; background:rgba(255,255,255,0.03); opacity:0.8;">${hitTotal}%</span>
+                <span class="status-pill" style="opacity:0.4; font-size:0.55rem;">${w15}-${l15}</span>
             </button>`;
         }).join('');
 
@@ -79,20 +87,14 @@ function renderSignalsPanel(signals) {
 
         const s = signals[activeIaTab];
         if (!s || !s.top) {
-            grid.innerHTML = '<div class="agent-card-pro" style="text-align:center; padding:40px;"><p class="muted">IA ANALYZING DATA...</p></div>';
+            grid.innerHTML = '<div class="agent-card-pro" style="text-align:center; padding:20px;"><p class="muted">IA ANALYZING...</p></div>';
             return;
         }
 
         const h15 = (iaSignalsHistory[activeIaTab] || []).slice(-15);
         const w15 = h15.filter(x => x === 'win').length;
         const hit15 = h15.length > 0 ? Math.round((w15 / h15.length) * 100) : 0;
-        
-        // Pattern detection strip (WWWWLL...)
         const patternStrip = h15.map(x => x === 'win' ? '<span style="color:var(--green); font-weight:900;">W</span>' : '<span style="color:var(--red); opacity:0.6;">L</span>').join('');
-
-        const hTotal = iaSignalsHistory[activeIaTab] || [];
-        const wTotal = hTotal.filter(x => x === 'win').length;
-        const hitTotal = hTotal.length > 0 ? Math.round((wTotal / hTotal.length) * 100) : 0;
 
         grid.innerHTML = `
         <div class="agent-card-pro">
@@ -100,13 +102,12 @@ function renderSignalsPanel(signals) {
                 <span class="card-title-pro">${names[activeIaTab]} ANALYSIS</span>
                 <div style="text-align:right;">
                     <div class="hit-rate-major">${hit15}% <small>HIT RATE</small></div>
-                    <div class="hit-rate-pattern" style="font-family:var(--mono); font-size:0.7rem; margin-top:4px; letter-spacing:2px;">${patternStrip}</div>
-                    <div class="hit-rate-minor">HISTORICAL: ${hitTotal}%</div>
+                    <div class="hit-rate-pattern">${patternStrip}</div>
                 </div>
             </div>
             
-            <div class="target-pocket-pro" style="margin-top:10px;">
-                <div class="target-num-pro">${s.top} <span style="font-size:0.8rem; vertical-align:middle; opacity:0.6;">n9</span></div>
+            <div class="target-pocket-pro">
+                <div class="target-num-pro">${s.top} <span style="font-size:0.6rem; vertical-align:middle; opacity:0.6;">n9</span></div>
                 <div class="target-label-pro">TARGETED POCKET</div>
             </div>
 

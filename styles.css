@@ -157,6 +157,21 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+.hit-rate-major {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+}
+
+.hit-rate-major small {
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .pro-table td {
     padding: 12px 15px;
     border-bottom: 1px solid rgba(255,255,255,0.03);
@@ -171,14 +186,14 @@ body {
 /* ── Hit Rate Patterns ───────────────────────────────────── */
 .hit-rate-pattern {
     font-family: var(--mono);
-    font-size: 0.7rem;
-    margin-top: 4px;
-    letter-spacing: 2px;
+    font-size: 0.65rem;
+    margin-top: 2px;
+    letter-spacing: 1px;
     display: flex;
     justify-content: flex-end;
-    gap: 3px;
+    gap: 2px;
 }
-.hit-rate-pattern span { min-width: 10px; text-align: center; }
+.hit-rate-pattern span { min-width: 8px; text-align: center; }
 
 /* ── Pro Prediction Cards ──────────────────────────────────── */
 .prediction-grid {
@@ -191,52 +206,44 @@ body {
 .agent-card-pro {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 25px;
+    border-radius: 12px;
+    padding: 12px 20px;
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(20px);
-    box-shadow: var(--shadow);
-    transition: all 0.3s ease;
-}
-.agent-card-pro:hover {
-    border-color: rgba(76, 130, 255, 0.2);
-    transform: translateY(-2px);
 }
 
 .card-header-pro {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 5px;
+    align-items: center;
+    margin-bottom: 2px;
 }
 
 .card-title-pro {
     font-weight: 900;
-    font-size: 0.8rem;
-    letter-spacing: 1.5px;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
     color: var(--text-dim);
-    text-transform: uppercase;
 }
 
 .target-pocket-pro {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    gap: 15px;
+    padding: 5px 12px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 20px;
-    margin: 15px 0;
+    border-radius: 10px;
+    margin: 4px 0;
     border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .target-num-pro {
-    font-size: 4rem;
+    font-size: 2.2rem;
     font-weight: 900;
     color: var(--gold);
     line-height: 1;
-    text-shadow: 0 0 30px var(--gold-glow);
     font-family: var(--mono);
 }
 
@@ -258,17 +265,16 @@ body {
 .metric-box-pro {
     background: rgba(4, 8, 24, 0.4);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px;
+    border-radius: 8px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
 }
 
 .metric-val-pro {
     font-family: var(--mono);
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: #fff;
 }
