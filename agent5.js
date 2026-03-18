@@ -77,6 +77,24 @@ async function predictAgent5(tableId, currentHistoryNumbers, otherAgentsDNA = []
             currentPhys.push(getPhysics(currentHistoryNumbers[i], currentHistoryNumbers[i+1]));
         }
 
+        // --- 1. EXTRACT EXPERT DNA (Proactive Influence) ---
+        let dnaPower = {}; // Points for numbers suggested by other elite agents
+        otherAgentsDNA.forEach(ag => {
+            if (ag.number !== null && ag.number !== undefined) {
+                dnaPower[ag.number] = (dnaPower[ag.number] || 0) + 3; // Direct number: High DNA Weight
+                
+                // Neighbor boost (N1 range on wheel)
+                const i = WHEEL_INDEX[ag.number];
+                [WHEEL_ORDER[(i+36)%37], WHEEL_ORDER[(i+1)%37]].forEach(n => {
+                    dnaPower[n] = (dnaPower[n] || 0) + 1;
+                });
+            }
+            if (ag.tp !== null && ag.tp !== undefined) dnaPower[ag.tp] = (dnaPower[ag.tp] || 0) + 2;
+            if (Array.isArray(ag.cor)) ag.cor.forEach(n => dnaPower[n] = (dnaPower[n] || 0) + 1);
+            if (ag.small !== undefined) dnaPower[ag.small] = (dnaPower[ag.small] || 0) + 1;
+            if (ag.big !== undefined) dnaPower[ag.big] = (dnaPower[ag.big] || 0) + 1;
+        });
+
         let nextNumberFrequencies = {};
         let matches = 0;
         
@@ -146,24 +164,31 @@ async function predictAgent5(tableId, currentHistoryNumbers, otherAgentsDNA = []
             return null;
         }
         
-        // Find the most frequent next number (The "Perfect Selection")
+        // --- 4. DATA FUSION (Combine Patterns + DNA Power) ---
+        if (matches > 0 || Object.keys(dnaPower).length > 0) {
+            Object.keys(dnaPower).forEach(n => {
+                if (nextNumberFrequencies[n] !== undefined) {
+                    nextNumberFrequencies[n] += dnaPower[n]; // Synergetic power!
+                } else {
+                    nextNumberFrequencies[n] = dnaPower[n] * 0.5; // DNA influence
+                }
+            });
+        }
+        
         let topNum = null;
-        let maxFreq = 0;
-        for (const [numStr, freq] of Object.entries(nextNumberFrequencies)) {
-            if (freq > maxFreq) {
-                maxFreq = freq;
+        let maxScore = 0;
+        for (const [numStr, score] of Object.entries(nextNumberFrequencies)) {
+            if (score > maxScore) {
+                maxScore = score;
                 topNum = parseInt(numStr);
             }
         }
         
-        // DNA ABSORPTION: Check if our top Num aligns with other elite agents
+        // Final Synergy Check for UI
         let dnaMatchFound = false;
-        if (topNum !== null && otherAgentsDNA.length > 0) {
-            const match = otherAgentsDNA.find(a => a.number === topNum || a.tp === topNum);
-            if (match) {
-                console.log(`🧬 [Célula] DNA Match detected! Prediction ${topNum} aligns with ${match.name}. Perfection achieved.`);
-                dnaMatchFound = true;
-            }
+        if (topNum !== null && otherAgentsDNA.some(a => a.number === topNum || a.tp === topNum)) {
+            console.log(`🧬 [Célula] Deep DNA Synergy: Prediction ${topNum} is backed by the team experts.`);
+            dnaMatchFound = true;
         }
 
         return { topNum, dnaMatch: dnaMatchFound };
