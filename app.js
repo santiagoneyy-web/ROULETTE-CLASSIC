@@ -80,13 +80,14 @@ function renderSignalsPanel(signals) {
     if (!grid || !tabStrip) return;
 
     try {
-        const names = ['FISICA', 'SIX', 'COMBINATION', 'SOPORTE', 'IA'];
+        const names = ['N17', 'N16', 'N17PLUS', 'N18', 'CELULA'];
         
         tabStrip.innerHTML = names.map((name, idx) => {
-            const h = iaSignalsHistory[idx] || [];
+            const h = (iaSignalsHistory[idx] || []).slice(-15);
             const last = h[h.length-1];
             const cls = last === 'win' ? 'tab-win' : (last === 'loss' ? 'tab-loss' : '');
-            const w = iaWins[idx], l = iaLosses[idx];
+            const w = h.filter(x => x === 'win').length;
+            const l = h.filter(x => x === 'loss').length;
             return `<button class="nav-item ${idx === activeIaTab ? 'active' : ''} ${cls}" onclick="setActiveIaTab(${idx})">
                 ${name} <span class="status-pill">${w}-${l}</span>
             </button>`;
@@ -100,29 +101,33 @@ function renderSignalsPanel(signals) {
             return;
         }
 
+        const h = (iaSignalsHistory[activeIaTab] || []).slice(-15);
+        const w = h.filter(x => x === 'win').length;
+        const l = h.filter(x => x === 'loss').length;
+
         grid.innerHTML = `
         <div class="agent-card-pro">
             <div class="card-header-pro">
-                <span class="card-title-pro">${names[activeIaTab]} ANALYSIS</span>
+                <span class="card-title-pro">${names[activeIaTab]} ANALYSIS (LAST 15: <span style="color:var(--green);">${w}W</span>/<span style="color:var(--red);">${l}L</span>)</span>
                 <span class="status-pill" style="color:var(--green); border-color:rgba(0,255,162,0.3);">CONF: ${s.confidence || '70%'}</span>
             </div>
             
             <div class="target-pocket-pro">
-                <div class="target-num-pro">${s.top}</div>
+                <div class="target-num-pro">${s.top} <span style="font-size:0.8rem; vertical-align:middle; opacity:0.6;">n9</span></div>
                 <div class="target-label-pro">TARGETED POCKET</div>
             </div>
 
             <div class="card-footer-pro">
                 <div class="metric-box-pro">
-                    <span class="metric-val-pro">${s.small || '--'}</span>
+                    <span class="metric-val-pro">${s.small || '--'} <span style="font-size:0.5rem; opacity:0.5;">n4</span></span>
                     <span class="metric-lbl-pro">SMALL</span>
                 </div>
                 <div class="metric-box-pro" style="border-color:var(--gold-glow); background:rgba(245,200,66,0.05);">
-                    <span class="metric-val-pro" style="color:var(--gold);">${s.top}</span>
+                    <span class="metric-val-pro" style="color:var(--gold);">${s.top} <span style="font-size:0.5rem; opacity:0.5;">n9</span></span>
                     <span class="metric-lbl-pro">TOP</span>
                 </div>
                 <div class="metric-box-pro">
-                    <span class="metric-val-pro">${s.big || '--'}</span>
+                    <span class="metric-val-pro">${s.big || '--'} <span style="font-size:0.5rem; opacity:0.5;">n4</span></span>
                     <span class="metric-lbl-pro">BIG</span>
                 </div>
             </div>
@@ -195,15 +200,15 @@ async function submitNumber(val, silent = false, batch = false) {
         lastIaSignals.forEach((s, idx) => {
             if (!s || s.confidence === '0%' || s.rule === 'STOP') return;
             let win = false;
-            if (s.betZone && s.betZone.length > 0) {
-                win = s.betZone.includes(n);
-            } else {
-                const target = s.number !== null && s.number !== undefined ? s.number : s.top;
-                if (target !== null && target !== undefined) {
-                    const dist = wheelDistance(n, target);
-                    win = (dist <= 2);
-                }
+            
+            // Top Number covers n9 (dist <= 4)
+            // Small/Big cover n4 (dist <= 2)
+            const target = s.number !== null && s.number !== undefined ? s.number : s.top;
+            if (target !== null && target !== undefined) {
+                const dist = wheelDistance(n, target);
+                win = (dist <= 4); // User clarified Top = n9
             }
+            
             if (win) iaWins[idx]++; else iaLosses[idx]++;
             iaSignalsHistory[idx].push(win ? 'win' : 'loss');
         });
@@ -217,11 +222,11 @@ async function submitNumber(val, silent = false, batch = false) {
     const sigs = getIAMasterSignals(prx, sig, history) || [];
     
     const finalSigs = [
-        { ...sigs[1], name: 'FISICA', top: sig.casilla5 },
-        { ...sigs[0], name: 'SIX', top: sig.casilla10 },
-        { ...sigs[2], name: 'COMBINATION', top: sig.casilla5 },
-        { ...sigs[3], name: 'SOPORTE', top: sig.casilla1 },
-        { ...sigs[0], name: 'IA', top: sig.casilla14 }
+        { ...sigs[1], name: 'N17', top: sig.casilla5, small: sig.casilla4, big: sig.casilla6 },
+        { ...sigs[0], name: 'N16', top: sig.casilla10, small: sig.casilla9, big: sig.casilla11 },
+        { ...sigs[2], name: 'N17PLUS', top: sig.casilla5, small: sig.casilla4, big: sig.casilla6 },
+        { ...sigs[3], name: 'N18', top: sig.casilla1, small: sig.casilla0, big: sig.casilla2 },
+        { ...sigs[0], name: 'CELULA', top: sig.casilla14, small: sig.casilla13, big: sig.casilla15 }
     ];
     
     lastIaSignals = finalSigs;
