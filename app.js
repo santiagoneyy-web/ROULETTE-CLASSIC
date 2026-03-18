@@ -126,13 +126,6 @@ function renderSignalsPanel(signals) {
     }
 }
 
-function renderTravelPanel() {
-    if (!travelTbody) return;
-    if (history.length < 2) {
-        travelTbody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center; padding:30px;">Analyzing incoming spin data...</td></tr>';
-        return;
-    }
-
     travelTbody.innerHTML = history.slice(-50).reverse().map((n, i) => {
         const idx = history.length - 1 - i;
         const prev = history[history.length - 2 - i];
@@ -142,13 +135,13 @@ function renderTravelPanel() {
         let phase = '---';
         if (n >= 1 && n <= 9) phase = 'SMALL';
         else if (n >= 10 && n <= 18) phase = 'BIG';
-        else if (n > 18) phase = 'ULTRA';
+        else if (n > 18) phase = 'ULTRA-BIG';
 
         return `<tr>
             <td>${idx + 1}</td>
             <td class="${color}" style="font-weight:900;">${n}</td>
             <td style="color:${dist >= 0 ? 'var(--green)' : 'var(--red)'}">${dist >= 0 ? '+' : ''}${dist}</td>
-            <td style="color:var(--accent); font-weight:800;">${dist >= 0 ? 'CW' : 'CCW'}</td>
+            <td style="color:var(--accent); font-weight:800;">${dist >= 0 ? 'DERECHA' : 'IZQUIERDA'}</td>
             <td style="font-weight:900; color:${phase === 'SMALL' ? 'var(--green)' : (phase === 'BIG' ? 'var(--red)' : '#fff')}">${phase}</td>
         </tr>`;
     }).join('');
