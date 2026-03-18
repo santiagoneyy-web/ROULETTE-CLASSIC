@@ -228,58 +228,39 @@ body {
 
 /* ── Active Signal Banner ─────────────────────────────────── */
 .signal-banner-pro {
-    margin: 0 30px 25px;
-    background: rgba(4, 8, 24, 0.6);
+    margin: 0 30px 20px;
+    background: rgba(4, 8, 24, 0.4);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    min-height: 100px;
+    border-radius: 12px;
+    padding: 15px;
+    min-height: 40px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     overflow: hidden;
     position: relative;
     backdrop-filter: blur(20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 500px;
 }
 
-.signal-active-box {
-    text-align: center;
-    animation: slideInUp 0.4s ease-out;
+.signal-collapsed {
+    max-height: 40px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    opacity: 0.8;
 }
 
-@keyframes slideInUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+.signal-collapsed .signal-active-box {
+    display: none;
 }
 
-.signal-pulse-green {
-    border-color: var(--green) !important;
-    box-shadow: 0 0 30px rgba(0, 255, 162, 0.2);
-    animation: signalVibrate 0.5s infinite linear;
-}
-
-@keyframes signalVibrate {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-.signal-target-num {
-    font-size: 3.5rem;
-    font-weight: 900;
-    color: var(--gold);
-    line-height: 1;
+.signal-idle {
     font-family: var(--mono);
-    text-shadow: 0 0 40px var(--gold-glow);
-}
-
-.signal-label-pro {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-dim);
-    font-weight: 800;
-    letter-spacing: 4px;
-    margin-top: 5px;
-    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-align: center;
 }
 
 .dashboard-content {

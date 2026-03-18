@@ -18,9 +18,11 @@ const activeAgentLabel = document.getElementById('active-agent-name');
 const historyEl       = document.getElementById('history-strip');
 const tableSelect     = document.getElementById('table-select');
 const travelTbody     = document.getElementById('travel-tbody');
-const topPanel        = document.getElementById('top-content'); // In case it's used elsewhere
+const topPanel        = document.getElementById('top-content'); 
+const signalBanner    = document.getElementById('active-signal-container');
 
-const numInput = { value: '', focus: () => {} }; 
+const numInput = { value: '', focus: () => {}, addEventListener: () => {} }; 
+const submitBtn = { addEventListener: () => {} };
 
 const wheelCanvas = document.getElementById('wheel-canvas');
 const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
@@ -130,24 +132,29 @@ function renderSignalsPanel(signals) {
         if (activeAgentLabel) activeAgentLabel.innerText = names[activeIaTab];
 
         const s = signals[activeIaTab];
-        if (!s || !s.top) {
-            banner.className = 'signal-banner-pro';
-            banner.innerHTML = '<div class="signal-idle">⚡ WAITING FOR SPIN DATA...</div>';
+        if (!s || !s.top || s.rule === 'STOP') {
+            banner.innerHTML = '<div class="signal-idle" onclick="toggleDashboard()">⚡ WAITING FOR SPIN DATA... <span style="font-size:0.6rem; opacity:0.4;">(CLICK TO TOGGLE)</span></div>';
             return;
         }
 
         const isHighConfidence = s.confidence && parseInt(s.confidence) > 50;
-        banner.className = `signal-banner-pro ${isHighConfidence ? 'signal-pulse-green' : ''}`;
-
         banner.innerHTML = `
+            <div class="signal-toggle-header" onclick="toggleDashboard()" style="cursor:pointer; font-size:0.6rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:5px; display:flex; justify-content:space-between;">
+                <span>Active Signal: ${names[activeIaTab]}</span>
+                <span>Click to Collapse</span>
+            </div>
             <div class="signal-active-box">
                 <div class="signal-target-num">${s.top} <sup style="font-size:0.8rem; opacity:0.6;">n9</sup></div>
                 <div class="signal-label-pro">RECOMMENDED PLAY</div>
-                <div style="font-family:var(--mono); font-size:0.7rem; color:var(--text-dim); margin-top:8px;">
-                    CONFIDENCE: <span style="color:var(--green);">${s.confidence || '33%'}</span> | 
+                <div style="font-family:var(--mono); font-size:0.72rem; color:var(--text-dim); margin-top:8px;">
+                    CONFIDENCE: <span style="color:var(--green); font-weight:800;">${s.confidence || '---'}</span> | 
                     ZONE: ${s.small}-${s.big}
                 </div>
             </div>`;
+        
+        if (isHighConfidence) banner.classList.add('signal-pulse-green');
+        else banner.classList.remove('signal-pulse-green');
+
     } catch (e) { console.error("Pro Signal Render Error:", e); }
 }
 
@@ -205,7 +212,7 @@ async function submitNumber(val, silent = false, batch = false) {
             let win = false;
             const target = s.number !== null && s.number !== undefined ? s.number : s.top;
             if (target !== null && target !== undefined) {
-                const dist = wheelDistance(n, target);
+                const dist = Math.abs(calcDist(n, target));
                 win = (dist <= 4); 
             }
             if (win) iaWins[idx]++; else iaLosses[idx]++;
@@ -221,11 +228,11 @@ async function submitNumber(val, silent = false, batch = false) {
     const sigs = getIAMasterSignals(prx, sig, history) || [];
     
     const finalSigs = [
-        { ...sigs[1], name: 'N17', top: sig.casilla5, small: sig.casilla4, big: sig.casilla6 },
-        { ...sigs[0], name: 'N16', top: sig.casilla10, small: sig.casilla9, big: sig.casilla11 },
-        { ...sigs[2], name: 'N17PLUS', top: sig.casilla5, small: sig.casilla4, big: sig.casilla6 },
-        { ...sigs[3], name: 'N18', top: sig.casilla1, small: sig.casilla0, big: sig.casilla2 },
-        { ...sigs[0], name: 'CELULA', top: sig.casilla14, small: sig.casilla13, big: sig.casilla15 }
+        { ...sigs[1], name: 'N17', top: sig.casilla1, small: sig.casilla5, big: sig.casilla14 },
+        { ...sigs[0], name: 'N16', top: sig.casilla10, small: sig.casilla5, big: sig.casilla19 },
+        { ...sigs[2], name: 'N17PLUS', top: sig.casilla14, small: sig.casilla5, big: sig.casilla19 },
+        { ...sigs[3], name: 'N18', top: sig.casilla19, small: sig.casilla1, big: sig.casilla10 },
+        { ...sigs[0], name: 'CELULA', top: sig.casilla5, small: sig.casilla1, big: sig.casilla14 }
     ];
     
     lastIaSignals = finalSigs;
@@ -252,6 +259,11 @@ function wipeData() {
 }
 
 window.setActiveIaTab = (idx) => { activeIaTab = idx; submitNumber(null, true, false); };
+
+window.toggleDashboard = () => {
+    const banner = document.getElementById('active-signal-container');
+    banner.classList.toggle('signal-collapsed');
+};
 
 window.toggleSettings = () => {
     const content = document.getElementById('settings-content');
