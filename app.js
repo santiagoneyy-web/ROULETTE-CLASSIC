@@ -111,25 +111,52 @@ function renderTravelPanel(sig) {
 function renderSignalsPanel(signals) {
     if (!topPanel) return;
     try {
-        const names = ['n16','n17','1717','N18','Célula'];
-        const tabButtons = names.map((name, idx) => `<button class="ia-tab ${idx === activeIaTab ? 'active' : ''}" onclick="setActiveIaTab(${idx})">${name}</button>`).join('');
+        const names = ['FISICA', 'SIX', 'COMBINATION', 'SOPORTE', 'IA'];
+        const tabButtons = names.map((name, idx) => {
+            const h = iaSignalsHistory[idx] || [];
+            const last = h[h.length-1];
+            const cls = last === 'win' ? 'tab-win' : (last === 'loss' ? 'tab-loss' : '');
+            return `<button class="ia-tab ${idx === activeIaTab ? 'active' : ''} ${cls}" onclick="setActiveIaTab(${idx})">${name}</button>`;
+        }).join('');
+
         const s = signals[activeIaTab];
-        let content = '<p class="muted">Sin señal.</p>';
+        let content = '<p class="muted">Buscando señal...</p>';
+
         if (s) {
-            const isCélula = s.name === 'Célula';
-            const isPerfect = s.confidence === 'PERFECTION';
+            const isPerfect = (s.name === 'Célula' && s.confidence === 'PERFECTION');
+            const slotClass = s.mode === 'FISICA' ? 'slot-escudo' : (s.mode === 'ATAQUE' ? 'slot-lanza' : (s.mode === 'MATH' ? 'slot-math' : ''));
             
-            if (isCélula) {
-                content = `<div class="ia-active-slot ${isPerfect ? 'slot-perfect' : ''}" style="${isPerfect ? 'border-color: #f5c842; box-shadow: 0 0 15px rgba(245, 200, 66, 0.4);' : ''}">
-                    <div class="ia-slot-header"><span style="color:${isPerfect ? '#f5c842' : '#fff'}">🧬 ${s.name}</span><span style="color:${isPerfect ? '#f5c842' : 'inherit'}">${s.confidence || '0%'}</span></div>
-                    <div class="ia-main-num" style="color:${isPerfect ? '#f5c842' : '#fff'}">${s.number !== null ? s.number : '...'}</div>
-                    <div class="ia-slot-footer"><div>${s.rule || '...' }</div><div class="ia-reason">${s.reason || ''}</div></div>
+            if (activeIaTab === 0) { // FISICA STUDIO
+                content = `<div class="ia-active-slot slot-escudo">
+                    <div class="ia-slot-header"><span class="ia-slot-name">🎯 FÍSICA STUDIO</span><span class="ia-slot-conf">${s.confidence || '0%'} CONF.</span></div>
+                    <div class="ia-grid">
+                        <div class="ia-side-box"><div class="ia-side-lbl">SMALL</div><div class="ia-side-num">${s.small || '0'}<sup>n4</sup></div></div>
+                        <div class="ia-center-box">
+                            <div class="ia-main-num">${s.number || '...'}<sup>n9</sup></div>
+                            <div class="ia-dir-lbl">TENDENCIA: ${s.rule || '...'}</div>
+                        </div>
+                        <div class="ia-side-box"><div class="ia-side-lbl">BIG</div><div class="ia-side-num">${s.big || '0'}<sup>n4</sup></div></div>
+                    </div>
+                    <div class="ia-slot-footer">
+                        <div class="ia-reason">RUPTURA DETECTADA - POLO ${s.mode || '...'}</div>
+                        <div class="ia-reason">SOPORTE ${s.mode === 'SOPORTE' ? 'PRO' : 'BIG N9'}</div>
+                    </div>
                 </div>`;
-            } else {
-                content = `<div class="ia-active-slot">
-                    <div class="ia-slot-header"><span>${s.name}</span><span>${s.confidence || '0%'}</span></div>
-                    <div class="ia-main-num">${s.number !== null ? s.number : (s.tp || '...')}</div>
-                    <div class="ia-slot-footer">W:${iaWins[activeIaTab]} L:${iaLosses[activeIaTab]}</div>
+            } else { // OTHER AGENTS & IA AUTÓNOMA
+                content = `<div class="ia-active-slot ${slotClass} ${isPerfect ? 'slot-perfect' : ''}">
+                    <div class="ia-slot-header">
+                        <span class="ia-slot-name">${activeIaTab === 4 ? '🤖 IA AUTÓNOMA' : s.name}</span>
+                        <span class="ia-slot-conf">${s.confidence || '0%'}</span>
+                    </div>
+                    <div class="ia-center-box">
+                        <div class="ia-rule-pro" style="color:var(--gold); font-size:0.7rem;">${s.rule || 'ANALIZANDO'}</div>
+                        <div class="ia-main-num">${s.number !== null ? s.number : (s.tp || '...')}</div>
+                        <div class="ia-dir-lbl" style="font-size:0.6rem; opacity:0.6;">SINCRONIZANDO BDD...</div>
+                    </div>
+                    <div class="ia-slot-footer">
+                        <div class="badge ${s.mode === 'ATAQUE' ? 'rec-lanza' : 'rec-escudo'}">JUGAR ${s.mode || '...'}</div>
+                        <div class="ia-reason">W:${iaWins[activeIaTab]} L:${iaLosses[activeIaTab]}</div>
+                    </div>
                 </div>`;
             }
         }
@@ -159,9 +186,15 @@ async function submitNumber(val, silent = false, batch = false) {
         lastIaSignals.forEach((s, idx) => {
             if (!s || s.confidence === '0%' || s.rule === 'STOP') return;
             let win = false;
-            // n16 (idx 0), n17 (idx 1), 1717 (idx 2), N18 (idx 3)
-            if (s.betZone && s.betZone.length > 0) win = s.betZone.includes(n);
-            else if (s.number !== null && s.number !== undefined) win = wheelDistance(n, s.number) <= (idx === 2 ? 4 : 8);
+            
+            // Evaluation logic based on agent type
+            if (s.betZone && s.betZone.length > 0) {
+                win = s.betZone.includes(n);
+            } else if (s.number !== null && s.number !== undefined) {
+                const dist = wheelDistance(n, s.number);
+                const maxDist = (idx === 0 || idx === 4) ? 2 : 4; // FISICA/IA are tighter (N2), others N4
+                win = (dist <= maxDist);
+            }
             
             if (win) iaWins[idx]++; else iaLosses[idx]++;
             iaSignalsHistory[idx].push(win ? 'win' : 'loss');
@@ -178,18 +211,28 @@ async function submitNumber(val, silent = false, batch = false) {
     const sig = computeDealerSignature(history);
     const res = analyzeSpin(history, stats);
     const prx = projectNextRound(history, stats);
-    const sigs = getIAMasterSignals(prx, sig, history) || [];
-    
-    // Agent 5 (Célula)
-    sigs.push({ 
-        name: 'Célula', 
-        number: latestAgent5Top,
-        confidence: latestAgent5Top !== null ? (latestAgent5Dna ? 'PERFECTION' : 'MAX') : '0%',
-        rule: latestAgent5Dna ? 'PERFECT DNA' : (latestAgent5Top !== null ? 'BDD' : 'APRENDIENDO'),
-        reason: latestAgent5Top !== null ? (latestAgent5Dna ? 'SINCRONIA TOTAL' : 'HISTÓRICO') : (history.length < 50 ? `GRABANDO ${history.length}/50` : 'ANALIZANDO...')
-    });
-    
-    lastIaSignals = sigs;
+        const sigs = getIAMasterSignals(prx, sig, history) || [];
+        
+        // Ensure sigs match the names array: ['FISICA', 'SIX', 'COMBINATION', 'SOPORTE', 'IA']
+        // 0: FISICA (n17), 1: SIX (n16), 2: COMBINATION (1717), 3: SOPORTE (N18)
+        
+        // Re-map for UI consistency
+        const finalSigs = [
+            { ...sigs[1], name: 'FISICA', mode: 'FISICA' },      // n17 -> FISICA
+            { ...sigs[0], name: 'SIX', mode: 'MATH' },        // n16 -> SIX
+            { ...sigs[2], name: 'COMBINATION', mode: 'ATAQUE' }, // 1717 -> COMBINATION
+            { ...sigs[3], name: 'SOPORTE', mode: 'SOPORTE' },    // N18 -> SOPORTE
+            { 
+                name: 'IA', 
+                mode: latestAgent5Dna ? 'ATAQUE' : 'MATH',
+                number: latestAgent5Top,
+                confidence: latestAgent5Top !== null ? (latestAgent5Dna ? 'PERFECTION' : 'MAX') : '0%',
+                rule: latestAgent5Dna ? 'PERFECT DNA' : (latestAgent5Top !== null ? 'BDD Master' : 'APRENDIENDO'),
+                reason: latestAgent5Top !== null ? (latestAgent5Dna ? 'SINCRONIA TOTAL' : 'AUTÓNOMO') : (history.length < 50 ? `GRABANDO ${history.length}/50` : 'ANALIZANDO...')
+            }
+        ];
+        
+        lastIaSignals = finalSigs;
 
     // 3. UI RENDERING (Skip if batching for performance)
     if (!batch) {
