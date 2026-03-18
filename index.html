@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MYLUCKYROULETTE — Analizador de Estrategias</title>
-    <meta name="description" content="Analizador de estrategias para ruleta europea con Target Strategy, Dealer Signature y Travel Data." />
+    <title>ROULETTE PREDICTOR PRO v3.1</title>
     <link rel="stylesheet" href="styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -13,25 +13,25 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="logo-circ" style="width:32px; height:32px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center;">
-                <img src="https://cdn-icons-png.flaticon.com/512/1055/1055644.png" alt="Logo" style="width:20px;">
+            <div class="logo-circ">
+                <img src="https://cdn-icons-png.flaticon.com/512/1055/1055644.png" alt="Logo">
             </div>
-            <div class="logo-text" style="font-size:0.85rem; font-weight:900; color:#fff;">
+            <div class="logo-text">
                 ROULETTE PREDICTOR PRO
-                <span style="display:block; font-size:0.6rem; color:var(--accent);">v3.1</span>
+                <span>v3.1</span>
             </div>
         </div>
 
-        <nav class="sidebar-nav" style="margin-top:20px; padding:0 10px;">
+        <nav class="sidebar-nav">
             <button class="nav-item active" data-view="dashboard">📊 Dashboard</button>
             <button class="nav-item" data-view="agents">👥 Agents</button>
             <button class="nav-item" data-view="analysis">📈 Analysis</button>
             <button class="nav-item" data-view="settings">⚙️ Settings</button>
         </nav>
         
-        <div class="sidebar-footer" style="margin-top:auto; padding:20px; border-top:1px solid var(--border);">
-            <div class="status-indicator" style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:var(--text-dim);">
-                <span class="status-dot" style="width:8px; height:8px; background:var(--green); border-radius:50%;"></span>
+        <div class="sidebar-footer">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
                 System Online
             </div>
         </div>
@@ -41,59 +41,60 @@
     <main class="main-view">
         <header class="top-bar">
             <div class="top-left">
-                <div class="header-title" style="font-size:0.9rem; font-weight:800; letter-spacing:1px;">
-                    ROULETTE PREDICTOR PRO <span style="font-size:0.6rem; opacity:0.5;">v3.1</span>
-                </div>
+                <div class="header-title">ROULETTE PREDICTOR PRO <span>v3.1</span></div>
             </div>
             <div class="clock" id="live-clock">00:00:00</div>
-            <div class="top-right" style="font-size:0.8rem; font-weight:700;">
-                Active Agent: <span id="active-agent-name" style="color:var(--gold); font-weight:900;">N17</span>
+            <div class="top-right">
+                <select id="table-select" class="pro-select"></select>
+                <div class="active-agent-label">
+                    Agent: <span id="active-agent-name">N17</span>
+                </div>
             </div>
         </header>
 
         <div class="dashboard-content">
-            <div class="active-agent-wrapper" style="padding:0 20px;">
-                <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); margin-bottom:10px; letter-spacing:1px;">ACTIVE AGENT</div>
+            <div class="active-agent-wrapper">
+                <div class="section-label">ACTIVE AGENT</div>
                 <!-- AGENT TABS -->
-                <div class="ia-tabs-strip-pro" id="strat-tabs" style="margin-bottom:15px;"></div>
+                <div class="ia-tabs-strip-pro" id="strat-tabs"></div>
 
                 <!-- 3-COLUMN PREDICTION GRID -->
-                <div class="prediction-grid-pro" id="prediction-grid" style="display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:12px; margin-bottom:20px;">
-                    <div class="pred-box box-cyan" style="background:var(--panel-bg); border:1px solid var(--accent); border-radius:8px; padding:15px; text-align:center;">
-                        <div style="font-size:0.65rem; color:var(--text-dim); letter-spacing:2px; margin-bottom:10px;">PREDICTION</div>
-                        <div id="pred-small-val" style="font-size:2rem; font-weight:900; color:var(--accent);">SMALL</div>
-                        <div style="font-size:0.75rem; color:var(--text-dim);">1-9</div>
+                <div class="prediction-grid-pro" id="prediction-grid">
+                    <div class="pred-box box-cyan">
+                        <div class="pred-label">PREDICTION</div>
+                        <div id="pred-small-val" class="pred-value">SMALL</div>
+                        <div class="pred-sub">1-9</div>
                     </div>
-                    <div class="pred-box box-gold" style="background:var(--panel-bg); border:2px solid var(--gold); border-radius:8px; padding:15px; text-align:center; box-shadow:0 0 20px var(--gold-glow);">
-                        <div style="font-size:0.65rem; color:var(--text-dim); letter-spacing:2px; margin-bottom:10px;">TOP TARGET</div>
-                        <div id="target-number" style="font-size:3.5rem; font-weight:900; color:var(--gold); line-height:1;">--</div>
-                        <div style="font-size:0.7rem; color:var(--text-dim); margin-top:5px;">TARGETED POCKET</div>
+                    <div class="pred-box box-gold">
+                        <div class="pred-label">TOP TARGET</div>
+                        <div id="target-number" class="pred-value-big">--</div>
+                        <div class="pred-sub">TARGETED POCKET</div>
                     </div>
-                    <div class="pred-box box-cyan" style="background:var(--panel-bg); border:1px solid var(--accent); border-radius:8px; padding:15px; text-align:center;">
-                        <div style="font-size:0.65rem; color:var(--text-dim); letter-spacing:2px; margin-bottom:10px;">PREDICTION</div>
-                        <div id="pred-big-val" style="font-size:2rem; font-weight:900; color:var(--accent);">BIG</div>
-                        <div style="font-size:0.75rem; color:var(--text-dim);">10-18</div>
+                    <div class="pred-box box-cyan">
+                        <div class="pred-label">PREDICTION</div>
+                        <div id="pred-big-val" class="pred-value">BIG</div>
+                        <div class="pred-sub">10-18</div>
                     </div>
                 </div>
             </div>
 
             <!-- TRAVEL DATA -->
-            <section class="panel travel-panel-pro" style="margin:0 20px; border-radius:10px; overflow:hidden; border:1px solid var(--border);">
-                <div class="travel-header-banner" style="background:rgba(0,210,255,0.05); padding:10px; text-align:center; font-size:0.7rem; font-weight:900; letter-spacing:2px; border-bottom:1px solid var(--border);">
-                    TRAVEL DATA - DETAILED SPIN HISTORY
-                </div>
-                <div class="table-container" style="max-height:350px; overflow-y:auto;">
-                    <table style="width:100%; border-collapse:collapse;">
+            <section class="panel travel-panel-pro">
+                <div class="travel-header-banner">TRAVEL DATA - DETAILED SPIN HISTORY</div>
+                <div class="table-container">
+                    <table>
                         <thead>
-                            <tr style="background:rgba(0,0,0,0.3);">
-                                <th style="padding:12px; font-size:0.6rem; color:var(--accent); text-transform:uppercase; text-align:left;">N</th>
-                                <th style="padding:12px; font-size:0.6rem; color:var(--accent); text-transform:uppercase; text-align:left;">NUMBER</th>
-                                <th style="padding:12px; font-size:0.6rem; color:var(--accent); text-transform:uppercase; text-align:left;">DISTANCE</th>
-                                <th style="padding:12px; font-size:0.6rem; color:var(--accent); text-transform:uppercase; text-align:left;">DIRECTION</th>
-                                <th style="padding:12px; font-size:0.6rem; color:var(--accent); text-transform:uppercase; text-align:left;">PHASE (S/B)</th>
+                            <tr>
+                                <th>N</th>
+                                <th>NUMBER</th>
+                                <th>DISTANCE</th>
+                                <th>DIRECTION</th>
+                                <th>PHASE (S/B)</th>
                             </tr>
                         </thead>
-                        <tbody id="travel-tbody"></tbody>
+                        <tbody id="travel-tbody">
+                            <tr><td colspan="5" class="muted">Select a table to begin analysis...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </section>
@@ -101,28 +102,13 @@
     </main>
 
     <!-- RIGHT VISUAL SIDEBAR -->
-    <aside class="visual-panel" style="background:var(--sidebar-bg); border-left:1px solid var(--border); padding:20px; display:flex; flex-direction:column; align-items:center;">
-        <div style="font-size:0.7rem; font-weight:900; color:var(--text-dim); letter-spacing:2px; margin-bottom:20px;">LIVE CYLINDER</div>
-        <canvas id="wheel-canvas" width="220" height="220"></canvas>
-        <div id="history-strip" class="history-strip-top" style="margin-top:30px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;"></div>
-    </aside>
-</div>
-
-<!-- Add table modal -->
-<div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:1000; align-items:center; justify-content:center;">
-    <div class="glass" style="padding:24px; min-width:300px; max-width:380px; border-radius:12px; background:#070c2a; border:1px solid #4a7cff44;">
-        <h2 style="color:#f5c842; font-size:1rem; margin-bottom:16px;">Nueva Mesa</h2>
-        <label style="color:#5b6ea8; font-size:0.72rem;">Nombre *</label>
-        <input id="modal-name" class="num-input" type="text" placeholder="Ej: Betano Mesa 2" style="width:100%; margin-bottom:10px; text-align:left; font-size:1rem;" />
-        <label style="color:#5b6ea8; font-size:0.72rem;">Proveedor</label>
-        <input id="modal-provider" class="num-input" type="text" placeholder="Evolution / Playtech / Otro" style="width:100%; margin-bottom:10px; text-align:left; font-size:1rem;" />
-        <label style="color:#5b6ea8; font-size:0.72rem;">URL (opcional)</label>
-        <input id="modal-url" class="num-input" type="text" placeholder="https://..." style="width:100%; margin-bottom:16px; text-align:left; font-size:1rem;" />
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-            <button id="modal-cancel" class="btn" style="background:rgba(255,59,92,0.15); color:#ff3b5c; border:1px solid rgba(255,59,92,0.35); padding:8px 16px; border-radius:6px;">Cancelar</button>
-            <button id="modal-save" class="btn btn-primary" style="background:linear-gradient(135deg,#4a7cff,#7c3bff); color:#fff; padding:8px 16px; border-radius:6px; border:none;">Guardar</button>
+    <aside class="visual-panel">
+        <div class="panel-header">LIVE CYLINDER</div>
+        <div class="wheel-box">
+            <canvas id="wheel-canvas" width="220" height="220"></canvas>
         </div>
-    </div>
+        <div id="history-strip" class="history-strip-top"></div>
+    </aside>
 </div>
 
 <script src="predictor.js"></script>
