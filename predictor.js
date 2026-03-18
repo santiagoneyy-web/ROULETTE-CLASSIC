@@ -181,63 +181,58 @@ function getIAMasterSignals(prox, sig, history) {
         mode: 'ZONAS'
     });
 
-    // 2. Android n17 (FÍSICA - Casilla 1)
+    // 2. Android n17 (SOPORTE + HIBRIDO)
+    // Combines Physicality (C1) with Directional Support (C10)
+    let target17 = sig.casilla1;
+    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) target17 = sig.casilla10; // Shifts to Hybrid if stable
     signals.push({
         name: 'Android n17',
-        number: sig.casilla1,
+        number: target17,
         confidence: "88%",
-        reason: "MATRIZ FISICA",
-        rule: "FISICA",
+        reason: target17 === sig.casilla10 ? "HIBRIDO ESTABLE" : "SOPORTE FISICO",
+        rule: "FISICA/SOPORTE",
         mode: "ESCUDO",
-        betZone: getWheelNeighbors(sig.casilla1, 3)
+        betZone: getWheelNeighbors(target17, 6) // Balanced range
     });
 
-    // 3. Android 1717 (HIBRIDA - Casilla 10 / N9)
-    // Goal: Cover a specific direction regardless of S/B.
-    const targetHibrida = sig.casilla10;
+    // 3. Android 1717 (SOPORTE + HIBRIDO + ZIG ZAG)
+    // The most versatile pattern matcher
+    let target1717 = sig.casilla10; // Hybrid base
+    if (isDirZigZag || isZoneZigZag) target1717 = sig.casilla19; // Shifts to Support/Opposite if unstable
     signals.push({
         name: 'Android 1717',
-        number: targetHibrida,
+        number: target1717,
         confidence: "90%",
-        reason: "DIRECCION ESTABLE",
-        rule: "HIBRIDO",
+        reason: (isDirZigZag || isZoneZigZag) ? "ZIGZAG SOPORTE" : "ATAQUE HIBRIDO",
+        rule: "HIBRIDO/ZIGZAG",
         mode: 'ATAQUE',
-        betZone: getWheelNeighbors(targetHibrida, 9) // N9 neighbors
+        betZone: getWheelNeighbors(target1717, 9)
     });
 
-    // 4. N18 (SOPORTE - Casilla 19 o 1 / N9)
-    let targetSoporte = sig.casilla19; // Default for BIG
-    let sopReason = "ZONA BIG (DIS:18)";
-    if (isSmallTrend) {
-        targetSoporte = sig.casilla1;
-        sopReason = "ZONA SMALL (DIS:1)";
-    }
+    // 4. N18 (SOPORTE PURO)
+    let targetSoporte = isBigTrend ? sig.casilla19 : sig.casilla1;
     signals.push({
         name: 'N18',
         number: targetSoporte,
         confidence: "86%",
-        reason: sopReason,
+        reason: isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL",
         rule: "SOPORTE",
         mode: 'SOPORTE',
-        betZone: getWheelNeighbors(targetSoporte, 9) // N9 neighbors
+        betZone: getWheelNeighbors(targetSoporte, 9)
     });
 
-    // 5. CELULA (SMALL & BIG Snipes - Casilla 5/14 / N4)
+    // 5. CELULA (COMBINADO TOTAL)
     let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
-    let snipeReason = isBigTrend ? "BIG SNIPE (DIS:13)" : "SMALL SNIPE (DIS:4)";
-    if (isZoneZigZag) {
-        targetSnipe = (history[history.length-1] >= 10) ? sig.casilla5 : sig.casilla14;
-        snipeReason = "ZIG ZAG SNIPE";
-    }
+    if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10) ? sig.casilla5 : sig.casilla14;
     
     signals.push({
         name: 'CELULA',
         number: targetSnipe,
         confidence: "92%",
-        reason: snipeReason,
+        reason: "SNIPE COMBINADO",
         rule: "SNIPER",
         mode: 'GANANCIA',
-        betZone: getWheelNeighbors(targetSnipe, 4) // N4 neighbors
+        betZone: getWheelNeighbors(targetSnipe, 4)
     });
 
     return signals;
