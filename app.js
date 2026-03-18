@@ -120,22 +120,39 @@ function renderSignalsPanel(signals) {
     
     const smallBox = document.getElementById('pred-small-val');
     const bigBox = document.getElementById('pred-big-val');
+    const targetLabel = document.querySelector('.target-box .label');
+
+    if (targetLabel && s) {
+        targetLabel.innerText = s.radius ? `TARGET POCKET (${s.radius})` : 'TARGETED POCKET';
+    }
+
     if (smallBox && bigBox && s && s.top) {
+        const smallLabel = smallBox.parentElement.querySelector('.label');
+        const bigLabel = bigBox.parentElement.querySelector('.label');
+
         if (s.top >= 1 && s.top <= 9) {
             smallBox.innerText = s.top;
             smallBox.style.opacity = '1';
+            if (smallLabel) smallLabel.innerText = "SMALL (N4)";
+            
             bigBox.innerText = 'BIG';
             bigBox.style.opacity = '0.3';
+            if (bigLabel) bigLabel.innerText = "BIG 10-18";
         } else if (s.top >= 10 && s.top <= 19) {
             bigBox.innerText = s.top;
             bigBox.style.opacity = '1';
+            if (bigLabel) bigLabel.innerText = "BIG (N4)";
+            
             smallBox.innerText = 'SMALL';
             smallBox.style.opacity = '0.3';
+            if (smallLabel) smallLabel.innerText = "SMALL 1-9";
         } else {
             smallBox.innerText = 'SMALL';
             bigBox.innerText = 'BIG';
             smallBox.style.opacity = '0.3';
             bigBox.style.opacity = '0.3';
+            if (smallLabel) smallLabel.innerText = "SMALL 1-9";
+            if (bigLabel) bigLabel.innerText = "BIG 10-18";
         }
     }
 }

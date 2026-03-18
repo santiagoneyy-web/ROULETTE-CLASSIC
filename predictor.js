@@ -167,18 +167,56 @@ function getIAMasterSignals(prox, sig, history) {
     const isZoneZigZag = history.length >= 3 && (history[history.length-1] >= 10 && history[history.length-1] <= 19) !== (history[history.length-2] >= 10 && history[history.length-2] <= 19);
 
     // 1. Android n16 (Six Strategie - The User's Core Logic)
+    // Intelligent Selection: Find which strategy is hitting best in the last 10 spins
     const ssOutcomes = getSixStrategieSignals(lastNum);
-    const activeSS = ssOutcomes[0]; // Base '+' strategy
+    let bestSS = ssOutcomes[0];
+    let maxHits = -1;
+
+    ssOutcomes.forEach(strategy => {
+        let hits = 0;
+        // Check performance in last 10 spins
+        for (let i = Math.max(0, history.length - 10); i < history.length - 1; i++) {
+            const hNum = history[i];
+            const nextHNum = history[i+1];
+            // Re-calculate what THIS strategy would have predicted at that moment
+            const t = hNum % 10;
+            let predBase = 0;
+            if (strategy.name === '+') predBase = hNum + t;
+            else if (strategy.name === '-') predBase = hNum - t;
+            else if (strategy.name === '-,+1') predBase = hNum - t + 1;
+            else if (strategy.name === '-,-1') predBase = hNum - t - 1;
+            else if (strategy.name === '+,+1') predBase = hNum + t + 1;
+            else if (strategy.name === '+,-1') predBase = hNum + t - 1;
+            
+            const predTP = (predBase + 37) % 37;
+            const predCors = TERMINALS_MAP[predTP] || [];
+            
+            // Count hit if next number is in TP or COR neighbors
+            const tpRad = (predCors.length >= 3) ? 2 : 2; 
+            const corRad = (predCors.length === 1) ? 3 : (predCors.length === 2 ? 3 : 2);
+            
+            const isHit = getWheelNeighbors(predTP, tpRad).includes(nextHNum) || 
+                          predCors.some(c => getWheelNeighbors(c, corRad).includes(nextHNum));
+            
+            if (isHit) hits++;
+        }
+        if (hits > maxHits) {
+            maxHits = hits;
+            bestSS = strategy;
+        }
+    });
+
     signals.push({
         name: 'Android n16',
-        tp: activeSS.tp,
-        cor: activeSS.cors,
-        betZone: activeSS.betZone,
-        number: activeSS.tp,
+        tp: bestSS.tp,
+        cor: bestSS.cors,
+        betZone: bestSS.betZone,
+        number: bestSS.tp,
         confidence: "94%",
-        reason: activeSS.reason,
+        reason: `${bestSS.name} (Hits: ${maxHits}/10)`,
         rule: 'SIX STRATEGIE',
-        mode: 'ZONAS'
+        mode: 'ZONAS',
+        radius: "N2/N3"
     });
 
     // 2. Android n17 (SOPORTE + HIBRIDO)
@@ -191,7 +229,8 @@ function getIAMasterSignals(prox, sig, history) {
         reason: target17 === sig.casilla10 ? "HIBRIDO" : "SOPORTE",
         rule: "FISICA/SOPORTE",
         mode: "ESCUDO",
-        betZone: getWheelNeighbors(target17, 9) // Top targets use N9
+        betZone: getWheelNeighbors(target17, 9),
+        radius: "N9"
     });
 
     // 3. Android 1717 (SOPORTE + HIBRIDO + ZIG ZAG)
@@ -204,7 +243,8 @@ function getIAMasterSignals(prox, sig, history) {
         reason: (isDirZigZag || isZoneZigZag) ? "ZIGZAG SOPORTE" : "ATAQUE HIBRIDO",
         rule: "HIBRIDO/ZIGZAG",
         mode: 'ATAQUE',
-        betZone: getWheelNeighbors(target1717, 9) // Top targets use N9
+        betZone: getWheelNeighbors(target1717, 9),
+        radius: "N9"
     });
 
     // 4. N18 (SOPORTE PURO)
@@ -216,7 +256,8 @@ function getIAMasterSignals(prox, sig, history) {
         reason: isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL",
         rule: "SOPORTE",
         mode: 'SOPORTE',
-        betZone: getWheelNeighbors(targetSoporte, 9) // Top targets use N9
+        betZone: getWheelNeighbors(targetSoporte, 9),
+        radius: "N9"
     });
 
     // 5. CELULA (COMBINADO TOTAL)
@@ -230,7 +271,8 @@ function getIAMasterSignals(prox, sig, history) {
         reason: "SNIPE COMBINADO",
         rule: "SNIPER",
         mode: 'GANANCIA',
-        betZone: getWheelNeighbors(targetSnipe, 4) // Snipes use N4
+        betZone: getWheelNeighbors(targetSnipe, 4),
+        radius: "N4"
     });
 
     return signals;
