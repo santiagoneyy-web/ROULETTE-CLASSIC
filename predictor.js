@@ -220,13 +220,18 @@ function getIAMasterSignals(prox, sig, history) {
     });
 
     // 2. Android n17 (SOPORTE + HIBRIDO)
-    let target17 = sig.casilla1;
-    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) target17 = sig.casilla10; 
+    let soporte17 = isBigTrend ? sig.casilla19 : sig.casilla1;
+    let target17 = soporte17;
+    let reason17 = isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL";
+    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) {
+        target17 = sig.casilla10;
+        reason17 = "HIBRIDO";
+    }
     signals.push({
         name: 'Android n17',
         number: target17,
         confidence: "88%",
-        reason: target17 === sig.casilla10 ? "HIBRIDO" : "SOPORTE",
+        reason: reason17,
         rule: "FISICA/SOPORTE",
         mode: "ESCUDO",
         betZone: getWheelNeighbors(target17, 9),
@@ -265,12 +270,16 @@ function getIAMasterSignals(prox, sig, history) {
     let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
     if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casilla5 : sig.casilla14;
     
+    let inverseSnipe = targetSnipe === sig.casilla14 ? sig.casilla5 : sig.casilla14;
+
     signals.push({
         name: 'CELULA',
         number: targetSnipe,
+        numberInverso: inverseSnipe,
         top: targetSnipe,
         confidence: "92%",
         reason: "SNIPE COMBINADO",
+        reasonInverso: "SNIPE INVERSO",
         rule: "SNIPER",
         mode: 'GANANCIA',
         betZone: getWheelNeighbors(targetSnipe, 9), // Main target is n9

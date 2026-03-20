@@ -48,6 +48,12 @@ function renderTabs() {
     }).join('');
 }
 
+let celulaInverso = false;
+window.toggleCelulaInvert = () => {
+    celulaInverso = !celulaInverso;
+    renderAgentCard(lastIaSignals);
+};
+
 // ─── RENDER: AGENT CARD ────────────────────────────────────
 function renderAgentCard(signals) {
     const s = signals[activeIaTab];
@@ -66,15 +72,26 @@ function renderAgentCard(signals) {
     const winsEl    = document.getElementById('agent-wins');
     const lossesEl  = document.getElementById('agent-losses');
     const dotsEl    = document.getElementById('result-dots');
+    const invBtn    = document.getElementById('btn-celula-invert');
 
-    if (nameEl)   nameEl.innerText   = (AGENT_NAMES[activeIaTab] || 'AGENT').toUpperCase();
+    let isInverseMode = (activeIaTab === 4 && celulaInverso);
+
+    if (nameEl)   nameEl.innerText   = isInverseMode ? 'CÉLULA (INVERSO)' : (AGENT_NAMES[activeIaTab] || 'AGENT').toUpperCase();
+    if (invBtn)   invBtn.style.display = (activeIaTab === 4) ? 'inline-block' : 'none';
+    
     if (confEl)   confEl.innerText   = (s.confidence || '90%') + ' CONF.';
     if (statusMsg) statusMsg.innerText = (s.rule || AGENT_MODES[activeIaTab]) + ' ' + (s.radius || 'N9');
-    if (statusEl) statusEl.innerText = s.reason || 'ANALIZANDO PATRONES...';
+    
+    let reasonTxt = s.reason || 'ANALIZANDO PATRONES...';
+    if (isInverseMode && s.reasonInverso) reasonTxt = s.reasonInverso;
+    if (statusEl) statusEl.innerText = reasonTxt;
+    
     if (syncEl)   syncEl.innerText   = s.mode ? `MODO: ${s.mode}` : 'SINCRONIZADO';
     
-    // Support either 'top' or 'number' from predictor.js
-    const targetNum = s.top !== undefined ? s.top : (s.number !== undefined ? s.number : '--');
+    // Support either 'top', 'number', or 'numberInverso'
+    let targetNum = s.top !== undefined ? s.top : (s.number !== undefined ? s.number : '--');
+    if (isInverseMode && s.numberInverso !== undefined) targetNum = s.numberInverso;
+    
     if (targetEl) targetEl.innerText = targetNum;
     
     if (radiusEl) radiusEl.innerText = s.radius ? s.radius.toLowerCase() : 'n9';
@@ -290,7 +307,7 @@ function submitNumber(val, silent = false, batch = false) {
                         { top: ag16?.tp,        confidence: ag16?.confidence,   reason: ag16?.reason,   rule: ag16?.rule,   mode: ag16?.mode,   radius: 'N2/N3',        tp: ag16?.tp, cors: ag16?.cor, smallSnipe: ag16?.smallSnipe, bigSnipe: ag16?.bigSnipe },
                         { top: ag1717?.number, confidence: ag1717?.confidence, reason: ag1717?.reason, rule: ag1717?.rule, mode: ag1717?.mode, radius: ag1717?.radius || 'N9', smallSnipe: ag1717?.smallSnipe, bigSnipe: ag1717?.bigSnipe },
                         { top: agN18?.number,  confidence: agN18?.confidence,  reason: agN18?.reason,  rule: agN18?.rule,  mode: agN18?.mode,  radius: agN18?.radius  || 'N9', smallSnipe: agN18?.smallSnipe, bigSnipe: agN18?.bigSnipe },
-                        { top: agCel?.number,  confidence: agCel?.confidence,  reason: agCel?.reason,  rule: agCel?.rule,  mode: agCel?.mode,  radius: agCel?.radius  || 'N4', smallSnipe: agCel?.smallSnipe, bigSnipe: agCel?.bigSnipe }
+                        { top: agCel?.number,  confidence: agCel?.confidence,  reason: agCel?.reason,  reasonInverso: agCel?.reasonInverso, numberInverso: agCel?.numberInverso, rule: agCel?.rule,  mode: agCel?.mode,  radius: agCel?.radius  || 'N4', smallSnipe: agCel?.smallSnipe, bigSnipe: agCel?.bigSnipe }
                     ];
                 }
             } catch(e) { console.error('Predict error:', e); }
