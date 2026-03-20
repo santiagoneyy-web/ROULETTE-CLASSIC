@@ -3,7 +3,7 @@
 // ============================================================
 
 const history      = [];
-const iaSignalsHistory = [ [], [], [], [], [] ]; 
+const iaSignalsHistory = [ [], [], [], [], [], [] ];
 let activeIaTab    = 0; 
 let lastIaSignals = [
     { top: 17, rule: 'READY', radius:'N9', smallSnipe: 5, bigSnipe: 14 },
@@ -115,7 +115,8 @@ function renderAgentCard(signals) {
     if (psBig)   psBig.innerText   = bigVal;
 
     // W-L
-    const h = iaSignalsHistory[activeIaTab] || [];
+    const hIdx = isInverseMode ? 5 : activeIaTab;
+    const h = iaSignalsHistory[hIdx] || [];
     const wins = h.filter(x => x === 'win').length;
     const losses = h.length - wins;
     if (winsEl)   winsEl.innerText   = wins;
@@ -291,6 +292,12 @@ function submitNumber(val, silent = false, batch = false) {
             const radius = s.radius === 'N4' ? 4 : 9;
             const win = Math.abs(calcDist(n, s.top)) <= radius;
             iaSignalsHistory[idx].push(win ? 'win' : 'loss');
+            
+            // Evaluar el pronóstico inverso
+            if (idx === 4 && s.numberInverso !== undefined) {
+                const winInv = Math.abs(calcDist(n, s.numberInverso)) <= radius;
+                iaSignalsHistory[5].push(winInv ? 'win' : 'loss');
+            }
         });
         
         history.push(n);
