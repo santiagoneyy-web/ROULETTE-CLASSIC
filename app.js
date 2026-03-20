@@ -103,8 +103,17 @@ function renderAgentCard(signals) {
     }
 
     // Secondary snipes (SMALL/BIG)
-    if (psSmall) psSmall.innerText = s.smallSnipe !== undefined ? s.smallSnipe : '--';
-    if (psBig)   psBig.innerText   = s.bigSnipe !== undefined   ? s.bigSnipe   : '--';
+    let smallVal = s.smallSnipe !== undefined ? s.smallSnipe : '--';
+    let bigVal   = s.bigSnipe !== undefined   ? s.bigSnipe   : '--';
+    
+    if (isInverseMode) {
+        let temp = smallVal;
+        smallVal = bigVal;
+        bigVal = temp;
+    }
+
+    if (psSmall) psSmall.innerText = smallVal;
+    if (psBig)   psBig.innerText   = bigVal;
 
     // W-L
     const h = iaSignalsHistory[activeIaTab] || [];
