@@ -95,6 +95,8 @@ function computeDealerSignature(history) {
         travelHistory: travels,
         casilla5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 5) % 37],
         casilla14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 14) % 37],
+        casillaNeg5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 5 + 37) % 37],
+        casillaNeg14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 14 + 37) % 37],
         casilla1: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 1) % 37],
         casilla19: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 19) % 37],
         casilla10: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 10) % 37]
@@ -270,7 +272,8 @@ function getIAMasterSignals(prox, sig, history) {
     let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
     if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casilla5 : sig.casilla14;
     
-    let inverseSnipe = targetSnipe === sig.casilla14 ? sig.casilla5 : sig.casilla14;
+    let inverseSnipe = isBigTrend ? sig.casillaNeg14 : sig.casillaNeg5;
+    if (isZoneZigZag) inverseSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casillaNeg5 : sig.casillaNeg14;
 
     signals.push({
         name: 'CELULA',
@@ -279,13 +282,15 @@ function getIAMasterSignals(prox, sig, history) {
         top: targetSnipe,
         confidence: "92%",
         reason: "SNIPE COMBINADO",
-        reasonInverso: "SNIPE INVERSO",
+        reasonInverso: "SNIPE INVERSO (IZQUIERDA)",
         rule: "SNIPER",
         mode: 'GANANCIA',
         betZone: getWheelNeighbors(targetSnipe, 9), // Main target is n9
         radius: "N9",
         smallSnipe: sig.casilla5,
-        bigSnipe: sig.casilla14
+        bigSnipe: sig.casilla14,
+        smallSnipeInverso: sig.casillaNeg5,
+        bigSnipeInverso: sig.casillaNeg14
     });
 
     // Populate secondary snipes for all agents to fill the 3-column UI

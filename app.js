@@ -107,9 +107,8 @@ function renderAgentCard(signals) {
     let bigVal   = s.bigSnipe !== undefined   ? s.bigSnipe   : '--';
     
     if (isInverseMode) {
-        let temp = smallVal;
-        smallVal = bigVal;
-        bigVal = temp;
+        if (s.smallSnipeInverso !== undefined) smallVal = s.smallSnipeInverso;
+        if (s.bigSnipeInverso !== undefined)   bigVal   = s.bigSnipeInverso;
     }
 
     if (psSmall) psSmall.innerText = smallVal;
@@ -316,7 +315,7 @@ function submitNumber(val, silent = false, batch = false) {
                         { top: ag16?.tp,        confidence: ag16?.confidence,   reason: ag16?.reason,   rule: ag16?.rule,   mode: ag16?.mode,   radius: 'N2/N3',        tp: ag16?.tp, cors: ag16?.cor, smallSnipe: ag16?.smallSnipe, bigSnipe: ag16?.bigSnipe },
                         { top: ag1717?.number, confidence: ag1717?.confidence, reason: ag1717?.reason, rule: ag1717?.rule, mode: ag1717?.mode, radius: ag1717?.radius || 'N9', smallSnipe: ag1717?.smallSnipe, bigSnipe: ag1717?.bigSnipe },
                         { top: agN18?.number,  confidence: agN18?.confidence,  reason: agN18?.reason,  rule: agN18?.rule,  mode: agN18?.mode,  radius: agN18?.radius  || 'N9', smallSnipe: agN18?.smallSnipe, bigSnipe: agN18?.bigSnipe },
-                        { top: agCel?.number,  confidence: agCel?.confidence,  reason: agCel?.reason,  reasonInverso: agCel?.reasonInverso, numberInverso: agCel?.numberInverso, rule: agCel?.rule,  mode: agCel?.mode,  radius: agCel?.radius  || 'N4', smallSnipe: agCel?.smallSnipe, bigSnipe: agCel?.bigSnipe }
+                        { top: agCel?.number,  confidence: agCel?.confidence,  reason: agCel?.reason,  reasonInverso: agCel?.reasonInverso, numberInverso: agCel?.numberInverso, rule: agCel?.rule,  mode: agCel?.mode,  radius: agCel?.radius  || 'N4', smallSnipe: agCel?.smallSnipe, bigSnipe: agCel?.bigSnipe, smallSnipeInverso: agCel?.smallSnipeInverso, bigSnipeInverso: agCel?.bigSnipeInverso }
                     ];
                 }
             } catch(e) { console.error('Predict error:', e); }
