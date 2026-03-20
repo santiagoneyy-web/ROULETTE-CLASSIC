@@ -160,13 +160,27 @@ function getIAMasterSignals(prox, sig, history) {
     const lastNum = history[history.length - 1];
     const signals = [];
 
-    // Analyze Patterns
-    const isBigTrend = history.slice(-5).filter(n => n >= 10 && n <= 19).length >= 3;
-    const isSmallTrend = history.slice(-5).filter(n => n >= 1 && n <= 9).length >= 3;
+    // Analyze Patterns based on DISTANCES
+    const dists = [];
+    for (let i = Math.max(1, history.length - 5); i < history.length; i++) {
+        dists.push(Math.abs(calcDist(history[i-1], history[i])));
+    }
+    const isBigTrend = dists.filter(d => d >= 10 && d <= 19).length >= 3;
+    const isSmallTrend = dists.filter(d => d >= 1 && d <= 9).length >= 3;
     
     // Zig Zag Detectors
-    const isDirZigZag = history.length >= 3 && Math.sign(calcDist(history[history.length-2], history[history.length-1])) !== Math.sign(calcDist(history[history.length-3], history[history.length-2]));
-    const isZoneZigZag = history.length >= 3 && (history[history.length-1] >= 10 && history[history.length-1] <= 19) !== (history[history.length-2] >= 10 && history[history.length-2] <= 19);
+    let isDirZigZag = false;
+    let isZoneZigZag = false;
+    let lastDist = 0;
+    if (history.length >= 3) {
+        let rawLastDist = calcDist(history[history.length-2], history[history.length-1]);
+        let rawPrevDist = calcDist(history[history.length-3], history[history.length-2]);
+        lastDist = Math.abs(rawLastDist);
+        let prevDist = Math.abs(rawPrevDist);
+        
+        isDirZigZag = Math.sign(rawLastDist) !== Math.sign(rawPrevDist);
+        isZoneZigZag = (lastDist >= 10 && lastDist <= 19) !== (prevDist >= 10 && prevDist <= 19);
+    }
 
     // 1. Android n16 (Six Strategie - The User's Core Logic)
     // Intelligent Selection: Find which strategy is hitting best in the last 10 spins
@@ -270,10 +284,10 @@ function getIAMasterSignals(prox, sig, history) {
     // 5. CELULA (COMBINADO TOTAL - SNIPER HYBRID)
     // Primary: n9 target based on physics, Secondary: n4 snipes on small/big
     let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
-    if (isZoneZigZag) targetSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casilla5 : sig.casilla14;
+    if (isZoneZigZag) targetSnipe = (lastDist >= 10 && lastDist <= 19) ? sig.casilla5 : sig.casilla14;
     
     let inverseSnipe = isBigTrend ? sig.casillaNeg14 : sig.casillaNeg5;
-    if (isZoneZigZag) inverseSnipe = (history[history.length-1] >= 10 && history[history.length-1] <= 19) ? sig.casillaNeg5 : sig.casillaNeg14;
+    if (isZoneZigZag) inverseSnipe = (lastDist >= 10 && lastDist <= 19) ? sig.casillaNeg5 : sig.casillaNeg14;
 
     signals.push({
         name: 'CELULA',
