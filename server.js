@@ -47,7 +47,7 @@ app.delete('/api/tables/:id', (req, res) => {
 // ---- API: Spins / History ----
 app.get('/api/history/:tableId', (req, res) => {
     const tableId = req.params.tableId;
-    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 200;
     console.log(`[GET] History for table ${tableId} (limit: ${limit})`);
     db.getHistory(tableId, limit, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
