@@ -68,11 +68,12 @@ app.post('/api/spin', async (req, res) => {
         
         // Fetch history to drive the agents
         if (isMongo) {
-            currentHistory = await Spin.find({ table_id }).sort({ id: 1 }).exec();
+            currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
+            currentHistory.reverse();
         } else {
             // Fallback JSON relies on db.getHistory callback
             currentHistory = await new Promise((resolve, reject) => {
-                db.getHistory(table_id, null, (err, rows) => {
+                db.getHistory(table_id, 100, (err, rows) => {
                     if (err) reject(err); else resolve(rows);
                 });
             });
@@ -215,10 +216,11 @@ app.get('/api/predict/:tableId', async (req, res) => {
         let spins = [];
         const isMongo = db.getUseMongo();
         if (isMongo) {
-            spins = await Spin.find({ table_id: tableId }).sort({ id: 1 }).exec();
+            spins = await Spin.find({ table_id: tableId }).sort({ id: -1 }).limit(100).exec();
+            spins.reverse();
         } else {
             spins = await new Promise((resolve, reject) => {
-                db.getHistory(tableId, null, (err, rows) => {
+                db.getHistory(tableId, 100, (err, rows) => {
                     if (err) reject(err); else resolve(rows);
                 });
             });
