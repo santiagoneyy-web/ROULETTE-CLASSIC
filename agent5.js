@@ -61,12 +61,13 @@ async function predictAgent5(tableId, currentHistoryNumbers, otherAgentsDNA = []
     try {
         let history = [];
         if (Spin.db.readyState === 1) { // 1 = connected
-            history = await Spin.find({ table_id: tableId }).sort({ id: 1 }).limit(5000).exec();
+            history = await Spin.find({ table_id: tableId }).sort({ id: -1 }).limit(500).exec();
+            history.reverse(); // Chronological order
         } else {
             // Fallback to local file if Mongo is not connected
             const db = require('./database');
             history = await new Promise((resolve, reject) => {
-                db.getHistory(tableId, 5000, (err, rows) => {
+                db.getHistory(tableId, 500, (err, rows) => {
                     if (err) reject(err); else resolve(rows);
                 });
             });
