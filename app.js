@@ -10,6 +10,11 @@ let currentView = 'CW'; // toggled by SWITCH SIDE
 let lastSignal = null;
 let currentTableId = null;
 
+let lastOverHitCW = false;
+let lastBigHitCW = false;
+let lastOverHitCCW = false;
+let lastBigHitCCW = false;
+
 const RED_NUMS  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
 
@@ -40,11 +45,20 @@ function renderShadowPanel() {
     const isCW = currentView === 'CW';
     const activeHistory = isCW ? cwHistory : ccwHistory;
     const activeTarget = isCW ? lastSignal.targetCW : lastSignal.targetCCW;
+    const activeOver = isCW ? lastSignal.targetOverCW : lastSignal.targetOverCCW;
+    const activeBig = isCW ? lastSignal.targetBigCW : lastSignal.targetBigCCW;
 
     if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
     if (dirEl) dirEl.innerText = currentView;
-    if (topCwEl) topCwEl.innerText = lastSignal.targetCW !== undefined ? lastSignal.targetCW : '--';
-    if (topCcwEl) topCcwEl.innerText = lastSignal.targetCCW !== undefined ? lastSignal.targetCCW : '--';
+    if (topCwEl) topCwEl.innerText = activeOver !== undefined ? activeOver : '--';
+    if (topCcwEl) topCcwEl.innerText = activeBig !== undefined ? activeBig : '--';
+    
+    const overHitEl = document.getElementById('hit-over');
+    const bigHitEl = document.getElementById('hit-big');
+    const overHitState = isCW ? lastOverHitCW : lastOverHitCCW;
+    const bigHitState = isCW ? lastBigHitCW : lastBigHitCCW;
+    if (overHitEl) overHitEl.innerText = overHitState ? 'LAST HIT! ✔' : '';
+    if (bigHitEl) bigHitEl.innerText = bigHitState ? 'LAST HIT! ✔' : '';
 
     // Win Rate & Streak
     if (activeHistory.length > 0) {
@@ -90,11 +104,15 @@ function submitNumber(val, silent = false, batch = false) {
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
                 cwHistory.push(distCW <= 4 ? 'win' : 'loss'); // N4 radius
+                lastOverHitCW = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
+                lastBigHitCW = Math.abs(calcDist(n, lastSignal.targetBigCW)) <= 4;
             }
             // Evaluates CCW N4
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
                 ccwHistory.push(distCCW <= 4 ? 'win' : 'loss'); // N4 radius
+                lastOverHitCCW = Math.abs(calcDist(n, lastSignal.targetOverCCW)) <= 4;
+                lastBigHitCCW = Math.abs(calcDist(n, lastSignal.targetBigCCW)) <= 4;
             }
         }
         
@@ -181,6 +199,42 @@ function renderTravelPanel() {
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
+
+    // Update Travel Chart.js
+    const canvas = document.getElementById('travelChart');
+    if (canvas && history.length >= 2) {
+        const d50 = history.slice(-50);
+        const dt = [];
+        for (let i = 1; i < d50.length; i++) {
+            dt.push(calcDist(d50[i-1], d50[i]));
+        }
+        if (window.travelChartInstance) window.travelChartInstance.destroy();
+        window.travelChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: dt.map((_, i) => i),
+                datasets: [{
+                    label: 'Dist',
+                    data: dt,
+                    borderColor: '#00e5c8',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointBackgroundColor: dt.map(v => Math.abs(v) >= 10 ? '#f04060' : '#30e090'),
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { min: -18, max: 18, ticks: { color: '#4a6080', stepSize: 6 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { display: false }
+                }
+            }
+        });
+    }
 }
 
 // ─── SYNC FROM SERVER ────────────────────────────────────────

@@ -117,13 +117,16 @@ function getWheelNeighbors(num, radius) {
 function getIAMasterSignals(prox, sig, history) {
     if (!sig || history.length === 0) return [];
     const lastNum = history[history.length - 1];
-    
-    // CW Target (+10 distance to the right)
+    // CW Targets (+ to the right)
     const idx = WHEEL_INDEX[lastNum];
     const targetCW = WHEEL_ORDER[(idx + 10) % 37];
+    const targetOverCW = WHEEL_ORDER[(idx + 5) % 37];
+    const targetBigCW = WHEEL_ORDER[(idx + 14) % 37];
     
-    // CCW Target (-10 distance to the left)
+    // CCW Targets (- to the left)
     const targetCCW = WHEEL_ORDER[(idx - 10 + 37) % 37];
+    const targetOverCCW = WHEEL_ORDER[(idx - 5 + 37) % 37];
+    const targetBigCCW = WHEEL_ORDER[(idx - 14 + 37) % 37];
 
     const signals = [];
 
@@ -132,6 +135,10 @@ function getIAMasterSignals(prox, sig, history) {
         name: 'Android 1717',
         targetCW: targetCW,
         targetCCW: targetCCW,
+        targetOverCW: targetOverCW,
+        targetBigCW: targetBigCW,
+        targetOverCCW: targetOverCCW,
+        targetBigCCW: targetBigCCW,
         betZoneCW: getWheelNeighbors(targetCW, 4), // n4
         betZoneCCW: getWheelNeighbors(targetCCW, 4), // n4
         rule: "DISTANCE 10",

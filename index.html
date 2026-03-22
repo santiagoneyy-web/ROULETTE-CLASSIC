@@ -6,6 +6,8 @@
     <title>ROULETTE PREDICTOR PRO</title>
     <link rel="stylesheet" href="styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <!-- Chart.js for Travel Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -48,8 +50,8 @@
             
             <div class="dropdown-header">▼ SHOW TOP NUMBERS</div>
             <div class="top-numbers">
-                <div class="top-line">TOP (CW): <span id="top-cw" class="highlight-val">--</span> <span class="n4-tag">n4</span></div>
-                <div class="top-line">TOP (CCW): <span id="top-ccw" class="highlight-val">--</span> <span class="n4-tag">n4</span></div>
+                <div class="top-line">OVER (5): <strong id="top-over" class="highlight-val">--</strong> <span class="n4-tag">n4</span><span id="hit-over" style="color:var(--green); font-size:10px; font-weight:bold; margin-left:auto;"></span></div>
+                <div class="top-line">BIG (14): <strong id="top-big" class="highlight-val">--</strong> <span class="n4-tag">n4</span><span id="hit-big" style="color:var(--green); font-size:10px; font-weight:bold; margin-left:auto;"></span></div>
             </div>
             
             <div class="panel-actions">
@@ -66,6 +68,10 @@
                 <span class="badge badge-stable" id="travel-pattern">ESTABLE</span>
                 <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
             </div>
+        </div>
+        <!-- TRAVEL CHART CANVAS -->
+        <div style="padding: 10px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border);">
+            <canvas id="travelChart" height="120"></canvas>
         </div>
         <div class="travel-table-wrap">
             <table class="travel-table">
