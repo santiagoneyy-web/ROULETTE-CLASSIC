@@ -34,12 +34,12 @@ html, body {
 
 /* ── APP SHELL ── */
 .app-shell {
-  max-width: 480px;
+  max-width: 380px;
   margin: 0 auto;
   padding: 0 0 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* ══════════ TOP BAR ══════════ */
@@ -65,11 +65,11 @@ html, body {
   align-items: center;
   justify-content: space-between;
   background: var(--card);
-  margin: 0 8px 10px 8px;
-  padding: 10px;
+  margin: 0 4px 6px 4px;
+  padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  gap: 12px;
+  border-radius: 10px;
+  gap: 10px;
 }
 .wheel-container {
   flex-shrink: 0;
@@ -133,10 +133,10 @@ canvas#wheel-canvas { width: 130px; height: 130px; }
 
 /* ══════════ PREDICTION PANEL (OFI STYLE) ══════════ */
 .shadow-panel {
-  margin: 0 8px 8px 8px;
+  margin: 0 4px 6px 4px;
   background: #090e15;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -294,33 +294,34 @@ canvas#wheel-canvas { width: 130px; height: 130px; }
 /* Switch Side button area */
 .panel-actions {
   display: flex;
-  padding: 12px 14px;
+  padding: 8px 14px;
+  justify-content: flex-end;
 }
 .btn-shadow {
-  flex: 1;
   background: transparent;
   border: 1px solid var(--gold);
   color: var(--gold);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 10px 0;
-  border-radius: 6px;
+  padding: 4px 14px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
+  white-space: nowrap;
 }
 .btn-shadow:hover {
   background: rgba(240,192,64,0.1);
-  box-shadow: 0 0 10px rgba(240,192,64,0.2);
+  box-shadow: 0 0 8px rgba(240,192,64,0.2);
 }
 
 /* ══════════ TRAVEL SECTION ══════════ */
 .travel-section {
-  margin: 0 8px 24px 8px;
+  margin: 0 4px 24px 4px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
 }
 .travel-top-bar {
