@@ -100,19 +100,21 @@ function submitNumber(val, silent = false, batch = false) {
     if (!isNaN(n) && n >= 0 && n <= 36) {
         // Evaluate previous predictions before pushing to history
         if (lastSignal && history.length > 0) {
-            // Evaluates CW N4
+            // Main CW prediction — evaluated at N9 radius
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
-                cwHistory.push(distCW <= 4 ? 'win' : 'loss'); // N4 radius
+                cwHistory.push(distCW <= 9 ? 'win' : 'loss'); // N9 radius
+                // SMALL (+5 dist) and BIG (+14 dist) snipes at N4
                 lastOverHitCW = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
-                lastBigHitCW = Math.abs(calcDist(n, lastSignal.targetBigCW)) <= 4;
+                lastBigHitCW  = Math.abs(calcDist(n, lastSignal.targetBigCW)) <= 4;
             }
-            // Evaluates CCW N4
+            // Main CCW prediction — evaluated at N9 radius
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
-                ccwHistory.push(distCCW <= 4 ? 'win' : 'loss'); // N4 radius
+                ccwHistory.push(distCCW <= 9 ? 'win' : 'loss'); // N9 radius
+                // SMALL (-5 dist) and BIG (-14 dist) snipes at N4
                 lastOverHitCCW = Math.abs(calcDist(n, lastSignal.targetOverCCW)) <= 4;
-                lastBigHitCCW = Math.abs(calcDist(n, lastSignal.targetBigCCW)) <= 4;
+                lastBigHitCCW  = Math.abs(calcDist(n, lastSignal.targetBigCCW)) <= 4;
             }
         }
         
@@ -137,7 +139,118 @@ function submitNumber(val, silent = false, batch = false) {
     }
 }
 
-// ─── TRAVEL TABLE (UNCHANGED) ──────────────────────────────
+// ─── RENDER: TRAVEL CHART (OFI-Style canvas) ──────────────
+function renderTravelChart() {
+    const canvas = document.getElementById('travelChart');
+    if (!canvas || history.length < 3) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth || canvas.parentElement.offsetWidth || 400;
+    canvas.width = W;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Build travel array
+    const travels = [];
+    for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
+    if (travels.length < 2) return;
+    const maxPoints = 30;
+    const data = travels.slice(-maxPoints);
+    const numPoints = data.length;
+
+    // Averages
+    const cwVals = data.filter(d => d > 0);
+    const ccwVals = data.filter(d => d < 0);
+    const avgCW  = cwVals.length  > 0 ? cwVals.reduce((a,b)=>a+b,0)/cwVals.length   :  7;
+    const avgCCW = ccwVals.length > 0 ? ccwVals.reduce((a,b)=>a+b,0)/ccwVals.length : -7;
+    const allAbs = data.map(d=>Math.abs(d));
+    const avgAbs = allAbs.reduce((a,b)=>a+b,0)/allAbs.length;
+    const stdDev = Math.sqrt(allAbs.reduce((a,b)=>a+Math.pow(b-avgAbs,2),0)/allAbs.length);
+    const upperRange = avgCW  + stdDev;
+    const lowerRange = avgCCW - stdDev;
+
+    const padL=30, padR=10, padT=14, padB=20;
+    const chartW = W-padL-padR, chartH = H-padT-padB;
+    const midY = padT + chartH/2;
+    const maxVal = 18;
+    const scaleY = v => midY - (v/maxVal)*(chartH/2);
+    const scaleX = i => padL + (i/(numPoints-1))*chartW;
+
+    // Grid
+    ctx.strokeStyle='#1a2a3d'; ctx.lineWidth=0.5;
+    for (let v=-15;v<=15;v+=5){ctx.beginPath();ctx.moveTo(padL,scaleY(v));ctx.lineTo(W-padR,scaleY(v));ctx.stroke();}
+    ctx.strokeStyle='#2a3a5d'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padL,midY); ctx.lineTo(W-padR,midY); ctx.stroke();
+
+    // Y labels
+    ctx.fillStyle='#4a6080';ctx.font='9px Inter';ctx.textAlign='right';
+    for(let v=-15;v<=15;v+=5){if(v===0)continue;ctx.fillText(v>0?`+${v}`:`${v}`,padL-4,scaleY(v)+3);}
+    ctx.fillText('0',padL-4,midY+3);
+    // X labels
+    ctx.textAlign='center';ctx.fillStyle='#3a5070';
+    const step=Math.max(1,Math.floor(numPoints/8));
+    for(let i=0;i<numPoints;i+=step){ctx.fillText(travels.length-numPoints+i+1,scaleX(i),H-4);}
+
+    // Range bands
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle='rgba(240,192,64,0.4)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(padL,scaleY(upperRange));ctx.lineTo(W-padR,scaleY(upperRange));ctx.stroke();
+    ctx.strokeStyle='rgba(100,180,255,0.4)';
+    ctx.beginPath();ctx.moveTo(padL,scaleY(lowerRange));ctx.lineTo(W-padR,scaleY(lowerRange));ctx.stroke();
+    ctx.setLineDash([]);
+
+    // AvgCW line (red)
+    ctx.strokeStyle='#f04060';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);
+    ctx.beginPath();ctx.moveTo(padL,scaleY(avgCW));ctx.lineTo(W-padR,scaleY(avgCW));ctx.stroke();
+    // AvgCCW line (orange)
+    ctx.strokeStyle='#ff8c40';
+    ctx.beginPath();ctx.moveTo(padL,scaleY(avgCCW));ctx.lineTo(W-padR,scaleY(avgCCW));ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Fill zones
+    ctx.fillStyle='rgba(48,224,144,0.04)';ctx.fillRect(padL,padT,chartW,chartH/2);
+    ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
+
+    // Main line (green CW / red CCW / gold if out of range)
+    ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';
+    for(let i=1;i<numPoints;i++){
+        const x1=scaleX(i-1),y1=scaleY(data[i-1]),x2=scaleX(i),y2=scaleY(data[i]);
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+        const val=data[i];
+        if(val>upperRange||val<lowerRange) ctx.strokeStyle='#f5c842';
+        else ctx.strokeStyle=val>=0?'#30e090':'#f04060';
+        ctx.stroke();
+    }
+    // Data points
+    for(let i=0;i<numPoints;i++){
+        const x=scaleX(i),y=scaleY(data[i]);
+        ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+        ctx.fillStyle=data[i]>=0?'#30e090':'#c090ff';
+        ctx.fill();ctx.strokeStyle='#0d1520';ctx.lineWidth=1;ctx.stroke();
+    }
+    // Last point highlight
+    if(numPoints>0){
+        const lx=scaleX(numPoints-1),ly=scaleY(data[numPoints-1]);
+        ctx.beginPath();ctx.arc(lx,ly,6,0,Math.PI*2);
+        ctx.strokeStyle='#fff';ctx.lineWidth=2;
+        ctx.shadowBlur=8;ctx.shadowColor=data[numPoints-1]>=0?'#30e090':'#c090ff';
+        ctx.stroke();ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';
+        const v=data[numPoints-1];
+        ctx.fillText((v>0?'+':'')+v,lx,ly-10);
+    }
+    // Legend
+    const leg=[['#30e090','Travel'],['#f04060','Avg CW'],['#ff8c40','Avg CCW'],['#f5c842','Range']];
+    let lx2=padL;
+    ctx.font='8px Inter';
+    leg.forEach(([color,label])=>{
+        ctx.fillStyle=color;ctx.fillRect(lx2,5,8,8);
+        ctx.fillStyle='#7a9bb8';ctx.textAlign='left';
+        ctx.fillText(label,lx2+10,13);
+        lx2+=ctx.measureText(label).width+22;
+    });
+}
+
+// ─── TRAVEL TABLE ──────────────────────────────────────────
 function renderTravelPanel() {
     const tbody   = document.getElementById('travel-tbody');
     const patEl   = document.getElementById('travel-pattern');
@@ -146,6 +259,7 @@ function renderTravelPanel() {
 
     if (history.length < 2) {
         tbody.innerHTML = '<tr><td colspan="4" class="muted">Selecciona una mesa...</td></tr>';
+        renderTravelChart();
         return;
     }
 
@@ -182,14 +296,11 @@ function renderTravelPanel() {
         const dist = (prev !== undefined) ? calcDist(prev, n) : 0;
         const absDist = Math.abs(dist);
         const dir  = dist > 0 ? 'DER.' : (dist < 0 ? 'IZQ.' : '--');
-        
         const numClass = (n === 0) ? 'num-zero' : (RED_NUMS.has(n) ? 'num-red' : 'num-black');
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
-        
         let phaseHtml = '';
         if (absDist >= 1 && absDist <= 9)        phaseHtml = `<span class="phase-pill pill-small">SMALL</span>`;
         else if (absDist >= 10 && absDist <= 19) phaseHtml = `<span class="phase-pill pill-big">BIG</span>`;
-
         const isLast = (i === 0);
         return `<tr>
             <td class="row-n">${idxInHistory + 1}${isLast ? '<span style="font-size:8px;color:var(--accent)"> ★</span>' : ''}</td>
@@ -200,41 +311,7 @@ function renderTravelPanel() {
         </tr>`;
     }).join('');
 
-    // Update Travel Chart.js
-    const canvas = document.getElementById('travelChart');
-    if (canvas && history.length >= 2) {
-        const d50 = history.slice(-50);
-        const dt = [];
-        for (let i = 1; i < d50.length; i++) {
-            dt.push(calcDist(d50[i-1], d50[i]));
-        }
-        if (window.travelChartInstance) window.travelChartInstance.destroy();
-        window.travelChartInstance = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: dt.map((_, i) => i),
-                datasets: [{
-                    label: 'Dist',
-                    data: dt,
-                    borderColor: '#00e5c8',
-                    borderWidth: 2,
-                    pointRadius: 2,
-                    pointBackgroundColor: dt.map(v => Math.abs(v) >= 10 ? '#f04060' : '#30e090'),
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { min: -18, max: 18, ticks: { color: '#4a6080', stepSize: 6 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { display: false }
-                }
-            }
-        });
-    }
+    renderTravelChart();
 }
 
 // ─── SYNC FROM SERVER ────────────────────────────────────────
