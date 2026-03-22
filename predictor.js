@@ -114,203 +114,28 @@ function getWheelNeighbors(num, radius) {
     return neighbors;
 }
 
-function getSixStrategieSignals(lastNum) {
-    if (lastNum === undefined || lastNum === null) return [];
-    
-    // Dynamic offset based on the Terminal (Last Digit) of the number
-    const t = lastNum % 10;
-    
-    const strategies = [
-        { name: '+',     tp: (lastNum + t + 37) % 37 },
-        { name: '-',     tp: (lastNum - t + 37) % 37 },
-        { name: '-,+1',  tp: (lastNum - t + 1 + 37) % 37 },
-        { name: '-,-1',  tp: (lastNum - t - 1 + 37) % 37 },
-        { name: '+,+1',  tp: (lastNum + t + 1 + 37) % 37 },
-        { name: '+,-1',  tp: (lastNum + t - 1 + 37) % 37 }
-    ];
-
-    return strategies.map(s => {
-        let tp = s.tp;
-        const cors = TERMINALS_MAP[tp] || [];
-        
-        // Neighbor Logic: 1 COR -> N3/N3 | 2 COR -> N2/N3 | 3+ COR -> N2/N2
-        let tpN = 3, corN = 3;
-        if (cors.length === 2) { tpN = 2; corN = 3; }
-        else if (cors.length >= 3) { tpN = 2; corN = 2; }
-
-        let betZone = [...getWheelNeighbors(tp, tpN)];
-        cors.forEach(c => {
-            const cNeighbors = getWheelNeighbors(c, corN);
-            betZone = [...new Set([...betZone, ...cNeighbors])];
-        });
-
-        return { 
-            strategy: s.name, 
-            tp, 
-            cors, 
-            betZone,
-            rule: 'SIX STRATEGIE',
-            reason: `TP:${tp} COR:${cors.join(',')}`
-        };
-    });
-}
-
 function getIAMasterSignals(prox, sig, history) {
     if (!sig || history.length === 0) return [];
     const lastNum = history[history.length - 1];
+    
+    // CW Target (+10 distance to the right)
+    const idx = WHEEL_INDEX[lastNum];
+    const targetCW = WHEEL_ORDER[(idx + 10) % 37];
+    
+    // CCW Target (-10 distance to the left)
+    const targetCCW = WHEEL_ORDER[(idx - 10 + 37) % 37];
+
     const signals = [];
 
-    // Analyze Patterns based on DISTANCES
-    const dists = [];
-    for (let i = Math.max(1, history.length - 5); i < history.length; i++) {
-        dists.push(Math.abs(calcDist(history[i-1], history[i])));
-    }
-    const isBigTrend = dists.filter(d => d >= 10 && d <= 19).length >= 3;
-    const isSmallTrend = dists.filter(d => d >= 1 && d <= 9).length >= 3;
-    
-    // Zig Zag Detectors
-    let isDirZigZag = false;
-    let isZoneZigZag = false;
-    let lastDist = 0;
-    if (history.length >= 3) {
-        let rawLastDist = calcDist(history[history.length-2], history[history.length-1]);
-        let rawPrevDist = calcDist(history[history.length-3], history[history.length-2]);
-        lastDist = Math.abs(rawLastDist);
-        let prevDist = Math.abs(rawPrevDist);
-        
-        isDirZigZag = Math.sign(rawLastDist) !== Math.sign(rawPrevDist);
-        isZoneZigZag = (lastDist >= 10 && lastDist <= 19) !== (prevDist >= 10 && prevDist <= 19);
-    }
-
-    // 1. Android n16 (Six Strategie - The User's Core Logic)
-    // Intelligent Selection: Find which strategy is hitting best in the last 10 spins
-    const ssOutcomes = getSixStrategieSignals(lastNum);
-    let bestSS = ssOutcomes[0];
-    let maxHits = -1;
-
-    ssOutcomes.forEach(strategy => {
-        let hits = 0;
-        // Check performance in last 10 spins
-        for (let i = Math.max(0, history.length - 10); i < history.length - 1; i++) {
-            const hNum = history[i];
-            const nextHNum = history[i+1];
-            // Re-calculate what THIS strategy would have predicted at that moment
-            const t = hNum % 10;
-            let predBase = 0;
-            if (strategy.name === '+') predBase = hNum + t;
-            else if (strategy.name === '-') predBase = hNum - t;
-            else if (strategy.name === '-,+1') predBase = hNum - t + 1;
-            else if (strategy.name === '-,-1') predBase = hNum - t - 1;
-            else if (strategy.name === '+,+1') predBase = hNum + t + 1;
-            else if (strategy.name === '+,-1') predBase = hNum + t - 1;
-            
-            const predTP = (predBase + 37) % 37;
-            const predCors = TERMINALS_MAP[predTP] || [];
-            
-            // Count hit if next number is in TP or COR neighbors
-            const tpRad = (predCors.length >= 3) ? 2 : 2; 
-            const corRad = (predCors.length === 1) ? 3 : (predCors.length === 2 ? 3 : 2);
-            
-            const isHit = getWheelNeighbors(predTP, tpRad).includes(nextHNum) || 
-                          predCors.some(c => getWheelNeighbors(c, corRad).includes(nextHNum));
-            
-            if (isHit) hits++;
-        }
-        if (hits > maxHits) {
-            maxHits = hits;
-            bestSS = strategy;
-        }
-    });
-
-    signals.push({
-        name: 'Android n16',
-        tp: bestSS.tp,
-        cor: bestSS.cors,
-        betZone: bestSS.betZone,
-        number: bestSS.tp,
-        confidence: "94%",
-        reason: `${bestSS.name} (Hits: ${maxHits}/10)`,
-        rule: 'SIX STRATEGIE',
-        mode: 'ZONAS',
-        radius: "N2/N3"
-    });
-
-    // 2. Android n17 (SOPORTE + HIBRIDO)
-    let soporte17 = isBigTrend ? sig.casilla19 : sig.casilla1;
-    let target17 = soporte17;
-    let reason17 = isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL";
-    if (history.length > 5 && Math.abs(sig.avgTravel) < 5) {
-        target17 = sig.casilla10;
-        reason17 = "HIBRIDO";
-    }
-    signals.push({
-        name: 'Android n17',
-        number: target17,
-        confidence: "88%",
-        reason: reason17,
-        rule: "FISICA/SOPORTE",
-        mode: "ESCUDO",
-        betZone: getWheelNeighbors(target17, 9),
-        radius: "N9"
-    });
-
-    // 3. Android 1717 (SOPORTE + HIBRIDO + ZIG ZAG)
-    let target1717 = sig.casilla10; 
-    if (isDirZigZag || isZoneZigZag) target1717 = sig.casilla19; 
+    // Return the dual n1717 signal
     signals.push({
         name: 'Android 1717',
-        number: target1717,
-        confidence: "90%",
-        reason: (isDirZigZag || isZoneZigZag) ? "ZIGZAG SOPORTE" : "ATAQUE HIBRIDO",
-        rule: "HIBRIDO/ZIGZAG",
-        mode: 'ATAQUE',
-        betZone: getWheelNeighbors(target1717, 9),
-        radius: "N9"
-    });
-
-    // 4. N18 (SOPORTE PURO)
-    let targetSoporte = isBigTrend ? sig.casilla19 : sig.casilla1;
-    signals.push({
-        name: 'N18',
-        number: targetSoporte,
-        confidence: "86%",
-        reason: isBigTrend ? "SOPORTE BIG" : "SOPORTE SMALL",
-        rule: "SOPORTE",
-        mode: 'SOPORTE',
-        betZone: getWheelNeighbors(targetSoporte, 9),
-        radius: "N9"
-    });
-
-    // 5. CELULA (COMBINADO TOTAL - SNIPER HYBRID)
-    // Primary: n9 target based on physics, Secondary: n4 snipes on small/big
-    let targetSnipe = isBigTrend ? sig.casilla14 : sig.casilla5;
-    if (isZoneZigZag) targetSnipe = (lastDist >= 10 && lastDist <= 19) ? sig.casilla5 : sig.casilla14;
-    
-    let inverseSnipe = isBigTrend ? sig.casillaNeg14 : sig.casillaNeg5;
-    if (isZoneZigZag) inverseSnipe = (lastDist >= 10 && lastDist <= 19) ? sig.casillaNeg5 : sig.casillaNeg14;
-
-    signals.push({
-        name: 'CELULA',
-        number: targetSnipe,
-        numberInverso: inverseSnipe,
-        top: targetSnipe,
-        confidence: "92%",
-        reason: "SNIPE COMBINADO",
-        reasonInverso: "SNIPE INVERSO (IZQUIERDA)",
-        rule: "SNIPER",
-        mode: 'GANANCIA',
-        betZone: getWheelNeighbors(targetSnipe, 9), // Main target is n9
-        radius: "N9",
-        smallSnipe: sig.casilla5,
-        bigSnipe: sig.casilla14,
-        smallSnipeInverso: sig.casillaNeg5,
-        bigSnipeInverso: sig.casillaNeg14
-    });
-
-    // Populate secondary snipes for all agents to fill the 3-column UI
-    signals.forEach(s => {
-        s.smallSnipe = sig.casilla5 !== undefined ? sig.casilla5 : '--';
-        s.bigSnipe = sig.casilla14 !== undefined ? sig.casilla14 : '--';
+        targetCW: targetCW,
+        targetCCW: targetCCW,
+        betZoneCW: getWheelNeighbors(targetCW, 4), // n4
+        betZoneCCW: getWheelNeighbors(targetCCW, 4), // n4
+        rule: "DISTANCE 10",
+        mode: 'DUAL'
     });
 
     return signals;

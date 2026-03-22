@@ -1,27 +1,17 @@
 // ============================================================
-// app.js — COMPACT MOBILE UI ENGINE (Phase 30)
+// app.js — SHADOW ROULETTE UI ENGINE
 // ============================================================
 
-const history      = [];
-const iaSignalsHistory = [ [], [], [], [], [], [] ];
-let activeIaTab    = 0; 
-let lastIaSignals = [
-    { top: 17, rule: 'READY', radius:'N9', smallSnipe: 5, bigSnipe: 14 },
-    { top: 16, rule: 'READY', radius:'N2/N3', smallSnipe: 5, bigSnipe: 14  },
-    { top: 5,  rule: 'READY', radius:'N9', smallSnipe: 5, bigSnipe: 14  },
-    { top: 22, rule: 'READY', radius:'N9', smallSnipe: 5, bigSnipe: 14  },
-    { top: 10, rule: 'READY', radius:'N4', smallSnipe: 5, bigSnipe: 14  }
-]; 
+const history = [];
+const cwHistory = [];
+const ccwHistory = [];
 
-// Agent names as per user request
-const AGENT_NAMES   = ['Android N17', 'Android N16', 'Android 1717', 'Android N18', 'CÉLULA'];
-const AGENT_KEYS    = ['N17', 'N16', 'N17PLUS', 'N18', 'CELULA'];
-const AGENT_MODES   = ['SOPORTE/HIBRIDO', 'SIX STRATEGIE', 'HIBRIDO/ZIGZAG', 'SOPORTE PURO', 'SNIPER'];
+let currentView = 'CW'; // toggled by SWITCH SIDE
+let lastSignal = null;
+let currentTableId = null;
 
 const RED_NUMS  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-
-let currentTableId = null;
 
 function calcDist(from, to) {
     const i1 = WHEEL_NUMS.indexOf(from);
@@ -33,187 +23,103 @@ function calcDist(from, to) {
     return d;
 }
 
-// ─── RENDER: AGENT TABS ────────────────────────────────────
-function renderTabs() {
-    const strip = document.getElementById('strat-tabs');
-    if (!strip) return;
-    strip.innerHTML = AGENT_KEYS.map((key, idx) => {
-        const h = iaSignalsHistory[idx] || [];
-        const wins = h.filter(x => x === 'win').length;
-        const active = idx === activeIaTab;
-        return `<button class="ia-tab ${active ? 'active' : ''}" onclick="setActiveIaTab(${idx})">
-            ${key}
-            <span class="wl">W-L ${wins}-${h.length - wins}</span>
-        </button>`;
-    }).join('');
-}
+// ─── RENDER: SHADOW PANEL ──────────────────────────────────
+function renderShadowPanel() {
+    if (!lastSignal) return;
 
-let celulaInverso = false;
-window.toggleCelulaInvert = () => {
-    celulaInverso = !celulaInverso;
-    renderAgentCard(lastIaSignals);
-};
+    const targetEl = document.getElementById('pred-target');
+    const wrateEl = document.getElementById('w-rate');
+    const streakEl = document.getElementById('wl-streak');
+    const patternEl = document.getElementById('pattern-next');
+    const dirEl = document.getElementById('pred-dir');
+    const topCwEl = document.getElementById('top-cw');
+    const topCcwEl = document.getElementById('top-ccw');
+    const spinsEl = document.getElementById('pred-spins');
 
-// ─── RENDER: AGENT CARD ────────────────────────────────────
-function renderAgentCard(signals) {
-    const s = signals[activeIaTab];
-    if (!s) return;
+    // Select the array and target based on current view
+    const isCW = currentView === 'CW';
+    const activeHistory = isCW ? cwHistory : ccwHistory;
+    const activeTarget = isCW ? lastSignal.targetCW : lastSignal.targetCCW;
 
-    const nameEl    = document.getElementById('active-agent-name');
-    const confEl    = document.getElementById('agent-confidence');
-    const statusMsg = document.getElementById('agent-status-msg');
-    const statusEl  = document.getElementById('agent-status');
-    const syncEl    = document.getElementById('agent-sync');
-    const targetEl  = document.getElementById('target-number');
-    const radiusEl  = document.getElementById('pi-radius');
-    const tendEl    = document.getElementById('pi-tendency');
-    const psSmall   = document.getElementById('psn-small-val');
-    const psBig     = document.getElementById('psn-big-val');
-    const winsEl    = document.getElementById('agent-wins');
-    const lossesEl  = document.getElementById('agent-losses');
-    const dotsEl    = document.getElementById('result-dots');
-    const invBtn    = document.getElementById('btn-celula-invert');
+    if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
+    if (dirEl) dirEl.innerText = currentView;
+    if (topCwEl) topCwEl.innerText = lastSignal.targetCW !== undefined ? lastSignal.targetCW : '--';
+    if (topCcwEl) topCcwEl.innerText = lastSignal.targetCCW !== undefined ? lastSignal.targetCCW : '--';
 
-    let isInverseMode = (activeIaTab === 4 && celulaInverso);
-
-    if (nameEl)   nameEl.innerText   = isInverseMode ? 'CÉLULA (INVERSO)' : (AGENT_NAMES[activeIaTab] || 'AGENT').toUpperCase();
-    if (invBtn)   invBtn.style.display = (activeIaTab === 4) ? 'inline-block' : 'none';
-    
-    if (confEl)   confEl.innerText   = (s.confidence || '90%') + ' CONF.';
-    if (statusMsg) statusMsg.innerText = (s.rule || AGENT_MODES[activeIaTab]) + ' ' + (s.radius || 'N9');
-    
-    let reasonTxt = s.reason || 'ANALIZANDO PATRONES...';
-    if (isInverseMode && s.reasonInverso) reasonTxt = s.reasonInverso;
-    if (statusEl) statusEl.innerText = reasonTxt;
-    
-    if (syncEl)   syncEl.innerText   = s.mode ? `MODO: ${s.mode}` : 'SINCRONIZADO';
-    
-    // Support either 'top', 'number', or 'numberInverso'
-    let targetNum = s.top !== undefined ? s.top : (s.number !== undefined ? s.number : '--');
-    if (isInverseMode && s.numberInverso !== undefined) targetNum = s.numberInverso;
-    
-    if (targetEl) targetEl.innerText = targetNum;
-    
-    if (radiusEl) radiusEl.innerText = s.radius ? s.radius.toLowerCase() : 'n9';
-    
-    // Tendency from last dist
-    if (tendEl && history.length >= 2) {
-        const d = calcDist(history[history.length-2], history[history.length-1]);
-        tendEl.innerText = `TENDENCIA: ${d >= 0 ? 'Der.' : 'Izq.'} ${d >= 0 ? '↺' : '↻'}`;
-    }
-
-    // Secondary snipes (SMALL/BIG)
-    let smallVal = s.smallSnipe !== undefined ? s.smallSnipe : '--';
-    let bigVal   = s.bigSnipe !== undefined   ? s.bigSnipe   : '--';
-    
-    if (isInverseMode) {
-        if (s.smallSnipeInverso !== undefined) smallVal = s.smallSnipeInverso;
-        if (s.bigSnipeInverso !== undefined)   bigVal   = s.bigSnipeInverso;
-    }
-
-    if (psSmall) psSmall.innerText = smallVal;
-    if (psBig)   psBig.innerText   = bigVal;
-
-    // W-L
-    const hIdx = isInverseMode ? 5 : activeIaTab;
-    const h = iaSignalsHistory[hIdx] || [];
-    const wins = h.filter(x => x === 'win').length;
-    const losses = h.length - wins;
-    if (winsEl)   winsEl.innerText   = wins;
-    if (lossesEl) lossesEl.innerText = losses;
-
-    // Performance string (All WWLL...)
-    const perfEl = document.getElementById('agent-performance');
-    if (perfEl) {
-        perfEl.innerHTML = h.slice(-15).map(r => 
-            `<span class="${r === 'win' ? 'perf-w' : 'perf-l'}">${r === 'win' ? 'W' : 'L'}</span>`
-        ).join('');
-    }
-}
-
-// ─── RENDER: WHEEL ──────────────────────────────────────────
-function drawWheel(highlightNum = null) {
-    const canvas = document.getElementById('wheel-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const cx = 65, cy = 65; // Updated center for 130x130
-    ctx.clearRect(0, 0, 130, 130);
-
-    const goldColor = '#f5c842';
-
-    ctx.beginPath(); ctx.arc(cx, cy, 63, 0, Math.PI * 2);
-    ctx.fillStyle = '#1a1a1a'; ctx.fill();
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.stroke();
-
-    WHEEL_NUMS.forEach((n, i) => {
-        const startAng = (i * (360 / 37) - 90 - (360/74)) * (Math.PI / 180);
-        const endAng   = (i * (360 / 37) - 90 + (360/74)) * (Math.PI / 180);
-        const midAng   = (i * (360 / 37) - 90) * (Math.PI / 180);
-
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(startAng) * 35, cy + Math.sin(startAng) * 35);
-        ctx.arc(cx, cy, 60, startAng, endAng);
-        ctx.lineTo(cx + Math.cos(endAng) * 35, cy + Math.sin(endAng) * 35);
-        ctx.closePath();
+    // Win Rate & Streak
+    if (activeHistory.length > 0) {
+        const wins = activeHistory.filter(x => x === 'win').length;
+        const rate = ((wins / activeHistory.length) * 100).toFixed(2);
+        if (wrateEl) wrateEl.innerText = `${rate}%`;
+        if (spinsEl) spinsEl.innerText = activeHistory.length;
         
-        ctx.fillStyle = (n === 0) ? '#008b00' : (RED_NUMS.has(n) ? '#c41e3a' : '#000');
-        ctx.fill();
-        ctx.strokeStyle = '#222'; ctx.lineWidth = 0.5; ctx.stroke();
+        let streakHtml = activeHistory.slice(-15).map(r => 
+            `<span style="color:${r === 'win' ? '#0f0' : '#f00'}; margin-right:2px;">${r === 'win' ? 'W' : 'L'}</span>`
+        ).join(',');
+        if (streakEl) streakEl.innerHTML = streakHtml;
 
-        const rx = cx + Math.cos(midAng) * 48;
-        const ry = cy + Math.sin(midAng) * 48;
-        
-        ctx.save();
-        ctx.translate(rx, ry); ctx.rotate(midAng + Math.PI/2);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Inter';
-        ctx.textAlign = 'center'; ctx.fillText(n, 0, 3);
-        ctx.restore();
-
-        if (n === highlightNum) {
-            ctx.beginPath(); ctx.arc(rx, ry, 9, 0, Math.PI * 2);
-            ctx.strokeStyle = goldColor; ctx.lineWidth = 2; ctx.stroke();
-            const bx = cx + Math.cos(midAng) * 63;
-            const by = cy + Math.sin(midAng) * 63;
-            ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2);
-            ctx.fillStyle = '#fff'; ctx.shadowBlur = 6; ctx.shadowColor = '#fff';
-            ctx.fill(); ctx.shadowBlur = 0;
+        // Simple pattern predict (always predict Win if W-Rate is good, else Lose - visual flair)
+        if (patternEl) {
+            patternEl.innerText = rate > 20 ? 'WIN' : 'LOSE';
+            patternEl.style.color = rate > 20 ? '#0f0' : '#f00';
         }
-    });
-
-    const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, 35);
-    gr.addColorStop(0, '#333'); gr.addColorStop(1, '#000');
-    ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI*2);
-    ctx.fillStyle = gr; ctx.fill();
-}
-
-// ─── RENDER: WHEEL & HISTORY ───────────────────────────────
-function renderWheelAndHistory() {
-    const strip = document.getElementById('history-strip-mini');
-    if (!strip) return;
-
-    // History (Last 15 inside the visual panel)
-    const last15 = history.slice(-15).reverse();
-    strip.innerHTML = last15.map(n => {
-        const cls = (n === 0) ? 'ball-zero' : (RED_NUMS.has(n) ? 'ball-red' : 'ball-black');
-        return `<div class="mini-ball ${cls}">${n}</div>`;
-    }).join('');
-
-    // Update Wheel
-    if (history.length > 0) {
-        drawWheel(history[history.length - 1]);
     } else {
-        drawWheel();
+        if (wrateEl) wrateEl.innerText = '0.00%';
+        if (streakEl) streakEl.innerHTML = '--';
+        if (spinsEl) spinsEl.innerText = '0';
     }
 }
 
-// ─── RENDER: ALL SIGNALS ───────────────────────────────────
-function renderSignalsPanel(signals) {
-    renderTabs();
-    renderAgentCard(signals);
-    renderWheelAndHistory();
+// ─── SWITCH SIDE ──────────────────────────────────────────
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'btn-switch-side') {
+        currentView = currentView === 'CW' ? 'CCW' : 'CW';
+        renderShadowPanel();
+    }
+});
+
+// ─── SUBMIT NUMBER ─────────────────────────────────────────
+function submitNumber(val, silent = false, batch = false) {
+    const raw = val !== undefined ? val : '';
+    const n = parseInt(raw);
+    
+    if (!isNaN(n) && n >= 0 && n <= 36) {
+        // Evaluate previous predictions before pushing to history
+        if (lastSignal && history.length > 0) {
+            // Evaluates CW N4
+            if (lastSignal.targetCW !== undefined) {
+                const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
+                cwHistory.push(distCW <= 4 ? 'win' : 'loss'); // N4 radius
+            }
+            // Evaluates CCW N4
+            if (lastSignal.targetCCW !== undefined) {
+                const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
+                ccwHistory.push(distCCW <= 4 ? 'win' : 'loss'); // N4 radius
+            }
+        }
+        
+        history.push(n);
+
+        // Compute new predictions
+        if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+            try {
+                const sig  = computeDealerSignature(history);
+                const prox = projectNextRound(history, {});
+                const masterSignals = getIAMasterSignals(prox, sig, history);
+                if (masterSignals && masterSignals.length > 0) {
+                    lastSignal = masterSignals[0];
+                }
+            } catch(e) { console.error('Predict error:', e); }
+        }
+    }
+
+    if (!batch) {
+        renderShadowPanel();
+        renderTravelPanel();
+    }
 }
 
-// ─── RENDER: TRAVEL TABLE ──────────────────────────────────
+// ─── TRAVEL TABLE (UNCHANGED) ──────────────────────────────
 function renderTravelPanel() {
     const tbody   = document.getElementById('travel-tbody');
     const patEl   = document.getElementById('travel-pattern');
@@ -245,7 +151,6 @@ function renderTravelPanel() {
         patEl.className = `badge ${patClass}`;
     }
 
-    // Last zone badge (based on number for the badge, but distance for the table)
     const lastN = history[history.length - 1];
     if (lastZEl) {
         if (lastN >= 1 && lastN <= 9)        { lastZEl.textContent = 'LAST: SMALL'; lastZEl.style.color = 'var(--green)'; }
@@ -263,7 +168,6 @@ function renderTravelPanel() {
         const numClass = (n === 0) ? 'num-zero' : (RED_NUMS.has(n) ? 'num-red' : 'num-black');
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
         
-        // Correct classification based on DISTANCE (Phase 31 Fix)
         let phaseHtml = '';
         if (absDist >= 1 && absDist <= 9)        phaseHtml = `<span class="phase-pill pill-small">SMALL</span>`;
         else if (absDist >= 10 && absDist <= 19) phaseHtml = `<span class="phase-pill pill-big">BIG</span>`;
@@ -279,72 +183,7 @@ function renderTravelPanel() {
     }).join('');
 }
 
-// ─── SUBMIT NUMBER ─────────────────────────────────────────
-function submitNumber(val, silent = false, batch = false) {
-    const inputEl = document.getElementById('spin-number');
-    const raw = val !== undefined ? val : (inputEl ? inputEl.value : '');
-    const n = parseInt(raw);
-    
-    if (!isNaN(n) && n >= 0 && n <= 36) {
-        // Evaluate previous predictions
-        lastIaSignals.forEach((s, idx) => {
-            if (!s || s.top === undefined || s.top === null) return;
-            const radius = s.radius === 'N4' ? 4 : 9;
-            const win = Math.abs(calcDist(n, s.top)) <= radius;
-            iaSignalsHistory[idx].push(win ? 'win' : 'loss');
-            
-            // Evaluar el pronóstico inverso
-            if (idx === 4 && s.numberInverso !== undefined) {
-                const winInv = Math.abs(calcDist(n, s.numberInverso)) <= radius;
-                iaSignalsHistory[5].push(winInv ? 'win' : 'loss');
-            }
-        });
-        
-        history.push(n);
-        if (inputEl && !batch) inputEl.value = '';
-
-        // Compute new predictions
-        if (typeof computeDealerSignature === 'function' && history.length >= 3) {
-            try {
-                const sig  = computeDealerSignature(history);
-                const prox = projectNextRound(history, {});
-                const masterSignals = getIAMasterSignals(prox, sig, history);
-                
-                if (masterSignals && masterSignals.length > 0) {
-                    const ag17   = masterSignals.find(s => s.name === 'Android n17');
-                    const ag16   = masterSignals.find(s => s.name === 'Android n16');
-                    const ag1717 = masterSignals.find(s => s.name === 'Android 1717');
-                    const agN18  = masterSignals.find(s => s.name === 'N18');
-                    const agCel  = masterSignals.find(s => s.name === 'CELULA');
-                    
-                    lastIaSignals = [
-                        { top: ag17?.number,   confidence: ag17?.confidence,   reason: ag17?.reason,   rule: ag17?.rule,   mode: ag17?.mode,   radius: ag17?.radius   || 'N9', smallSnipe: ag17?.smallSnipe, bigSnipe: ag17?.bigSnipe },
-                        { top: ag16?.tp,        confidence: ag16?.confidence,   reason: ag16?.reason,   rule: ag16?.rule,   mode: ag16?.mode,   radius: 'N2/N3',        tp: ag16?.tp, cors: ag16?.cor, smallSnipe: ag16?.smallSnipe, bigSnipe: ag16?.bigSnipe },
-                        { top: ag1717?.number, confidence: ag1717?.confidence, reason: ag1717?.reason, rule: ag1717?.rule, mode: ag1717?.mode, radius: ag1717?.radius || 'N9', smallSnipe: ag1717?.smallSnipe, bigSnipe: ag1717?.bigSnipe },
-                        { top: agN18?.number,  confidence: agN18?.confidence,  reason: agN18?.reason,  rule: agN18?.rule,  mode: agN18?.mode,  radius: agN18?.radius  || 'N9', smallSnipe: agN18?.smallSnipe, bigSnipe: agN18?.bigSnipe },
-                        { top: agCel?.number,  confidence: agCel?.confidence,  reason: agCel?.reason,  reasonInverso: agCel?.reasonInverso, numberInverso: agCel?.numberInverso, rule: agCel?.rule,  mode: agCel?.mode,  radius: agCel?.radius  || 'N4', smallSnipe: agCel?.smallSnipe, bigSnipe: agCel?.bigSnipe, smallSnipeInverso: agCel?.smallSnipeInverso, bigSnipeInverso: agCel?.bigSnipeInverso }
-                    ];
-                }
-            } catch(e) { console.error('Predict error:', e); }
-        }
-
-        // Post to backend (non-blocking)
-        if (currentTableId && !batch) {
-            fetch('/api/spin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ table_id: currentTableId, number: n, source: 'manual' })
-            }).catch(() => {});
-        }
-    }
-
-    if (!batch) {
-        renderSignalsPanel(lastIaSignals);
-        renderTravelPanel();
-    }
-}
-
-// ─── SYNC FROM SERVER ──────────────────────────────────────
+// ─── SYNC FROM SERVER ────────────────────────────────────────
 async function syncData() {
     if (!currentTableId) return;
     try {
@@ -353,33 +192,41 @@ async function syncData() {
         const spins = await r.json();
         if (spins.length !== history.length) {
             history.length = 0;
-            iaSignalsHistory.forEach(h => h.length = 0);
+            cwHistory.length = 0;
+            ccwHistory.length = 0;
+            lastSignal = null;
             for (const s of spins) submitNumber(s.number, true, true);
-            renderSignalsPanel(lastIaSignals);
+            renderShadowPanel();
             renderTravelPanel();
         }
     } catch(e) {}
 }
 
-// ─── TAB SWITCH ───────────────────────────────────────────
-window.setActiveIaTab = (idx) => {
-    activeIaTab = idx;
-    renderSignalsPanel(lastIaSignals);
-};
+let eventSource = null;
+function connectSSE(tId) {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    eventSource = new EventSource(`/api/events/${tId}`);
+    eventSource.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'new_spin' && data.number !== undefined) {
+                // Instantly react to new live spins
+                submitNumber(data.number, false, false);
+            }
+        } catch(err) {}
+    };
+}
 
 // ─── INIT ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    // Clock
     setInterval(() => {
         const el = document.getElementById('live-clock');
         if (el) el.innerText = new Date().toLocaleTimeString();
     }, 1000);
 
-    // Immediate render with placeholders
-    renderSignalsPanel(lastIaSignals);
+    renderShadowPanel();
     renderTravelPanel();
 
-    // Load tables from API
     try {
         const r = await fetch('/api/tables');
         if (r.ok) {
@@ -390,15 +237,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tableSelect.addEventListener('change', () => {
                     currentTableId = tableSelect.value;
                     history.length = 0;
-                    iaSignalsHistory.forEach(h => h.length = 0);
-                    syncData();
+                    cwHistory.length = 0;
+                    ccwHistory.length = 0;
+                    lastSignal = null;
+                    syncData().then(() => connectSSE(currentTableId));
                 });
                 currentTableId = ts[0].id;
-                syncData();
+                await syncData();
+                connectSSE(currentTableId);
             }
         }
     } catch (e) { console.warn('API not reachable, offline mode.'); }
-
-    // Poll for updates every 5s
-    setInterval(syncData, 5000);
 });

@@ -32,57 +32,29 @@
         </div>
     </section>
 
-    <!-- ═══ AGENT TABS ═══ -->
-    <nav class="agent-tab-bar" id="strat-tabs"></nav>
-
-    <!-- ═══ AGENT CARD ═══ -->
-    <section class="agent-card" id="agent-card">
-        <div class="agent-card-header">
-            <span class="agent-icon">🤖</span>
-            <span class="agent-card-name" id="active-agent-name">ANDROID N17</span>
-            <button id="btn-celula-invert" style="display:none; background: var(--accent); color:#000; border:none; border-radius:10px; padding: 2px 8px; font-weight:bold; cursor:pointer; font-size:10px; margin-left: auto; margin-right: 10px;" onclick="toggleCelulaInvert()">INVERSO 🔄</button>
-            <span class="agent-confidence" id="agent-confidence">0%</span>
+    <!-- ═══ PREDICTION PANEL ═══ -->
+    <section class="shadow-panel" id="prediction-panel">
+        <div class="panel-header">
+            <span class="icon">🤖</span> PREDICTION
         </div>
-
-        <div class="agent-strategy-label" id="agent-strategy">--</div>
-
-        <!-- Wheel dots (visual flair) -->
-        <div class="wheel-dots">
-            <span class="wd"></span><span class="wd"></span><span class="wd"></span>
-        </div>
-
-        <div class="agent-status-row" id="agent-status-row">
-            <span class="status-line" id="agent-status">BUSCANDO EN BASE DE DATOS...</span>
-        </div>
-        <div class="agent-sync-row" id="agent-sync">SINCRONIZANDO BDD...</div>
-
-        <!-- 3-Column Prediction Grid -->
-        <div class="prediction-grid-3" id="prediction-grid">
-            <div class="p-box pb-left">
-                <span class="p-label">SMALL</span>
-                <span class="p-val" id="psn-small-val">--</span>
-                <span class="p-sub">n4</span>
+        
+        <div class="panel-body">
+            <div class="pred-line">Prediction: <strong id="pred-target" class="highlight-val">--</strong> <span class="w-rate">[W-RATE: <span id="w-rate">0.00%</span>]</span></div>
+            <div class="pred-line">W/L Streak: <span id="wl-streak" class="streak-text">--</span></div>
+            <div class="pred-line">Pattern Predicted next: <span id="pattern-next">--</span></div>
+            <div class="pred-line">Avg. used 10</div>
+            <div class="pred-line">Direction: <span id="pred-dir">CW</span></div>
+            <div class="pred-line">Spins: <span id="pred-spins">0</span></div>
+            
+            <div class="dropdown-header">▼ SHOW TOP NUMBERS</div>
+            <div class="top-numbers">
+                <div class="top-line">TOP (CW): <span id="top-cw" class="highlight-val">--</span> <span class="n4-tag">n4</span></div>
+                <div class="top-line">TOP (CCW): <span id="top-ccw" class="highlight-val">--</span> <span class="n4-tag">n4</span></div>
             </div>
-            <div class="p-box pb-center">
-                <div class="p-val-main" id="target-number">--</div>
-                <div class="p-sub-main" id="pi-radius">n9</div>
-                <div class="p-tendency" id="pi-tendency">TENDENCIA: --</div>
+            
+            <div class="panel-actions">
+                <button id="btn-switch-side" class="btn-shadow">SWITCH SIDE</button>
             </div>
-            <div class="p-box pb-right">
-                <span class="p-label">BIG</span>
-                <span class="p-val" id="psn-big-val">--</span>
-                <span class="p-sub">n4</span>
-            </div>
-        </div>
-
-        <div class="agent-footer-stats">
-            <span class="st">W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
-            <span class="status-msg" id="agent-status-msg">SOPORTE BIG N9</span>
-        </div>
-
-        <!-- Long-form performance string (WWLL...) -->
-        <div class="performance-string" id="agent-performance">
-            <!-- Filled by JS -->
         </div>
     </section>
 

@@ -47,12 +47,31 @@ app.delete('/api/tables/:id', (req, res) => {
 // ---- API: Spins / History ----
 app.get('/api/history/:tableId', (req, res) => {
     const tableId = req.params.tableId;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 200;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 400; // Updated limit to 400 to match OFI
     console.log(`[GET] History for table ${tableId} (limit: ${limit})`);
     db.getHistory(tableId, limit, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         console.log(`[DB] Found ${rows.length} rows for table ${tableId}`);
         res.json(rows);
+    });
+});
+
+// ── SSE: broadcast to all clients listening per table ──────
+const sseClients = {}; // { tableId: [res, res, ...] }
+
+app.get('/api/events/:tableId', (req, res) => {
+    const tableId = req.params.tableId;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering on Render
+    res.flushHeaders();
+    // Keep connection alive
+    res.write('data: {"type":"connected"}\n\n');
+    if (!sseClients[tableId]) sseClients[tableId] = [];
+    sseClients[tableId].push(res);
+    req.on('close', () => {
+        sseClients[tableId] = (sseClients[tableId] || []).filter(c => c !== res);
     });
 });
 
@@ -166,12 +185,23 @@ app.post('/api/spin', async (req, res) => {
                 predictions: newPredictions
             });
             await newSpin.save();
+            
+            if (sseClients[table_id]) {
+                sseClients[table_id].forEach(client => {
+                    client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
+                });
+            }
             res.json(newSpin);
         } else {
             // Fallback
             db.addSpin(table_id, number, source || 'bot', (err, id) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ id, table_id, number, source, note: 'Saved to fallback JSON without rich predictions' });
+                if (sseClients[table_id]) {
+                    sseClients[table_id].forEach(client => {
+                        client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
+                    });
+                }
+                res.json({ id, table_id, number, source, note: 'Saved to fallback' });
             });
         }
 
