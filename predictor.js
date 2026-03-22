@@ -158,7 +158,6 @@ if (typeof window !== 'undefined') {
     window.projectNextRound = projectNextRound;
     window.computeDealerSignature = computeDealerSignature;
     window.getIAMasterSignals = getIAMasterSignals;
-    window.getSixStrategieSignals = getSixStrategieSignals;
     window.WHEEL_ORDER = WHEEL_ORDER;
     window.WHEEL_INDEX = WHEEL_INDEX;
 }
@@ -166,6 +165,6 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         WHEEL_ORDER, WHEEL_INDEX, TERMINALS_MAP,
-        analyzeSpin, projectNextRound, computeDealerSignature, getIAMasterSignals, getSixStrategieSignals
+        analyzeSpin, projectNextRound, computeDealerSignature, getIAMasterSignals
     };
 }
