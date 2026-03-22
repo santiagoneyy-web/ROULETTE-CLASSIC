@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>ROULETTE PREDICTOR PRO</title>
+    <title>CLASI ROULETTE</title>
     <link rel="stylesheet" href="styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <!-- Chart.js for Travel Graph -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -16,7 +14,7 @@
     <header class="top-bar">
         <div class="top-bar-left">
             <span class="app-logo">🎰</span>
-            <span class="app-title">ROULETTE PRO</span>
+            <span class="app-title">CLASI ROULETTE</span>
         </div>
         <div class="top-bar-right">
             <select id="table-select" class="compact-select"></select>
@@ -24,39 +22,59 @@
         </div>
     </header>
 
-    <!-- ═══ VISUAL PANEL (Wheel + Mini History) ═══ -->
+    <!-- ═══ VISUAL PANEL (Wheel + Number History) ═══ -->
     <section class="visual-panel-mini">
         <div class="wheel-container">
             <canvas id="wheel-canvas" width="130" height="130"></canvas>
         </div>
         <div id="history-strip-mini" class="history-strip-mini">
-            <!-- Last 15 numbers (ball style) -->
+            <!-- Numbers appear here -->
         </div>
     </section>
 
     <!-- ═══ PREDICTION PANEL ═══ -->
     <section class="shadow-panel" id="prediction-panel">
-        <div class="panel-header">
-            <span class="icon">🤖</span> PREDICTION
+        <div class="agent-card-header">
+            <span class="agent-icon">🤖</span>
+            <span class="agent-card-name">ANDROID 1717</span>
+            <span class="side-badge" id="pred-dir">CW ↺</span>
         </div>
-        
-        <div class="panel-body">
-            <div class="pred-line">Prediction: <strong id="pred-target" class="highlight-val">--</strong> <span class="w-rate">[W-RATE: <span id="w-rate">0.00%</span>]</span></div>
-            <div class="pred-line">W/L Streak: <span id="wl-streak" class="streak-text">--</span></div>
-            <div class="pred-line">Pattern Predicted next: <span id="pattern-next">--</span></div>
-            <div class="pred-line">Avg. used 10</div>
-            <div class="pred-line">Direction: <span id="pred-dir">CW</span></div>
-            <div class="pred-line">Spins: <span id="pred-spins">0</span></div>
-            
-            <div class="dropdown-header">▼ SHOW TOP NUMBERS</div>
-            <div class="top-numbers">
-                <div class="top-line">OVER (5): <strong id="top-over" class="highlight-val">--</strong> <span class="n4-tag">n4</span><span id="hit-over" style="color:var(--green); font-size:10px; font-weight:bold; margin-left:auto;"></span></div>
-                <div class="top-line">BIG (14): <strong id="top-big" class="highlight-val">--</strong> <span class="n4-tag">n4</span><span id="hit-big" style="color:var(--green); font-size:10px; font-weight:bold; margin-left:auto;"></span></div>
+
+        <div class="agent-strategy-label" id="agent-strategy">DISTANCE 10 · N9</div>
+
+        <!-- 3-Column Prediction Grid (OFI Style) -->
+        <div class="prediction-grid-3" id="prediction-grid">
+            <div class="p-box pb-left">
+                <span class="p-label">SMALL</span>
+                <span class="p-val" id="psn-small-val">--</span>
+                <span class="p-sub">n4</span>
+                <span class="hit-text" id="hit-small"></span>
             </div>
-            
-            <div class="panel-actions">
-                <button id="btn-switch-side" class="btn-shadow">SWITCH SIDE</button>
+            <div class="p-box pb-center">
+                <div class="p-val-main" id="target-number">--</div>
+                <div class="p-sub-main">n9</div>
+                <div class="p-tendency" id="pi-tendency">MAIN PRED.</div>
             </div>
+            <div class="p-box pb-right">
+                <span class="p-label">BIG</span>
+                <span class="p-val" id="psn-big-val">--</span>
+                <span class="p-sub">n4</span>
+                <span class="hit-text" id="hit-big"></span>
+            </div>
+        </div>
+
+        <!-- W/L Stats -->
+        <div class="agent-footer-stats">
+            <span class="st">W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
+            <span class="status-msg" id="agent-status-msg">W-RATE: <span id="w-rate">0.00%</span></span>
+        </div>
+
+        <!-- Recent streak -->
+        <div class="performance-string" id="agent-performance"></div>
+
+        <!-- Switch Side -->
+        <div class="panel-actions" style="margin-top:10px;">
+            <button id="btn-switch-side" class="btn-shadow">⇄ SWITCH SIDE</button>
         </div>
     </section>
 
@@ -70,21 +88,22 @@
             </div>
         </div>
         <!-- TRAVEL CHART CANVAS -->
-        <div style="padding: 10px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border);">
-            <canvas id="travelChart" height="120"></canvas>
+        <div class="chart-wrap">
+            <canvas id="travelChart" height="130"></canvas>
         </div>
         <div class="travel-table-wrap">
             <table class="travel-table">
                 <thead>
                     <tr>
-                        <th>N°</th>
+                        <th>#</th>
+                        <th>NUM</th>
                         <th>DIST</th>
                         <th>DIR</th>
-                        <th>PHASE</th>
+                        <th>ZONE</th>
                     </tr>
                 </thead>
                 <tbody id="travel-tbody">
-                    <tr><td colspan="4" class="muted">Selecciona una mesa...</td></tr>
+                    <tr><td colspan="5" class="muted">Selecciona una mesa...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -92,7 +111,7 @@
 
 </div>
 
-<script src="predictor.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="predictor.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

@@ -28,63 +28,120 @@ function calcDist(from, to) {
     return d;
 }
 
-// ─── RENDER: SHADOW PANEL ──────────────────────────────────
+/// ─── RENDER: SHADOW PANEL ────────────────────────────────
 function renderShadowPanel() {
     if (!lastSignal) return;
-
-    const targetEl = document.getElementById('pred-target');
-    const wrateEl = document.getElementById('w-rate');
-    const streakEl = document.getElementById('wl-streak');
-    const patternEl = document.getElementById('pattern-next');
-    const dirEl = document.getElementById('pred-dir');
-    const topCwEl = document.getElementById('top-cw');
-    const topCcwEl = document.getElementById('top-ccw');
-    const spinsEl = document.getElementById('pred-spins');
-
-    // Select the array and target based on current view
     const isCW = currentView === 'CW';
+
     const activeHistory = isCW ? cwHistory : ccwHistory;
-    const activeTarget = isCW ? lastSignal.targetCW : lastSignal.targetCCW;
-    const activeOver = isCW ? lastSignal.targetOverCW : lastSignal.targetOverCCW;
-    const activeBig = isCW ? lastSignal.targetBigCW : lastSignal.targetBigCCW;
+    const activeTarget  = isCW ? lastSignal.targetCW  : lastSignal.targetCCW;
+    const activeSmall   = isCW ? lastSignal.targetOverCW  : lastSignal.targetOverCCW;
+    const activeBig     = isCW ? lastSignal.targetBigCW   : lastSignal.targetBigCCW;
 
+    // Main prediction
+    const targetEl = document.getElementById('target-number');
     if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
-    if (dirEl) dirEl.innerText = currentView;
-    if (topCwEl) topCwEl.innerText = activeOver !== undefined ? activeOver : '--';
-    if (topCcwEl) topCcwEl.innerText = activeBig !== undefined ? activeBig : '--';
-    
-    const overHitEl = document.getElementById('hit-over');
-    const bigHitEl = document.getElementById('hit-big');
-    const overHitState = isCW ? lastOverHitCW : lastOverHitCCW;
-    const bigHitState = isCW ? lastBigHitCW : lastBigHitCCW;
-    if (overHitEl) overHitEl.innerText = overHitState ? 'LAST HIT! ✔' : '';
-    if (bigHitEl) bigHitEl.innerText = bigHitState ? 'LAST HIT! ✔' : '';
 
-    // Win Rate & Streak
-    if (activeHistory.length > 0) {
-        const wins = activeHistory.filter(x => x === 'win').length;
-        const rate = ((wins / activeHistory.length) * 100).toFixed(2);
-        if (wrateEl) wrateEl.innerText = `${rate}%`;
-        if (spinsEl) spinsEl.innerText = activeHistory.length;
-        
-        let streakHtml = activeHistory.slice(-15).map(r => 
-            `<span style="color:${r === 'win' ? '#0f0' : '#f00'}; margin-right:2px;">${r === 'win' ? 'W' : 'L'}</span>`
-        ).join(',');
-        if (streakEl) streakEl.innerHTML = streakHtml;
+    // SMALL and BIG snipes
+    const smallEl = document.getElementById('psn-small-val');
+    const bigEl   = document.getElementById('psn-big-val');
+    if (smallEl) smallEl.innerText = activeSmall !== undefined ? activeSmall : '--';
+    if (bigEl)   bigEl.innerText   = activeBig   !== undefined ? activeBig   : '--';
 
-        // Simple pattern predict (always predict Win if W-Rate is good, else Lose - visual flair)
-        if (patternEl) {
-            patternEl.innerText = rate > 20 ? 'WIN' : 'LOSE';
-            patternEl.style.color = rate > 20 ? '#0f0' : '#f00';
-        }
-    } else {
-        if (wrateEl) wrateEl.innerText = '0.00%';
-        if (streakEl) streakEl.innerHTML = '--';
-        if (spinsEl) spinsEl.innerText = '0';
+    // Direction badge
+    const dirEl = document.getElementById('pred-dir');
+    if (dirEl) dirEl.innerText = isCW ? 'CW ↺' : 'CCW ↻';
+
+    // Hit indicators
+    const hitSEl = document.getElementById('hit-small');
+    const hitBEl = document.getElementById('hit-big');
+    const smallHit = isCW ? lastOverHitCW : lastOverHitCCW;
+    const bigHit   = isCW ? lastBigHitCW  : lastBigHitCCW;
+    if (hitSEl) hitSEl.innerText = smallHit ? '✔ HIT' : '';
+    if (hitBEl) hitBEl.innerText = bigHit   ? '✔ HIT' : '';
+
+    // W/L
+    const wins = activeHistory.filter(x => x === 'win').length;
+    const losses = activeHistory.length - wins;
+    const rate = activeHistory.length > 0 ? ((wins / activeHistory.length) * 100).toFixed(1) : '0.0';
+    const wEl  = document.getElementById('agent-wins');
+    const lEl  = document.getElementById('agent-losses');
+    const wrEl = document.getElementById('w-rate');
+    if (wEl)  wEl.innerText  = wins;
+    if (lEl)  lEl.innerText  = losses;
+    if (wrEl) wrEl.innerText = `${rate}%`;
+
+    // W/L Streak string
+    const perfEl = document.getElementById('agent-performance');
+    if (perfEl) {
+        perfEl.innerHTML = activeHistory.slice(-15).map(r =>
+            `<span class="${r === 'win' ? 'perf-w' : 'perf-l'}">${r === 'win' ? 'W' : 'L'}</span>`
+        ).join('');
+    }
+
+    // Tendency
+    const tendEl = document.getElementById('pi-tendency');
+    if (tendEl && history.length >= 2) {
+        const d = calcDist(history[history.length-2], history[history.length-1]);
+        tendEl.innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
     }
 }
 
-// ─── SWITCH SIDE ──────────────────────────────────────────
+// ─── WHEEL DRAW ──────────────────────────────────────────────
+function drawWheel(highlightNum = null) {
+    const canvas = document.getElementById('wheel-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = 65, cy = 65;
+    ctx.clearRect(0, 0, 130, 130);
+    const goldColor = '#f5c842';
+    ctx.beginPath(); ctx.arc(cx, cy, 63, 0, Math.PI*2);
+    ctx.fillStyle = '#1a1a1a'; ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5; ctx.stroke();
+    WHEEL_NUMS.forEach((n, i) => {
+        const startAng = (i*(360/37)-90-(360/74))*(Math.PI/180);
+        const endAng   = (i*(360/37)-90+(360/74))*(Math.PI/180);
+        const midAng   = (i*(360/37)-90)*(Math.PI/180);
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(startAng)*35, cy+Math.sin(startAng)*35);
+        ctx.arc(cx, cy, 60, startAng, endAng);
+        ctx.lineTo(cx+Math.cos(endAng)*35, cy+Math.sin(endAng)*35);
+        ctx.closePath();
+        ctx.fillStyle = n===0 ? '#006600' : (RED_NUMS.has(n) ? '#c41e3a' : '#111');
+        ctx.fill();
+        ctx.strokeStyle = '#333'; ctx.lineWidth=0.5; ctx.stroke();
+        const rx = cx+Math.cos(midAng)*48, ry = cy+Math.sin(midAng)*48;
+        ctx.save(); ctx.translate(rx,ry); ctx.rotate(midAng+Math.PI/2);
+        ctx.fillStyle = n===highlightNum ? goldColor : '#fff';
+        ctx.font = `bold ${n===highlightNum?9:7}px Inter`;
+        ctx.textAlign = 'center'; ctx.fillText(n,0,3);
+        ctx.restore();
+        if (n === highlightNum) {
+            ctx.beginPath(); ctx.arc(rx,ry,9,0,Math.PI*2);
+            ctx.strokeStyle=goldColor; ctx.lineWidth=2;
+            ctx.shadowBlur=12; ctx.shadowColor=goldColor;
+            ctx.stroke(); ctx.shadowBlur=0;
+        }
+    });
+    const gr = ctx.createRadialGradient(cx,cy,0,cx,cy,35);
+    gr.addColorStop(0,'#3a3a3a'); gr.addColorStop(1,'#111');
+    ctx.beginPath(); ctx.arc(cx,cy,35,0,Math.PI*2);
+    ctx.fillStyle=gr; ctx.fill();
+    ctx.strokeStyle='#555'; ctx.lineWidth=1; ctx.stroke();
+}
+
+function renderWheelAndHistory() {
+    const strip = document.getElementById('history-strip-mini');
+    if (!strip) return;
+    const last15 = history.slice(-15).reverse();
+    strip.innerHTML = last15.map(n => {
+        const cls = n===0 ? 'ball-zero' : (RED_NUMS.has(n) ? 'ball-red' : 'ball-black');
+        return `<div class="mini-ball ${cls}">${n}</div>`;
+    }).join('');
+    drawWheel(history.length > 0 ? history[history.length-1] : null);
+}
+
+// ─── SWITCH SIDE ─────────────────────────────────────────────
 document.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'btn-switch-side') {
         currentView = currentView === 'CW' ? 'CCW' : 'CW';
@@ -135,6 +192,7 @@ function submitNumber(val, silent = false, batch = false) {
 
     if (!batch) {
         renderShadowPanel();
+        renderWheelAndHistory();
         renderTravelPanel();
     }
 }
@@ -296,17 +354,17 @@ function renderTravelPanel() {
         const dist = (prev !== undefined) ? calcDist(prev, n) : 0;
         const absDist = Math.abs(dist);
         const dir  = dist > 0 ? 'DER.' : (dist < 0 ? 'IZQ.' : '--');
-        const numClass = (n === 0) ? 'num-zero' : (RED_NUMS.has(n) ? 'num-red' : 'num-black');
+        const numClass = n===0 ? 'num-zero' : (RED_NUMS.has(n) ? 'num-red' : 'num-black');
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
         let phaseHtml = '';
         if (absDist >= 1 && absDist <= 9)        phaseHtml = `<span class="phase-pill pill-small">SMALL</span>`;
         else if (absDist >= 10 && absDist <= 19) phaseHtml = `<span class="phase-pill pill-big">BIG</span>`;
         const isLast = (i === 0);
-        return `<tr>
-            <td class="row-n">${idxInHistory + 1}${isLast ? '<span style="font-size:8px;color:var(--accent)"> ★</span>' : ''}</td>
+        return `<tr${isLast ? ' class="last-row"' : ''}>
+            <td class="row-n">${idxInHistory + 1}</td>
             <td class="${numClass}">${n}</td>
             <td style="color:var(--text2)">${absDist}p</td>
-            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.6">${dist >= 0 ? '↺' : '↻'}</span></td>
+            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? '↺' : '↻'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
