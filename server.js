@@ -9,6 +9,10 @@ const db      = require('./database');
 const Spin    = require('./models/Spin'); // MongoDB Model
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const predictor = require('./predictor'); // Agents 1-4
+const axios   = require('axios');
+
+const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
+const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +84,11 @@ app.post('/api/spin', async (req, res) => {
     const { table_id, number, source, direction } = req.body;
     if (table_id == null || number == null) return res.status(400).json({ error: 'table_id and number required' });
     if (number < 0 || number > 36) return res.status(400).json({ error: 'number must be 0-36' });
+
+    // Decrement Ntfy cooldown
+    if (ntfyCooldowns[table_id] && ntfyCooldowns[table_id] > 0) {
+        ntfyCooldowns[table_id]--;
+    }
 
     try {
         const isMongo = db.getUseMongo();
@@ -167,6 +176,75 @@ app.post('/api/spin', async (req, res) => {
     } else if (numsOnly.length < 50) {
         console.log(`⏳ [Célula] Learning mode: (${numsOnly.length}/50) spins.`);
     }
+        }
+
+        // ── NODO 3.5: ALARMAS AL CELULAR (NTFY) ──
+        if (numsOnly.length >= 4) {
+            try { 
+                const windowSize = 5;
+                const recentHist = currentHistory.slice(-(windowSize-1));
+                
+                const physList = [];
+                for(let i = 0; i < recentHist.length; i++){
+                    physList.push({ dir: recentHist[i].direction, dist: recentHist[i].distance });
+                }
+                physList.push({ dir: physics.direction, dist: physics.distance });
+
+                if (physList.length >= 3) {
+                    const lastW = physList.slice(-windowSize);
+                    const dirs = lastW.map(p => p.dir);
+                    const zones = lastW.map(p => p.dist);
+
+                    // Logic from ROULETEOFI1.0
+                    const last3Dirs = dirs.slice(-3);
+                    const last3Zones = zones.slice(-3);
+                    const strictDir = last3Dirs.every(d => d && d === last3Dirs[0]) ? last3Dirs[0] : null;
+                    const strictZone = last3Zones.every(z => z && z === last3Zones[0]) ? last3Zones[0] : null;
+
+                    const getTrend = (arr, minVal) => {
+                        if (arr.length < minVal) return null;
+                        const counts = {};
+                        arr.forEach(val => { if (val) counts[val] = (counts[val] || 0) + 1; });
+                        for (const [key, c] of Object.entries(counts)) {
+                            if (c >= minVal) return key;
+                        }
+                        return null;
+                    };
+
+                    const trendDir = getTrend(dirs, 4);
+                    const trendZone = getTrend(zones, 4);
+
+                    const finalDir = strictDir || trendDir;
+                    const finalZone = strictZone || trendZone;
+
+                    if (finalDir || finalZone) {
+                        const cooldown = ntfyCooldowns[table_id] || 0;
+                        if (cooldown <= 0) { 
+                            ntfyCooldowns[table_id] = 4; // 4 spins cooldown
+
+                            const isSuper = finalDir && finalZone;
+                            const isTendency = (!strictDir && trendDir) || (!strictZone && trendZone);
+                            let title = isSuper ? '⭐⭐ SÚPER ESTABLE' : '⭐ ESTABLE';
+                            if (isTendency && !isSuper) title = '⭐ TENDENCIA FAVORABLE';
+                            if (isTendency && isSuper) title = '⭐⭐ SÚPER TENDENCIA';
+
+                            let msg = `MESA ${table_id}: `;
+                            if (finalZone) msg += `[${finalZone.toUpperCase()}] `;
+                            if (finalDir) msg += `[${finalDir === 'DERECHA' || finalDir === 'DER' ? 'DER' : 'IZQ'}]`;
+
+                            axios.post(`https://ntfy.sh/${NTFY_TOPIC}`, msg, {
+                                headers: {
+                                    'Title': title,
+                                    'Tags': isSuper ? 'fire,slot_machine' : 'star,bar_chart',
+                                    'Priority': isSuper ? '5' : '4'
+                                }
+                            }).catch(err => console.log('Ntfy Err:', err.message));
+                            
+                            console.log(`🔔 [NTFY SENT] ${title} - ${msg}`);
+                        }
+                    }
+                }
+            } catch(e) { console.error('Ntfy check err:', e); }
         }
 
         // ── NODO 4: SINCRONIZACIÓN (Guardar la inyección enriquecida) ──
