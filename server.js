@@ -232,12 +232,12 @@ app.post('/api/spin', async (req, res) => {
                             if (finalZone) msg += `[${finalZone.toUpperCase()}] `;
                             if (finalDir) msg += `[${finalDir === 'DERECHA' || finalDir === 'DER' ? 'DER' : 'IZQ'}]`;
 
-                            axios.post(`https://ntfy.sh/${NTFY_TOPIC}`, msg, {
-                                headers: {
-                                    'Title': title,
-                                    'Tags': isSuper ? 'fire,slot_machine' : 'star,bar_chart',
-                                    'Priority': isSuper ? '5' : '4'
-                                }
+                            axios.post(`https://ntfy.sh/`, {
+                                topic: NTFY_TOPIC,
+                                title: title,
+                                message: msg,
+                                tags: isSuper ? ['fire', 'slot_machine'] : ['star', 'bar_chart'],
+                                priority: isSuper ? 5 : 4
                             }).catch(err => console.log('Ntfy Err:', err.message));
                             
                             console.log(`🔔 [NTFY SENT] ${title} - ${msg}`);
