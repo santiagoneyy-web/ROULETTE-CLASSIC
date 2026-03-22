@@ -22,96 +22,103 @@
         </div>
     </header>
 
-    <!-- ═══ VISUAL PANEL (Wheel + Number History) ═══ -->
-    <section class="visual-panel-mini">
-        <div class="wheel-container">
-            <canvas id="wheel-canvas" width="130" height="130"></canvas>
-        </div>
-        <div id="history-strip-mini" class="history-strip-mini">
-            <!-- Numbers appear here -->
-        </div>
-    </section>
+    <!-- ═══ TWO-COLUMN BODY ═══ -->
+    <div class="two-col-body">
 
-    <!-- ═══ PREDICTION PANEL ═══ -->
-    <section class="shadow-panel" id="prediction-panel">
-        <div class="agent-card-header">
-            <span class="agent-icon">🤖</span>
-            <span class="agent-card-name">ANDROID 1717</span>
-            <span class="side-badge" id="pred-dir">CW ↺</span>
-        </div>
+        <!-- ── LEFT COLUMN ── -->
+        <div class="col-left">
 
-        <div class="agent-strategy-label" id="agent-strategy">DISTANCE 10 · N9</div>
+            <!-- Visual Panel (Wheel + Mini History) -->
+            <section class="visual-panel-mini">
+                <div class="wheel-container">
+                    <canvas id="wheel-canvas" width="120" height="120"></canvas>
+                </div>
+                <div id="history-strip-mini" class="history-strip-mini"></div>
+            </section>
 
-        <!-- 3-Column Prediction Grid (OFI Style) -->
-        <div class="prediction-grid-3" id="prediction-grid">
-            <div class="p-box pb-left">
-                <span class="p-label">SMALL</span>
-                <span class="p-val" id="psn-small-val">--</span>
-                <span class="p-sub">n4</span>
-                <span class="hit-text" id="hit-small"></span>
-            </div>
-            <div class="p-box pb-center">
-                <div class="p-val-main" id="target-number">--</div>
-                <div class="p-sub-main">n9</div>
-                <div class="p-tendency" id="pi-tendency">MAIN PRED.</div>
-            </div>
-            <div class="p-box pb-right">
-                <span class="p-label">BIG</span>
-                <span class="p-val" id="psn-big-val">--</span>
-                <span class="p-sub">n4</span>
-                <span class="hit-text" id="hit-big"></span>
-            </div>
-        </div>
+            <!-- Prediction Panel -->
+            <section class="shadow-panel" id="prediction-panel">
+                <!-- Header row: title + side switch together -->
+                <div class="agent-card-header">
+                    <span class="agent-icon">🤖</span>
+                    <span class="agent-card-name">ANDROID 1717</span>
+                    <span class="side-badge" id="pred-dir">CW ↺</span>
+                    <button id="btn-switch-side" class="btn-switch-inline">⇄</button>
+                </div>
 
-        <!-- W/L Stats -->
-        <div class="agent-footer-stats">
-            <span class="st">W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
-            <span class="status-msg" id="agent-status-msg">W-RATE: <span id="w-rate">0.00%</span></span>
-        </div>
+                <div class="agent-strategy-label" id="agent-strategy">DISTANCE 10 · N9</div>
 
-        <!-- Recent streak -->
-        <div class="performance-string" id="agent-performance"></div>
+                <!-- 3-Column Prediction Grid -->
+                <div class="prediction-grid-3" id="prediction-grid">
+                    <div class="p-box pb-left">
+                        <span class="p-label">SMALL</span>
+                        <span class="p-val" id="psn-small-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="hit-small"></span>
+                    </div>
+                    <div class="p-box pb-center">
+                        <div class="p-val-main" id="target-number">--</div>
+                        <div class="p-sub-main">n9</div>
+                        <div class="p-tendency" id="pi-tendency">MAIN PRED.</div>
+                    </div>
+                    <div class="p-box pb-right">
+                        <span class="p-label">BIG</span>
+                        <span class="p-val" id="psn-big-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="hit-big"></span>
+                    </div>
+                </div>
 
-        <!-- Switch Side -->
-        <div class="panel-actions" style="margin-top:10px;">
-            <button id="btn-switch-side" class="btn-shadow">⇄ SWITCH SIDE</button>
-        </div>
-    </section>
+                <!-- W/L Stats -->
+                <div class="agent-footer-stats">
+                    <span class="st">W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
+                    <span class="status-msg">W-RATE: <span id="w-rate">0.00%</span></span>
+                </div>
 
-    <!-- ═══ TRAVEL DATA ═══ -->
-    <section class="travel-section">
-        <div class="travel-top-bar">
-            <span class="section-title">📊 TRAVEL DATA</span>
-            <div class="travel-badges">
-                <span class="badge badge-stable" id="travel-pattern">ESTABLE</span>
-                <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
-            </div>
-        </div>
-        <!-- TRAVEL CHART CANVAS -->
-        <div class="chart-wrap">
-            <canvas id="travelChart" height="130"></canvas>
-        </div>
-        <div class="travel-table-wrap">
-            <table class="travel-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>NUM</th>
-                        <th>DIST</th>
-                        <th>DIR</th>
-                        <th>ZONE</th>
-                    </tr>
-                </thead>
-                <tbody id="travel-tbody">
-                    <tr><td colspan="5" class="muted">Selecciona una mesa...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+                <!-- Recent streak -->
+                <div class="performance-string" id="agent-performance"></div>
+            </section>
+
+        </div><!-- /col-left -->
+
+        <!-- ── RIGHT COLUMN ── -->
+        <div class="col-right">
+            <section class="travel-section">
+                <div class="travel-top-bar">
+                    <span class="section-title">📊 TRAVEL DATA</span>
+                    <div class="travel-badges">
+                        <span class="badge badge-stable" id="travel-pattern">ESTABLE</span>
+                        <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
+                    </div>
+                </div>
+                <!-- Travel Chart Canvas -->
+                <div class="chart-wrap">
+                    <canvas id="travelChart" height="130"></canvas>
+                </div>
+                <div class="travel-table-wrap">
+                    <table class="travel-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>NUM</th>
+                                <th>DIST</th>
+                                <th>DIR</th>
+                                <th>ZONE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="travel-tbody">
+                            <tr><td colspan="5" class="muted">Selecciona una mesa...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div><!-- /col-right -->
+
+    </div><!-- /two-col-body -->
 
 </div>
 
-<script src="predictor.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="predictor.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

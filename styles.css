@@ -34,12 +34,39 @@ html, body {
 
 /* ── APP SHELL ── */
 .app-shell {
-  max-width: 380px;
+  max-width: 900px; /* wide enough for 2 columns on desktop */
   margin: 0 auto;
   padding: 0 0 24px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* ─── TWO-COLUMN BODY ─── */
+.two-col-body {
+  display: grid;
+  grid-template-columns: 360px 1fr; /* fixed left, flexible right */
+  gap: 8px;
+  align-items: start;
+  padding: 0 6px;
+}
+.col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.col-right {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile: single column */
+@media (max-width: 680px) {
+  .two-col-body {
+    grid-template-columns: 1fr;
+    padding: 0 4px;
+  }
+  .app-shell { max-width: 420px; }
 }
 
 /* ══════════ TOP BAR ══════════ */
@@ -63,13 +90,11 @@ html, body {
 .visual-panel-mini {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   background: var(--card);
-  margin: 0 4px 6px 4px;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  gap: 10px;
+  gap: 8px;
 }
 .wheel-container {
   flex-shrink: 0;
@@ -133,7 +158,6 @@ canvas#wheel-canvas { width: 130px; height: 130px; }
 
 /* ══════════ PREDICTION PANEL (OFI STYLE) ══════════ */
 .shadow-panel {
-  margin: 0 4px 6px 4px;
   background: #090e15;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -291,38 +315,33 @@ canvas#wheel-canvas { width: 130px; height: 130px; }
   color: var(--red);
 }
 
-/* Switch Side button area */
-.panel-actions {
-  display: flex;
-  padding: 8px 14px;
-  justify-content: flex-end;
-}
-.btn-shadow {
+/* Inline switch button (next to title) */
+.btn-switch-inline {
   background: transparent;
   border: 1px solid var(--gold);
   color: var(--gold);
   font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 1px;
-  white-space: nowrap;
+  transition: all 0.18s;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
-.btn-shadow:hover {
-  background: rgba(240,192,64,0.1);
-  box-shadow: 0 0 8px rgba(240,192,64,0.2);
+.btn-switch-inline:hover {
+  background: rgba(240,192,64,0.15);
+  box-shadow: 0 0 6px rgba(240,192,64,0.3);
 }
 
 /* ══════════ TRAVEL SECTION ══════════ */
 .travel-section {
-  margin: 0 4px 24px 4px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  height: 100%; /* fill the right column height */
 }
 .travel-top-bar {
   padding: 10px 14px;
