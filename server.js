@@ -135,8 +135,7 @@ app.post('/api/spin', async (req, res) => {
                 agent1_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent1_top),
                 agent2_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent2_top),
                 agent3_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent3_top),
-                agent4_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent4_top),
-                agent5_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent5_top)
+                agent4_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent4_top)
             };
             await prevSpin.save(); // Sync eval back to db
         }
@@ -146,7 +145,7 @@ app.post('/api/spin', async (req, res) => {
 
         // ── NODO 3: IA & AGENTES (Predicciones para el FUTURO) ──
         let newPredictions = {
-            agent1_top: null, agent2_top: null, agent3_top: null, agent4_top: null, agent5_top: null
+            agent1_top: null, agent2_top: null, agent3_top: null, agent4_top: null
         };
 
         if (numsOnly.length >= 3) {
@@ -171,16 +170,6 @@ app.post('/api/spin', async (req, res) => {
         if (ag2 && ag2.tp !== undefined) newPredictions.agent2_top = ag2.tp;
         if (ag3) newPredictions.agent3_top = ag3.number;
         if (ag4) newPredictions.agent4_top = ag4.number;
-    }
-
-    // Célula (Androide Célula) - DNA Absorption enabled
-    const ag5Result = await agent5.predictAgent5(table_id, numsOnly, masterSignals);
-    if (ag5Result) {
-        newPredictions.agent5_top = ag5Result.topNum;
-        newPredictions.agent5_dna = ag5Result.dnaMatch; 
-        console.log(`🤖 [Célula] Generated prediction: ${ag5Result.topNum} ${ag5Result.dnaMatch ? '(PERFECT DNA)' : ''}`);
-    } else if (numsOnly.length < 50) {
-        console.log(`⏳ [Célula] Learning mode: (${numsOnly.length}/50) spins.`);
     }
         }
 

@@ -22,8 +22,7 @@ const SpinSchema = new mongoose.Schema({
         agent1_top: { type: Number, default: null },
         agent2_top: { type: Number, default: null },
         agent3_top: { type: Number, default: null },
-        agent4_top: { type: Number, default: null },
-        agent5_top: { type: Number, default: null }
+        agent4_top: { type: Number, default: null }
     },
     
     // Automatic qualification
@@ -31,8 +30,7 @@ const SpinSchema = new mongoose.Schema({
         agent1_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null },
         agent2_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null },
         agent3_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null },
-        agent4_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null },
-        agent5_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null }
+        agent4_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null }
     },
 
     timestamp: { type: Date, default: Date.now }
