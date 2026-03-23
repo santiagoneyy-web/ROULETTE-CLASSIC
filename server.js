@@ -220,20 +220,21 @@ app.post('/api/spin', async (req, res) => {
                             msg += `[${trendDir === 'DERECHA' || trendDir === 'DER' ? 'DER' : 'IZQ'}]`;
                             if (trendZone) msg += ` - [ZONA ${trendZone.toUpperCase()}]`;
 
-                            const axiosConfig = {};
-                            if (process.env.NTFY_TOKEN) {
-                                axiosConfig.headers = { 'Authorization': `Bearer ${process.env.NTFY_TOKEN}` };
-                            }
+                            const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+                            const tgChat = process.env.TELEGRAM_CHAT_ID;
 
-                            axios.post(`https://ntfy.sh/`, {
-                                topic: NTFY_TOPIC,
-                                title: title,
-                                message: msg,
-                                tags: isSuper ? ['fire', 'slot_machine'] : ['star', 'bar_chart'],
-                                priority: isSuper ? 5 : 4
-                            }, axiosConfig).catch(err => console.log('Ntfy Err:', err.message));
+                            if (tgToken && tgChat) {
+                                const tgMsg = `🚨 *${title}*\n\n🎯 ${msg}`;
+                                axios.post(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                                    chat_id: tgChat,
+                                    text: tgMsg,
+                                    parse_mode: 'Markdown'
+                                }).catch(err => console.log('Telegram Err:', err.response ? err.response.data : err.message));
+                            } else {
+                                console.log('[WARNING] Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in env.');
+                            }
                             
-                            console.log(`🔔 [NTFY SENT] ${title} - ${msg}`);
+                            console.log(`🔔 [TELEGRAM SENT] ${title} - ${msg}`);
                         }
                     }
                 }
