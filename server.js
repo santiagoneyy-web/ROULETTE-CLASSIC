@@ -264,27 +264,47 @@ app.post('/api/spin', async (req, res) => {
 
         // ── NODO 4: SINCRONIZACIÓN (Guardar la inyección enriquecida) ──
         if (isMongo) {
-            const maxSpin = await Spin.findOne().sort('-id').exec();
-            const newId = maxSpin ? maxSpin.id + 1 : 1;
-
-            const newSpin = new Spin({
-                id: newId,
-                table_id,
-                number,
-                source: source || 'bot',
-                distance: physics.distance,
-                direction: direction || physics.direction,
-                sector,
-                predictions: newPredictions
-            });
-            await newSpin.save();
+            let savedSpin = null;
+            let attempts = 0;
             
+            while (!savedSpin && attempts < 5) {
+                try {
+                    const maxSpin = await Spin.findOne().sort('-id').exec();
+                    const newId = maxSpin ? maxSpin.id + 1 : 1;
+
+                    const newSpin = new Spin({
+                        id: newId,
+                        table_id,
+                        number,
+                        source: source || 'bot',
+                        event_id: req.body.event_id || null, // ensure event_id is saved
+                        distance: physics.distance,
+                        direction: direction || physics.direction,
+                        sector,
+                        predictions: newPredictions
+                    });
+                    
+                    savedSpin = await newSpin.save();
+                } catch (err) {
+                    if (err.code === 11000 && err.keyPattern && err.keyPattern.id) {
+                        attempts++;
+                        console.log(`[RETRY] ID collision for table ${table_id}, retrying... (${attempts}/5)`);
+                    } else {
+                        throw err; // Re-throw if it is a different database error
+                    }
+                }
+            }
+
+            if (!savedSpin) {
+                return res.status(500).json({ error: 'Failed to generate unique ID after 5 attempts', table_id, number });
+            }
+
             if (sseClients[table_id]) {
                 sseClients[table_id].forEach(client => {
                     client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
                 });
             }
-            res.json(newSpin);
+            res.json(savedSpin);
         } else {
             // Fallback
             db.addSpin(table_id, number, source || 'bot', (err, id) => {
