@@ -105,23 +105,18 @@ async function poll() {
         const resolvedEvents = events.filter(e => e.data && e.data.status === 'Resolved');
         
         // 2. Find events NEWER than our last known ID
-        // We look for the index of lastKnownEventId in the full resolved list
         let newEvents = [];
         if (!lastKnownEventId) {
-            // First run: just take the very latest one as seed
-            if (resolvedEvents.length > 0) {
-                lastKnownEventId = resolvedEvents[0].data.id || resolvedEvents[0].id;
-                console.log(`📡 [T${TABLE_ID}] Initialized with EventID: ${lastKnownEventId}`);
-            }
+            // First run: send all 20 historical events to fill any gaps directly to the backend.
+            // The server's event_id duplicate guard will safely ignore any that are already in the DB.
+            newEvents = resolvedEvents.slice();
         } else {
-            // Find where our last ID is. Since list is DESC (newest first), 
-            // everything BEFORE that index is "newer".
             const lastIdx = resolvedEvents.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
             
             if (lastIdx === -1) {
                 // If last ID not found in the recent list (maybe we missed too many),
-                // just take the latest one to resync, or take all if list is small.
-                newEvents = [resolvedEvents[0]]; 
+                // take ALL 20 events to re-sync completely.
+                newEvents = resolvedEvents.slice(); 
             } else if (lastIdx > 0) {
                 // Slice all elements from 0 to lastIdx (exclusive)
                 newEvents = resolvedEvents.slice(0, lastIdx);
