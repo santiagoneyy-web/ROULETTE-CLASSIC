@@ -60,24 +60,7 @@ function renderShadowPanel() {
     if (hitSEl) hitSEl.innerText = smallHit ? '✔ HIT' : '';
     if (hitBEl) hitBEl.innerText = bigHit   ? '✔ HIT' : '';
 
-    // W/L
-    const wins = activeHistory.filter(x => x === 'win').length;
-    const losses = activeHistory.length - wins;
-    const rate = activeHistory.length > 0 ? ((wins / activeHistory.length) * 100).toFixed(1) : '0.0';
-    const wEl  = document.getElementById('agent-wins');
-    const lEl  = document.getElementById('agent-losses');
-    const wrEl = document.getElementById('w-rate');
-    if (wEl)  wEl.innerText  = wins;
-    if (lEl)  lEl.innerText  = losses;
-    if (wrEl) wrEl.innerText = `${rate}%`;
 
-    // W/L Streak string
-    const perfEl = document.getElementById('agent-performance');
-    if (perfEl) {
-        perfEl.innerHTML = activeHistory.slice(-15).map(r =>
-            `<span class="${r === 'win' ? 'perf-w' : 'perf-l'}">${r === 'win' ? 'W' : 'L'}</span>`
-        ).join('');
-    }
 
     // Tendency
     const tendEl = document.getElementById('pi-tendency');
