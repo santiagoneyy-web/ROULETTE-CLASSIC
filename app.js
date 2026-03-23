@@ -140,7 +140,7 @@ function renderWheelAndHistory() {
         const cls = n===0 ? 'ball-zero' : (RED_NUMS.has(n) ? 'ball-red' : 'ball-black');
         return `<div class="mini-ball ${cls}">${n}</div>`;
     }).join('');
-    drawWheel(history.length > 0 ? history[history.length-1] : null);
+    // drawWheel removed
 }
 
 // ─── SWITCH SIDE ─────────────────────────────────────────────
