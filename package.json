@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "npm install && node render-build.js",
+    "build": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "commonjs",
@@ -15,9 +15,6 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "mongoose": "^9.3.0",
-    "puppeteer": "^24.39.1",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0"
   }
