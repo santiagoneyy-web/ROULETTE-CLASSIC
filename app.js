@@ -400,6 +400,7 @@ async function syncData() {
             for (const s of spins) submitNumber(s.number, true, true);
             renderShadowPanel();
             renderTravelPanel();
+            renderWheelAndHistory();
         }
     } catch(e) {}
 }
@@ -449,6 +450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     cwHistory.length = 0;
                     ccwHistory.length = 0;
                     lastSignal = null;
+                    renderWheelAndHistory();
                     syncData().then(() => connectSSE(currentTableId));
                 });
                 currentTableId = ts[0].id;
