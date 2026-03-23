@@ -179,9 +179,9 @@ app.post('/api/spin', async (req, res) => {
         }
 
         // ── NODO 3.5: ALARMAS AL CELULAR (NTFY) ──
-        if (numsOnly.length >= 4) {
+        if (numsOnly.length >= 6) {
             try { 
-                const windowSize = 5;
+                const windowSize = 6;
                 const recentHist = currentHistory.slice(-(windowSize-1));
                 
                 const physList = [];
@@ -190,19 +190,12 @@ app.post('/api/spin', async (req, res) => {
                 }
                 physList.push({ dir: physics.direction, dist: physics.distance });
 
-                if (physList.length >= 3) {
+                if (physList.length >= 6) {
                     const lastW = physList.slice(-windowSize);
                     const dirs = lastW.map(p => p.dir);
                     const zones = lastW.map(p => p.dist);
 
-                    // Logic from ROULETEOFI1.0
-                    const last3Dirs = dirs.slice(-3);
-                    const last3Zones = zones.slice(-3);
-                    const strictDir = last3Dirs.every(d => d && d === last3Dirs[0]) ? last3Dirs[0] : null;
-                    const strictZone = last3Zones.every(z => z && z === last3Zones[0]) ? last3Zones[0] : null;
-
                     const getTrend = (arr, minVal) => {
-                        if (arr.length < minVal) return null;
                         const counts = {};
                         arr.forEach(val => { if (val) counts[val] = (counts[val] || 0) + 1; });
                         for (const [key, c] of Object.entries(counts)) {
@@ -211,26 +204,21 @@ app.post('/api/spin', async (req, res) => {
                         return null;
                     };
 
-                    const trendDir = getTrend(dirs, 4);
-                    const trendZone = getTrend(zones, 4);
+                    const trendDir = getTrend(dirs, 5);
+                    const trendZone = getTrend(zones, 5);
 
-                    const finalDir = strictDir || trendDir;
-                    const finalZone = strictZone || trendZone;
-
-                    if (finalDir || finalZone) {
+                    // ALARMA SOLO SI LA DIRECCIÓN DOMINA (5 de 6 o 6 de 6)
+                    if (trendDir) {
                         const cooldown = ntfyCooldowns[table_id] || 0;
                         if (cooldown <= 0) { 
                             ntfyCooldowns[table_id] = 4; // 4 spins cooldown
 
-                            const isSuper = finalDir && finalZone;
-                            const isTendency = (!strictDir && trendDir) || (!strictZone && trendZone);
-                            let title = isSuper ? '⭐⭐ SÚPER ESTABLE' : '⭐ ESTABLE';
-                            if (isTendency && !isSuper) title = '⭐ TENDENCIA FAVORABLE';
-                            if (isTendency && isSuper) title = '⭐⭐ SÚPER TENDENCIA';
+                            const isSuper = trendDir && trendZone;
+                            let title = isSuper ? '⭐⭐ SÚPER ESTABLE' : '⭐ TENDENCIA ESTABLE';
 
                             let msg = `MESA ${table_id}: `;
-                            if (finalZone) msg += `[${finalZone.toUpperCase()}] `;
-                            if (finalDir) msg += `[${finalDir === 'DERECHA' || finalDir === 'DER' ? 'DER' : 'IZQ'}]`;
+                            msg += `[${trendDir === 'DERECHA' || trendDir === 'DER' ? 'DER' : 'IZQ'}]`;
+                            if (trendZone) msg += ` - [ZONA ${trendZone.toUpperCase()}]`;
 
                             axios.post(`https://ntfy.sh/`, {
                                 topic: NTFY_TOPIC,
