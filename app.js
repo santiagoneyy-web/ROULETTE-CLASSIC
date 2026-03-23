@@ -363,7 +363,6 @@ function renderTravelPanel() {
         else if (absDist >= 10 && absDist <= 19) phaseHtml = `<span class="phase-pill pill-big">BIG</span>`;
         const isLast = (i === 0);
         return `<tr${isLast ? ' class="last-row"' : ''}>
-            <td class="row-n">${idxInHistory + 1}</td>
             <td class="${numClass}">${n}</td>
             <td style="color:var(--text2)">${absDist}p</td>
             <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? '↺' : '↻'}</span></td>
