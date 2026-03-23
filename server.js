@@ -220,13 +220,18 @@ app.post('/api/spin', async (req, res) => {
                             msg += `[${trendDir === 'DERECHA' || trendDir === 'DER' ? 'DER' : 'IZQ'}]`;
                             if (trendZone) msg += ` - [ZONA ${trendZone.toUpperCase()}]`;
 
+                            const axiosConfig = {};
+                            if (process.env.NTFY_TOKEN) {
+                                axiosConfig.headers = { 'Authorization': `Bearer ${process.env.NTFY_TOKEN}` };
+                            }
+
                             axios.post(`https://ntfy.sh/`, {
                                 topic: NTFY_TOPIC,
                                 title: title,
                                 message: msg,
                                 tags: isSuper ? ['fire', 'slot_machine'] : ['star', 'bar_chart'],
                                 priority: isSuper ? 5 : 4
-                            }).catch(err => console.log('Ntfy Err:', err.message));
+                            }, axiosConfig).catch(err => console.log('Ntfy Err:', err.message));
                             
                             console.log(`🔔 [NTFY SENT] ${title} - ${msg}`);
                         }
