@@ -204,10 +204,25 @@ app.post('/api/spin', async (req, res) => {
                         return null;
                     };
 
-                    const trendDir = getTrend(dirs, 4);
-                    const trendZone = getTrend(zones, 4);
+                    // Verifica regla 1: 5 de 6
+                    let trendDir = getTrend(dirs, 5);
+                    let trendZone = getTrend(zones, 5);
 
-                    // ALARMA SOLO SI LA DIRECCIÓN DOMINA (4 de 6, 5 de 6, o 6 de 6)
+                    // Verifica regla 2: 4 seguidos exactos (los últimos 4)
+                    if (!trendDir) {
+                        const last4Dirs = dirs.slice(-4);
+                        if (last4Dirs.length === 4 && last4Dirs.every(d => d && d === last4Dirs[0])) {
+                            trendDir = last4Dirs[0];
+                        }
+                    }
+                    if (!trendZone) {
+                        const last4Zones = zones.slice(-4);
+                        if (last4Zones.length === 4 && last4Zones.every(z => z && z === last4Zones[0])) {
+                            trendZone = last4Zones[0];
+                        }
+                    }
+
+                    // ALARMA SI SE CUMPLE ALGUNA DE LAS DOS REGLAS DOMINANTES
                     if (trendDir) {
                         const cooldown = ntfyCooldowns[table_id] || 0;
                         if (cooldown <= 0) { 
