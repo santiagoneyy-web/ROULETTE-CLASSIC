@@ -438,6 +438,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tableSelect.innerHTML = ts.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
                 tableSelect.addEventListener('change', () => {
                     currentTableId = tableSelect.value;
+                    
+                    // Switch the table thumbnail image
+                    const tImg = document.querySelector('.table-image-container img');
+                    if (tImg) {
+                        tImg.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
+                    }
+
                     history.length = 0;
                     cwHistory.length = 0;
                     ccwHistory.length = 0;
@@ -445,6 +452,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     syncData().then(() => connectSSE(currentTableId));
                 });
                 currentTableId = ts[0].id;
+                const tImgInit = document.querySelector('.table-image-container img');
+                if (tImgInit) tImgInit.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
                 await syncData();
                 connectSSE(currentTableId);
             }
