@@ -179,9 +179,9 @@ app.post('/api/spin', async (req, res) => {
         }
 
         // ── NODO 3.5: ALARMAS AL CELULAR (NTFY) ──
-        if (numsOnly.length >= 6) {
+        if (numsOnly.length >= 5) {
             try { 
-                const windowSize = 6;
+                const windowSize = 5;
                 const recentHist = currentHistory.slice(-(windowSize-1));
                 
                 const physList = [];
@@ -190,7 +190,7 @@ app.post('/api/spin', async (req, res) => {
                 }
                 physList.push({ dir: physics.direction, dist: physics.distance });
 
-                if (physList.length >= 6) {
+                if (physList.length >= 5) {
                     const lastW = physList.slice(-windowSize);
                     const dirs = lastW.map(p => p.dir);
                     const zones = lastW.map(p => p.dist);
@@ -204,10 +204,10 @@ app.post('/api/spin', async (req, res) => {
                         return null;
                     };
 
-                    const trendDir = getTrend(dirs, 5);
-                    const trendZone = getTrend(zones, 5);
+                    const trendDir = getTrend(dirs, 4);
+                    const trendZone = getTrend(zones, 4);
 
-                    // ALARMA SOLO SI LA DIRECCIÓN DOMINA (5 de 6 o 6 de 6)
+                    // ALARMA SOLO SI LA DIRECCIÓN DOMINA (4 de 5 o 5 de 5)
                     if (trendDir) {
                         const cooldown = ntfyCooldowns[table_id] || 0;
                         if (cooldown <= 0) { 
