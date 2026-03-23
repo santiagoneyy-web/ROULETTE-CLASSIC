@@ -329,10 +329,22 @@ function renderTravelPanel() {
         const bigCount   = last5.filter(n => n >= 10 && n <= 19).length;
         const smallCount = last5.filter(n => n >= 1 && n <= 9).length;
         const dirs = [];
-        for (let i = history.length - 4; i < history.length; i++) {
-            if (i > 0) dirs.push(calcDist(history[i-1], history[i]) > 0 ? 'D' : 'I');
+        const scanLength = 7; // Last 7 numbers gives up to 6 directions
+        const startIndex = Math.max(1, history.length - scanLength);
+        for (let i = startIndex; i < history.length; i++) {
+            const dist = calcDist(history[i-1], history[i]);
+            if (dist !== 0) {
+                dirs.push(dist > 0 ? 'D' : 'I');
+            }
         }
-        const isZigZagDir = dirs.length >= 2 && dirs[dirs.length-1] !== dirs[dirs.length-2];
+        
+        let changes = 0;
+        for (let i = 1; i < dirs.length; i++) {
+            if (dirs[i] !== dirs[i-1]) changes++;
+        }
+        
+        // ZIG ZAG (Volátil): Al menos 4 direcciones registradas, y cambia constantemente (>= 3 cortes)
+        const isZigZagDir = dirs.length >= 4 && changes >= 3;
         
         let pat = 'ESTABLE', patClass = 'badge-stable';
         if (isZigZagDir) { pat = 'ZIG ZAG ↔'; patClass = 'badge-zigzag'; }
