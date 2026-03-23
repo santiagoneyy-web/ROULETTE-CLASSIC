@@ -135,8 +135,8 @@ function drawWheel(highlightNum = null) {
 function renderWheelAndHistory() {
     const strip = document.getElementById('history-strip-mini');
     if (!strip) return;
-    const last15 = history.slice(-15).reverse();
-    strip.innerHTML = last15.map(n => {
+    const last12 = history.slice(-12).reverse();
+    strip.innerHTML = last12.map(n => {
         const cls = n===0 ? 'ball-zero' : (RED_NUMS.has(n) ? 'ball-red' : 'ball-black');
         return `<div class="mini-ball ${cls}">${n}</div>`;
     }).join('');
