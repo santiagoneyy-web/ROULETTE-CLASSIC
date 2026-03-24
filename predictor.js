@@ -159,56 +159,71 @@ function predictZonePattern(history) {
     const recent = distances.slice(-12);
     if (recent.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 
-    // Classify each jump
     const mags = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
     const dirs = recent.map(d => d >= 0 ? 'CW' : 'CCW');
 
-    // ─── MARKOV CHAIN: MAGNITUDE ───
-    // Count transitions: what follows B? what follows S?
-    const magTrans = { B: { B: 0, S: 0 }, S: { B: 0, S: 0 } };
-    for (let i = 0; i < mags.length - 1; i++) {
-        magTrans[mags[i]][mags[i + 1]]++;
+    // ════════════════════════════════════════════════
+    // SIGNAL 1: MARKOV — Transition probabilities
+    // ════════════════════════════════════════════════
+    function markovProb(seq, stateA, stateB) {
+        const trans = {};
+        trans[stateA] = {}; trans[stateA][stateA] = 0; trans[stateA][stateB] = 0;
+        trans[stateB] = {}; trans[stateB][stateA] = 0; trans[stateB][stateB] = 0;
+        for (let i = 0; i < seq.length - 1; i++) trans[seq[i]][seq[i+1]]++;
+        const last = seq[seq.length - 1];
+        const total = trans[last][stateA] + trans[last][stateB];
+        if (total === 0) return 0.5;
+        return trans[last][stateA] / total; // P(stateA | last)
     }
-    const lastMag = mags[mags.length - 1];
-    const magTotal = magTrans[lastMag].B + magTrans[lastMag].S;
-    let predMag, magProb;
-    if (magTotal === 0) {
-        predMag = lastMag === 'B' ? 'BIG' : 'SMALL';
-        magProb = 50;
-    } else {
-        const pBig = (magTrans[lastMag].B / magTotal) * 100;
-        if (pBig >= 50) {
-            predMag = 'BIG';
-            magProb = Math.round(pBig);
-        } else {
-            predMag = 'SMALL';
-            magProb = Math.round(100 - pBig);
-        }
-    }
+    const markovPBig = markovProb(mags, 'B', 'S');
+    const markovPCW  = markovProb(dirs, 'CW', 'CCW');
 
-    // ─── MARKOV CHAIN: DIRECTION ───
-    const dirTrans = { CW: { CW: 0, CCW: 0 }, CCW: { CW: 0, CCW: 0 } };
-    for (let i = 0; i < dirs.length - 1; i++) {
-        dirTrans[dirs[i]][dirs[i + 1]]++;
-    }
-    const lastDir = dirs[dirs.length - 1];
-    const dirTotal = dirTrans[lastDir].CW + dirTrans[lastDir].CCW;
-    let predDir, dirProb;
-    if (dirTotal === 0) {
-        predDir = lastDir;
-        dirProb = 50;
-    } else {
-        const pCW = (dirTrans[lastDir].CW / dirTotal) * 100;
-        if (pCW >= 50) {
-            predDir = 'CW';
-            dirProb = Math.round(pCW);
-        } else {
-            predDir = 'CCW';
-            dirProb = Math.round(100 - pCW);
+    // ════════════════════════════════════════════════
+    // SIGNAL 2: RUN-LENGTH — Streak break prediction
+    // ════════════════════════════════════════════════
+    function runLengthProb(seq, target) {
+        // Measure all run lengths of `target` in history
+        const runs = [];
+        let currentRun = 0;
+        for (const s of seq) {
+            if (s === target) { currentRun++; }
+            else { if (currentRun > 0) runs.push(currentRun); currentRun = 0; }
         }
+        // Current active streak
+        let activeStreak = 0;
+        for (let i = seq.length - 1; i >= 0; i--) {
+            if (seq[i] === target) activeStreak++; else break;
+        }
+        if (runs.length === 0) return 0.5;
+        const avgRun = runs.reduce((a,b) => a+b, 0) / runs.length;
+        // If active streak exceeds average, predict a break
+        if (activeStreak >= avgRun) {
+            const overshoot = activeStreak / avgRun;
+            return Math.max(0.1, 1 - (overshoot * 0.3)); // Declines as streak grows
+        }
+        return 0.5 + (activeStreak / avgRun) * 0.2; // Building confidence
     }
+    const rlPBig = runLengthProb(mags, 'B');
+    const rlPCW  = runLengthProb(dirs, 'CW');
 
-    // Combined confidence: geometric mean of both probabilities
+    // ════════════════════════════════════════════════
+    // SIGNAL 3: GLOBAL FREQUENCY — Overall ratio
+    // ════════════════════════════════════════════════
+    const globalPBig = mags.filter(m => m === 'B').length / mags.length;
+    const globalPCW  = dirs.filter(d => d === 'CW').length / dirs.length;
+
+    // ════════════════════════════════════════════════
+    // BAYESIAN BLEND — Weighted combination
+    // Markov: 50%, Run-Length: 30%, Global: 20%
+    // ════════════════════════════════════════════════
+    const blendPBig = (markovPBig * 0.50) + (rlPBig * 0.30) + (globalPBig * 0.20);
+    const blendPCW  = (markovPCW  * 0.50) + (rlPCW  * 0.30) + (globalPCW  * 0.20);
+
+    const predMag = blendPBig >= 0.5 ? 'BIG' : 'SMALL';
+    const predDir = blendPCW >= 0.5 ? 'CW' : 'CCW';
+
+    const magProb = Math.round((blendPBig >= 0.5 ? blendPBig : 1 - blendPBig) * 100);
+    const dirProb = Math.round((blendPCW >= 0.5 ? blendPCW : 1 - blendPCW) * 100);
     const confidence = Math.round(Math.sqrt(magProb * dirProb));
 
     return { magnitude: predMag, direction: predDir, confidence: confidence };
