@@ -138,14 +138,14 @@ function renderShadowPanel() {
         // ─── ZONE MODE (📐) ───
         if (iconEl)  iconEl.innerText = '📐';
         if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
-        if (lblL)    lblL.innerText   = 'SOPORTE';
-        if (lblR)    lblR.innerText   = 'INVERSO';
-        if (subL)    subL.innerText   = 'n9';
+        if (lblL)    lblL.innerText   = '';
+        if (lblR)    lblR.innerText   = '';
+        if (subL)    subL.innerText   = '';
         if (subC)    subC.innerText   = 'n9';
-        if (subR)    subR.innerText   = 'n9';
+        if (subR)    subR.innerText   = '';
 
         const btnSide = document.getElementById('btn-switch-side');
-        if (btnSide) btnSide.style.display = 'inline-block'; // Manual control again
+        if (btnSide) btnSide.style.display = 'inline-block';
         if (btnSide) btnSide.innerText = '⇄';
 
         const badgeTxt = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
@@ -160,12 +160,12 @@ function renderShadowPanel() {
         const lastDist = Math.abs(calcDist(prevNum, lastNum));
         const t = getZoneTargets(lastNum);
 
-        if (targetEl) targetEl.innerText = t.main    !== undefined ? t.main    : '--';
-        if (smallEl)  smallEl.innerText  = t.support !== undefined ? t.support : '--';
-        if (bigEl)    bigEl.innerText    = t.inverse !== undefined ? t.inverse : '--';
+        if (targetEl) targetEl.innerText = t.main !== undefined ? t.main : '--';
+        if (smallEl)  smallEl.innerText  = '';
+        if (bigEl)    bigEl.innerText    = '';
 
-        if (hitSEl) hitSEl.innerText = (Math.abs(calcDist(lastNum, t.support)) <= 9) ? '✔ HIT' : '';
-        if (hitBEl) hitBEl.innerText = (Math.abs(calcDist(lastNum, t.inverse)) <= 9) ? '✔ HIT' : '';
+        if (hitSEl) hitSEl.innerText = '';
+        if (hitBEl) hitBEl.innerText = '';
 
         if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
@@ -182,40 +182,65 @@ function renderShadowPanel() {
         // ─── JUGADAS MODE (🎯) ───
         if (iconEl)  iconEl.innerText = '🎯';
         if (nameEl)  nameEl.innerText = 'JUGADAS / SNIPER';
-        if (lblL)    lblL.innerText   = 'PRED. DIR';
-        if (lblR)    lblR.innerText   = 'PRED. DIR';
-        if (subL)    subL.innerText   = '-';
-        if (subC)    subC.innerText   = 'n4';
-        if (subR)    subR.innerText   = '-';
 
         const btnSide = document.getElementById('btn-switch-side');
         if (btnSide) btnSide.style.display = 'none';
 
-        if (!lastSignal) return;
-        
-        const isSmall = jugView.magnitude === 'SMALL';
-        const isCW = jugView.direction === 'CW';
-        
-        let pTarget = '--';
-        if (isCW) {
-            pTarget = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
+        const conf = jugView.confidence || 0;
+        const isCharging = conf < 75;
+
+        if (isCharging) {
+            // CHARGING MODE
+            if (lblL) lblL.innerText = '';
+            if (lblR) lblR.innerText = '';
+            if (subL) subL.innerText = '';
+            if (subC) subC.innerText = '';
+            if (subR) subR.innerText = '';
+            if (dirEl) dirEl.innerText = '⚡ CHARGING...';
+            if (stratEl) stratEl.innerText = `Analyzing patterns... (${conf}%)`;
+            if (targetEl) targetEl.innerText = '⌓';
+            if (smallEl) smallEl.innerText = '--';
+            if (bigEl) bigEl.innerText = '--';
+            if (hitSEl) hitSEl.innerText = '';
+            if (hitBEl) hitBEl.innerText = '';
+            if (tendEl && history.length >= 2) {
+                const jump = calcDist(history[history.length-2], history[history.length-1]);
+                tendEl.innerText = `LAST: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SML'} (${Math.abs(jump)}p)`;
+            }
         } else {
-            pTarget = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
-        }
-        
-        if (dirEl) dirEl.innerText = `PLAY ${jugView.magnitude}`;
-        if (stratEl) stratEl.innerText = `SNIPER ${jugView.magnitude} ${jugView.direction} · N4`;
-        
-        if (targetEl) targetEl.innerText = pTarget !== undefined ? pTarget : '--';
-        if (smallEl)  smallEl.innerText  = isCW ? 'CW ↺' : '--'; 
-        if (bigEl)    bigEl.innerText    = !isCW ? 'CCW ↻' : '--'; 
+            // ACTIVE PREDICTION
+            if (lblL) lblL.innerText = '';
+            if (lblR) lblR.innerText = '';
+            if (subL) subL.innerText = '';
+            if (subC) subC.innerText = 'n4';
+            if (subR) subR.innerText = '';
 
-        if (hitSEl) hitSEl.innerText = (isCW && lastJugHit) ? '✔ HIT' : '';
-        if (hitBEl) hitBEl.innerText = (!isCW && lastJugHit) ? '✔ HIT' : '';
+            if (!lastSignal) return;
 
-        if (tendEl && history.length >= 2) {
-            const jump = calcDist(history[history.length-2], history[history.length-1]);
-            tendEl.innerText = `LAST JUMP: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SMALL'} (${Math.abs(jump)}p)`;
+            const isSmall = jugView.magnitude === 'SMALL';
+            const isCW = jugView.direction === 'CW';
+
+            let pTarget = '--';
+            if (isCW) {
+                pTarget = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
+            } else {
+                pTarget = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
+            }
+
+            if (dirEl) dirEl.innerText = `🎯 ${jugView.magnitude} ${jugView.direction}`;
+            if (stratEl) stratEl.innerText = `SNIPER ${jugView.magnitude} ${jugView.direction} · N4 · ${conf}%`;
+
+            if (targetEl) targetEl.innerText = pTarget !== undefined ? pTarget : '--';
+            if (smallEl)  smallEl.innerText  = '';
+            if (bigEl)    bigEl.innerText    = '';
+
+            if (hitSEl) hitSEl.innerText = lastJugHit ? '✔ HIT' : '';
+            if (hitBEl) hitBEl.innerText = '';
+
+            if (tendEl && history.length >= 2) {
+                const jump = calcDist(history[history.length-2], history[history.length-1]);
+                tendEl.innerText = `LAST: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SML'} (${Math.abs(jump)}p)`;
+            }
         }
 
         const last12j = jugHistory.slice(-12);
@@ -330,28 +355,19 @@ function submitNumber(val, silent = false, batch = false) {
         }
         
         // Evaluate ZONE prediction — N9 RADIUS (<= 9)
+        // WIN = the result falls within N9 of the main zone target
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const pt = getZoneTargets(prevForZone);
-            // WIN if lands within N9 of MAIN or SUPPORT
             const dMain = Math.abs(calcDist(n, pt.main));
-            const dSup  = Math.abs(calcDist(n, pt.support));
-            const dInv  = Math.abs(calcDist(n, pt.inverse));
-            
-            let hitLogic = false;
-            if (zoneView === 'BIG') {
-                hitLogic = (dMain <= 9); // BIG: Focus on +19 target
-            } else {
-                hitLogic = (dMain <= 9 || dSup <= 9 || dInv <= 9); // SMALL: 1, 0, -1
-            }
+            const hitLogic = (dMain <= 9);
             zoneHistory.push(hitLogic ? 'win' : 'loss');
-            
             lastZoneMainHit    = hitLogic;
-            lastZoneInverseHit = (dInv <= 9);
+            lastZoneInverseHit = false;
         }
 
-        // Evaluate JUGADAS prediction — checking jump magnitude and direction
-        if (history.length >= 1) {
+        // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 75)
+        if (history.length >= 1 && jugView.confidence >= 75) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
             
@@ -360,6 +376,8 @@ function submitNumber(val, silent = false, batch = false) {
             
             lastJugHit = hitMag && hitDir;
             jugHistory.push(lastJugHit ? 'win' : 'loss');
+        } else if (history.length >= 1) {
+            lastJugHit = false; // Charging, no W/L recorded
         }
 
         history.push(n);

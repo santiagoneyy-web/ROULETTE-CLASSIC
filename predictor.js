@@ -149,7 +149,7 @@ function getIAMasterSignals(prox, sig, history) {
 }
 
 function predictZonePattern(history) {
-    if (history.length < 2) return { magnitude: 'SMALL', direction: 'CW' };
+    if (history.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 
     const distances = [];
     for (let i = 1; i < history.length; i++) {
@@ -157,7 +157,10 @@ function predictZonePattern(history) {
     }
 
     const recent = distances.slice(-12);
-    if (recent.length === 0) return { magnitude: 'SMALL', direction: 'CW' };
+    if (recent.length < 2) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
+
+    let magConf = 0; // Magnitude confidence points
+    let dirConf = 0; // Direction confidence points
 
     // --- MAGNITUDE LOGIC ---
     const zones = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
@@ -167,17 +170,28 @@ function predictZonePattern(history) {
     if (zones.length >= 4) {
         const last4Str = zones.slice(-4).join('');
         if (last4Str === 'BSBS' || last4Str === 'SBSB') {
-            predMag = lastZone === 'B' ? 'SMALL' : 'BIG'; 
+            predMag = lastZone === 'B' ? 'SMALL' : 'BIG';
+            magConf += 40; // Strong zigzag pattern
         } else {
             const bCount4 = zones.slice(-4).filter(z => z === 'B').length;
-            if (bCount4 >= 3) predMag = 'BIG';
-            else if (bCount4 <= 1) predMag = 'SMALL';
+            if (bCount4 >= 3) { predMag = 'BIG'; magConf += 30; }
+            else if (bCount4 <= 1) { predMag = 'SMALL'; magConf += 30; }
+            else { magConf += 10; } // 2/4 is inconclusive
         }
     }
-    if (zones.length >= 8) {
+    if (zones.length >= 6) {
+        const last6 = zones.slice(-6);
+        const bCount6 = last6.filter(z => z === 'B').length;
+        const bRatio6 = bCount6 / last6.length;
+        if (bRatio6 >= 0.67) { predMag = 'BIG'; magConf += 30; }
+        else if (bRatio6 <= 0.33) { predMag = 'SMALL'; magConf += 30; }
+        else { magConf += 5; }
+    }
+    if (zones.length >= 10) {
         const bRatio = zones.filter(z => z === 'B').length / zones.length;
-        if (bRatio >= 0.6) predMag = 'BIG';
-        else if (bRatio <= 0.4) predMag = 'SMALL';
+        if (bRatio >= 0.7) { predMag = 'BIG'; magConf += 30; }
+        else if (bRatio <= 0.3) { predMag = 'SMALL'; magConf += 30; }
+        else { magConf += 5; }
     }
 
     // --- DIRECTION LOGIC ---
@@ -189,19 +203,32 @@ function predictZonePattern(history) {
         const last4DirStr = dirs.slice(-4).map(x => x === 'CW' ? 'R' : 'L').join('');
         if (last4DirStr === 'RLRL' || last4DirStr === 'LRLR') {
             predDir = lastDir === 'CW' ? 'CCW' : 'CW';
+            dirConf += 40;
         } else {
             const cwCount4 = dirs.slice(-4).filter(d => d === 'CW').length;
-            if (cwCount4 >= 3) predDir = 'CW';
-            else if (cwCount4 <= 1) predDir = 'CCW';
+            if (cwCount4 >= 3) { predDir = 'CW'; dirConf += 30; }
+            else if (cwCount4 <= 1) { predDir = 'CCW'; dirConf += 30; }
+            else { dirConf += 10; }
         }
     }
-    if (dirs.length >= 8) {
+    if (dirs.length >= 6) {
+        const last6d = dirs.slice(-6);
+        const cwRatio6 = last6d.filter(d => d === 'CW').length / last6d.length;
+        if (cwRatio6 >= 0.67) { predDir = 'CW'; dirConf += 30; }
+        else if (cwRatio6 <= 0.33) { predDir = 'CCW'; dirConf += 30; }
+        else { dirConf += 5; }
+    }
+    if (dirs.length >= 10) {
         const cwRatio = dirs.filter(d => d === 'CW').length / dirs.length;
-        if (cwRatio >= 0.6) predDir = 'CW';
-        else if (cwRatio <= 0.4) predDir = 'CCW';
+        if (cwRatio >= 0.7) { predDir = 'CW'; dirConf += 30; }
+        else if (cwRatio <= 0.3) { predDir = 'CCW'; dirConf += 30; }
+        else { dirConf += 5; }
     }
 
-    return { magnitude: predMag, direction: predDir };
+    // Combined confidence: average of mag and dir, capped at 100
+    const confidence = Math.min(100, Math.round((magConf + dirConf) / 2));
+
+    return { magnitude: predMag, direction: predDir, confidence: confidence };
 }
 
 // Ensure calcDist is available globally if needed by predictor.js
