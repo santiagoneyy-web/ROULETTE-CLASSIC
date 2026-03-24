@@ -24,9 +24,44 @@ let lastZoneBigHit   = false;
 let lastZoneSmallHit = false;
 
 // ─── JUGADAS STATE ───────────────────────────────────────────
-let jugView = { magnitude: 'SMALL', direction: 'CW' };
+let jugView = { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 const jugHistory = [];
 let lastJugHit = false;
+let patternStatsCache = null;
+
+// Pattern memory fetcher
+async function fetchPatternMemory(historyArr) {
+    if (historyArr.length < 5) return;
+    
+    const tableIdInput = document.getElementById('table-select');
+    let tableId = 1;
+    if (tableIdInput && tableIdInput.value) tableId = tableIdInput.value;
+    
+    // We need the sequence of 4 jumps (5 numbers)
+    const last5 = historyArr.slice(-5);
+    let seqMag = '';
+    let seqDir = '';
+    
+    for (let i = 1; i < last5.length; i++) {
+        const d = calcDist(last5[i-1], last5[i]);
+        seqMag += Math.abs(d) >= 10 ? 'B' : 'S';
+        seqDir += d >= 0 ? 'CW' : 'CCW';
+    }
+    
+    try {
+        const res = await fetch(`/api/patterns/${tableId}?seq_mag=${seqMag}&seq_dir=${seqDir}`);
+        const data = await res.json();
+        patternStatsCache = data;
+        
+        // Re-evaluate Sniper with new data
+        if (typeof predictZonePattern === 'function') {
+            jugView = predictZonePattern(historyArr, patternStatsCache);
+            renderShadowPanel();
+        }
+    } catch (e) {
+        console.error('Pattern fetch failed', e);
+    }
+}
 
 const RED_NUMS  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
@@ -216,7 +251,7 @@ function renderShadowPanel() {
         if (btnSide) btnSide.style.display = 'none';
 
         const conf = jugView.confidence || 0;
-        const isCharging = conf < 50;
+        const isCharging = conf < 65;
 
         if (isCharging) {
             // CHARGING MODE
@@ -407,8 +442,8 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 50)
-        if (history.length >= 1 && jugView.confidence >= 50) {
+        // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 65)
+        if (history.length >= 1 && jugView.confidence >= 65) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
             
@@ -435,7 +470,11 @@ function submitNumber(val, silent = false, batch = false) {
                 
                 // JUGADAS Sniper automatically reads the table
                 if (typeof predictZonePattern === 'function') {
-                    jugView = predictZonePattern(history);
+                    jugView = predictZonePattern(history, patternStatsCache);
+                }
+
+                if (!batch && history.length > 0) {
+                    fetchPatternMemory(history);
                 }
             } catch(e) { console.error('Predict error:', e); }
         }

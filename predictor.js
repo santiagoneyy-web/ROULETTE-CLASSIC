@@ -148,7 +148,7 @@ function getIAMasterSignals(prox, sig, history) {
     return signals;
 }
 
-function predictZonePattern(history) {
+function predictZonePattern(history, patternStats = null) {
     if (history.length < 4) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 
     const distances = [];
@@ -213,11 +213,38 @@ function predictZonePattern(history) {
     const globalPCW  = dirs.filter(d => d === 'CW').length / dirs.length;
 
     // ════════════════════════════════════════════════
-    // BAYESIAN BLEND — Weighted combination
-    // Markov: 50%, Run-Length: 30%, Global: 20%
+    // SIGNAL 4: PATTERN MEMORY — MongoDB historical matches
     // ════════════════════════════════════════════════
-    const blendPBig = (markovPBig * 0.50) + (rlPBig * 0.30) + (globalPBig * 0.20);
-    const blendPCW  = (markovPCW  * 0.50) + (rlPCW  * 0.30) + (globalPCW  * 0.20);
+    let memPBig = 0.5, memPCW = 0.5;
+    let memWeight = 0; // Starts at 0 until we have database matches
+
+    if (patternStats && patternStats.mag && patternStats.dir) {
+        const magStats = patternStats.mag;
+        const totalMag = (magStats.B || 0) + (magStats.S || 0);
+        if (totalMag > 0) {
+            memPBig = (magStats.B || 0) / totalMag;
+            memWeight = Math.min(0.40, totalMag * 0.05); // Up to 40% weight if >= 8 matches
+        }
+
+        const dirStats = patternStats.dir;
+        const totalDir = (dirStats.CW || 0) + (dirStats.CCW || 0);
+        if (totalDir > 0) {
+            memPCW = (dirStats.CW || 0) / totalDir;
+            // Use highest weight found between mag and dir matches
+            memWeight = Math.max(memWeight, Math.min(0.40, totalDir * 0.05));
+        }
+    }
+
+    // ════════════════════════════════════════════════
+    // BAYESIAN BLEND — Dynamically weighted combination
+    // ════════════════════════════════════════════════
+    // If memory is strong (memWeight=0.40), other weights scale down proportionally
+    const wMark = 0.50 - (memWeight * 0.50);
+    const wRun  = 0.30 - (memWeight * 0.25);
+    const wGlob = 0.20 - (memWeight * 0.25);
+
+    const blendPBig = (markovPBig * wMark) + (rlPBig * wRun) + (globalPBig * wGlob) + (memPBig * memWeight);
+    const blendPCW  = (markovPCW  * wMark) + (rlPCW  * wRun) + (globalPCW  * wGlob) + (memPCW  * memWeight);
 
     const predMag = blendPBig >= 0.5 ? 'BIG' : 'SMALL';
     const predDir = blendPCW >= 0.5 ? 'CW' : 'CCW';

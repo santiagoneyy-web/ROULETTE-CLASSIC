@@ -7,6 +7,7 @@ const cors    = require('cors');
 const path    = require('path');
 const db      = require('./database');
 const Spin    = require('./models/Spin'); // MongoDB Model
+const Pattern = require('./models/Pattern'); // MongoDB Pattern Memory Model
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const predictor = require('./predictor'); // Agents 1-4
 const axios   = require('axios');
@@ -79,6 +80,40 @@ app.get('/api/events/:tableId', (req, res) => {
     });
 });
 
+app.get('/api/patterns/:tableId', async (req, res) => {
+    const { tableId } = req.params;
+    const { seq_mag, seq_dir } = req.query; // 'BSBS', 'CWCCWCW'
+    
+    try {
+        const isMongo = db.getUseMongo();
+        if (!isMongo) return res.json({ error: 'MongoDB not enabled', mag: {}, dir: {} });
+        
+        let magStats = [];
+        let dirStats = [];
+
+        if (seq_mag) {
+            magStats = await Pattern.aggregate([
+                { $match: { table_id: String(tableId), sequence_mag: seq_mag } },
+                { $group: { _id: "$next_mag", count: { $sum: 1 } } }
+            ]);
+        }
+        
+        if (seq_dir) {
+            dirStats = await Pattern.aggregate([
+                { $match: { table_id: String(tableId), sequence_dir: seq_dir } },
+                { $group: { _id: "$next_dir", count: { $sum: 1 } } }
+            ]);
+        }
+        
+        res.json({
+            mag: magStats.reduce((acc, curr) => ({ ...acc, [curr._id]: curr.count }), {}),
+            dir: dirStats.reduce((acc, curr) => ({ ...acc, [curr._id]: curr.count }), {})
+        });
+    } catch(e) {
+        res.status(500).json({ error: e.message, mag: {}, dir: {} });
+    }
+});
+
 app.post('/api/spin', async (req, res) => {
     // ── NODO 1: INGESTA ──
     const { table_id, number, source, direction } = req.body;
@@ -142,6 +177,39 @@ app.post('/api/spin', async (req, res) => {
 
         // Add the new number to the local array to generate predictions for the NEXT round
         numsOnly.push(number);
+
+        // ── NODO PATTERNS: GUARDAR SECUENCIA (Pattern Memory) ──
+        if (isMongo && numsOnly.length >= 6) {
+            try {
+                // 6 numbers = 5 jumps (4 for sequence, 1 for outcome)
+                const last6 = numsOnly.slice(-6); 
+                const jumps = [];
+                for (let i = 1; i < last6.length; i++) {
+                    const p = agent5.getPhysics(last6[i-1], last6[i]);
+                    const mag = (p.distance === 'Big' || p.distance === 'ULTRA') ? 'B' : 'S';
+                    let dir = 'CW';
+                    if (p.direction === 'IZQUIERDA') dir = 'CCW';
+                    jumps.push({ mag, dir });
+                }
+                
+                const seq = jumps.slice(0, 4);
+                const outcome = jumps[4];
+                
+                const seqMag = seq.map(x => x.mag).join('');
+                const seqDir = seq.map(x => x.dir).join('');
+                
+                const newPattern = new Pattern({
+                    table_id: String(table_id),
+                    sequence_mag: seqMag,
+                    sequence_dir: seqDir,
+                    next_mag: outcome.mag,
+                    next_dir: outcome.dir
+                });
+                await newPattern.save();
+            } catch (err) {
+                console.error('[DB] Pattern save error:', err.message);
+            }
+        }
 
         // ── NODO 3: IA & AGENTES (Predicciones para el FUTURO) ──
         let newPredictions = {
