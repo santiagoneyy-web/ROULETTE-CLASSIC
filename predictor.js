@@ -149,7 +149,7 @@ function getIAMasterSignals(prox, sig, history) {
 }
 
 function predictZonePattern(history, patternStats = null) {
-    if (history.length < 4) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
+    if (history.length < 4) return { magnitude: 'SMALL', direction: 'CW', confidence: 0, isCharging: true };
 
     const distances = [];
     for (let i = 1; i < history.length; i++) {
@@ -157,7 +157,7 @@ function predictZonePattern(history, patternStats = null) {
     }
 
     const recent = distances.slice(-12);
-    if (recent.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
+    if (recent.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0, isCharging: true };
 
     const mags = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
     const dirs = recent.map(d => d >= 0 ? 'CW' : 'CCW');
@@ -246,14 +246,27 @@ function predictZonePattern(history, patternStats = null) {
     const blendPBig = (markovPBig * wMark) + (rlPBig * wRun) + (globalPBig * wGlob) + (memPBig * memWeight);
     const blendPCW  = (markovPCW  * wMark) + (rlPCW  * wRun) + (globalPCW  * wGlob) + (memPCW  * memWeight);
 
+    const finalMagProb = blendPBig >= 0.5 ? blendPBig : 1 - blendPBig;
+    const finalDirProb = blendPCW >= 0.5 ? blendPCW : 1 - blendPCW;
+
     const predMag = blendPBig >= 0.5 ? 'BIG' : 'SMALL';
     const predDir = blendPCW >= 0.5 ? 'CW' : 'CCW';
 
-    const magProb = Math.round((blendPBig >= 0.5 ? blendPBig : 1 - blendPBig) * 100);
-    const dirProb = Math.round((blendPCW >= 0.5 ? blendPCW : 1 - blendPCW) * 100);
+    const magProb = Math.round(finalMagProb * 100);
+    const dirProb = Math.round(finalDirProb * 100);
     const confidence = Math.round(Math.sqrt(magProb * dirProb));
 
-    return { magnitude: predMag, direction: predDir, confidence: confidence };
+    // Decisión propia de cargar batería (CHARGING):
+    // Entra en confusión si hay contradicción extrema en las metodologías (probabilidad < 55%)
+    // o si el historial está apenas empezando.
+    let isCharging = false;
+    if (history.length < 6) {
+        isCharging = true; // Calentamiento necesario
+    } else if (finalMagProb < 0.55 || finalDirProb < 0.55) {
+        isCharging = true; // Mucha errática/incertidumbre, prefiere no disparar
+    }
+
+    return { magnitude: predMag, direction: predDir, confidence: confidence, isCharging: isCharging };
 }
 
 // Ensure calcDist is available globally if needed by predictor.js
