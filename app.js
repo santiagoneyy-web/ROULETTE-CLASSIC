@@ -138,11 +138,11 @@ function renderShadowPanel() {
         // ─── ZONE MODE (📐) ───
         if (iconEl)  iconEl.innerText = '📐';
         if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
-        if (lblL)    lblL.innerText   = '';
-        if (lblR)    lblR.innerText   = '';
-        if (subL)    subL.innerText   = '';
+        if (lblL)    lblL.innerText   = 'SOPORTE';
+        if (lblR)    lblR.innerText   = 'INVERSO';
+        if (subL)    subL.innerText   = 'n9';
         if (subC)    subC.innerText   = 'n9';
-        if (subR)    subR.innerText   = '';
+        if (subR)    subR.innerText   = 'n9';
 
         const btnSide = document.getElementById('btn-switch-side');
         if (btnSide) btnSide.style.display = 'inline-block';
@@ -160,12 +160,12 @@ function renderShadowPanel() {
         const lastDist = Math.abs(calcDist(prevNum, lastNum));
         const t = getZoneTargets(lastNum);
 
-        if (targetEl) targetEl.innerText = t.main !== undefined ? t.main : '--';
-        if (smallEl)  smallEl.innerText  = '';
-        if (bigEl)    bigEl.innerText    = '';
+        if (targetEl) targetEl.innerText = t.main    !== undefined ? t.main    : '--';
+        if (smallEl)  smallEl.innerText  = t.support !== undefined ? t.support : '--';
+        if (bigEl)    bigEl.innerText    = t.inverse !== undefined ? t.inverse : '--';
 
-        if (hitSEl) hitSEl.innerText = '';
-        if (hitBEl) hitBEl.innerText = '';
+        if (hitSEl) hitSEl.innerText = lastZoneMainHit ? '✔ HIT' : '';
+        if (hitBEl) hitBEl.innerText = lastZoneInverseHit ? '✔ HIT' : '';
 
         if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
@@ -360,10 +360,11 @@ function submitNumber(val, silent = false, batch = false) {
             const prevForZone = history[history.length - 1];
             const pt = getZoneTargets(prevForZone);
             const dMain = Math.abs(calcDist(n, pt.main));
+            const dInv  = Math.abs(calcDist(n, pt.inverse));
             const hitLogic = (dMain <= 9);
             zoneHistory.push(hitLogic ? 'win' : 'loss');
             lastZoneMainHit    = hitLogic;
-            lastZoneInverseHit = false;
+            lastZoneInverseHit = (dInv <= 9);
         }
 
         // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 75)
