@@ -18,9 +18,10 @@ let lastBigHitCCW  = false;
 
 // ─── ZONE STATE ──────────────────────────────────────────────
 let zoneView = 'BIG';     
-const zoneHistory = [];   
-let lastZoneMainHit    = false;
-let lastZoneInverseHit = false;
+const zoneBigHistory = [];   
+const zoneSmallHistory = [];
+let lastZoneBigHit   = false;
+let lastZoneSmallHit = false;
 
 // ─── JUGADAS STATE ───────────────────────────────────────────
 let jugView = { magnitude: 'SMALL', direction: 'CW' };
@@ -138,38 +139,71 @@ function renderShadowPanel() {
         // ─── ZONE MODE (📐) ───
         if (iconEl)  iconEl.innerText = '📐';
         if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
-        if (lblL)    lblL.innerText   = 'SOPORTE';
-        if (lblR)    lblR.innerText   = 'INVERSO';
-        if (subL)    subL.innerText   = 'n9';
-        if (subC)    subC.innerText   = 'n9';
-        if (subR)    subR.innerText   = 'n9';
 
         const btnSide = document.getElementById('btn-switch-side');
         if (btnSide) btnSide.style.display = 'inline-block';
         if (btnSide) btnSide.innerText = '⇄';
 
-        const badgeTxt = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
-        if (dirEl)   dirEl.innerText   = badgeTxt;
-        if (stratEl) stratEl.innerText = zoneView === 'BIG'
-            ? 'SOPORTE BIG · POS +19 · N9'
-            : 'SOPORTE SMALL · POS +1 · N9';
+        if (history.length < 2) {
+            if (dirEl)   dirEl.innerText   = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
+            if (stratEl) stratEl.innerText = zoneView === 'BIG' ? 'DIST +19 · N9' : 'DIST +1/0/-1 · N9';
+            if (targetEl) targetEl.innerText = '--';
+            return;
+        }
 
-        if (history.length < 2) return;
         const lastNum  = history[history.length - 1];
         const prevNum  = history[history.length - 2];
         const lastDist = Math.abs(calcDist(prevNum, lastNum));
-        const t = getZoneTargets(lastNum);
+        const idx = WHEEL_NUMS.indexOf(lastNum);
 
-        if (targetEl) targetEl.innerText = t.main    !== undefined ? t.main    : '--';
-        if (smallEl)  smallEl.innerText  = t.support !== undefined ? t.support : '--';
-        if (bigEl)    bigEl.innerText    = t.inverse !== undefined ? t.inverse : '--';
+        if (zoneView === 'BIG') {
+            // BIG: Single target at +19
+            if (lblL)    lblL.innerText   = '';
+            if (lblR)    lblR.innerText   = '';
+            if (subL)    subL.innerText   = '';
+            if (subC)    subC.innerText   = 'n9';
+            if (subR)    subR.innerText   = '';
 
-        if (hitSEl) hitSEl.innerText = lastZoneMainHit ? '✔ HIT' : '';
-        if (hitBEl) hitBEl.innerText = lastZoneInverseHit ? '✔ HIT' : '';
+            if (dirEl)   dirEl.innerText   = 'BIG 🔺';
+            if (stratEl) stratEl.innerText = 'DIST +19 · N9';
+
+            const bigTarget = WHEEL_NUMS[(idx + 19 + 37) % 37];
+            if (targetEl) targetEl.innerText = bigTarget;
+            if (smallEl)  smallEl.innerText  = '';
+            if (bigEl)    bigEl.innerText    = '';
+
+            if (hitSEl) hitSEl.innerText = '';
+            if (hitBEl) hitBEl.innerText = '';
+            if (lastZoneBigHit && hitSEl) hitSEl.innerText = '✔ HIT';
+        } else {
+            // SMALL: Three targets at +1, 0, -1
+            if (lblL)    lblL.innerText   = '+1';
+            if (lblR)    lblR.innerText   = '-1';
+            if (subL)    subL.innerText   = 'n9';
+            if (subC)    subC.innerText   = 'n9';
+            if (subR)    subR.innerText   = 'n9';
+
+            if (dirEl)   dirEl.innerText   = 'SMALL 🔻';
+            if (stratEl) stratEl.innerText = 'DIST +1 / 0 / -1 · N9';
+
+            const tPlus1  = WHEEL_NUMS[(idx + 1 + 37) % 37];
+            const tZero   = lastNum;
+            const tMinus1 = WHEEL_NUMS[(idx - 1 + 37) % 37];
+
+            if (smallEl)  smallEl.innerText  = tPlus1;
+            if (targetEl) targetEl.innerText = tZero;
+            if (bigEl)    bigEl.innerText    = tMinus1;
+
+            if (hitSEl) hitSEl.innerText = '';
+            if (hitBEl) hitBEl.innerText = '';
+            if (lastZoneSmallHit && hitSEl) hitSEl.innerText = '✔ HIT';
+        }
 
         if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
-        const last12z = zoneHistory.slice(-12);
+        // Show W/L for the ACTIVE zone mode
+        const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
+        const last12z = activeZoneHist.slice(-12);
         const winsZ   = last12z.filter(x => x === 'win').length;
         const lossesZ = last12z.length - winsZ;
         const rateZ   = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) : '0.0';
@@ -354,17 +388,32 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE prediction — N9 RADIUS (<= 9)
-        // WIN = the result falls within N9 of the main zone target
+        // Evaluate ZONE BIG prediction — N9 of +19 target
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
-            const pt = getZoneTargets(prevForZone);
-            const dMain = Math.abs(calcDist(n, pt.main));
-            const dInv  = Math.abs(calcDist(n, pt.inverse));
-            const hitLogic = (dMain <= 9);
-            zoneHistory.push(hitLogic ? 'win' : 'loss');
-            lastZoneMainHit    = hitLogic;
-            lastZoneInverseHit = (dInv <= 9);
+            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
+            if (idxZ !== -1) {
+                const bigTarget = WHEEL_NUMS[(idxZ + 19 + 37) % 37];
+                const dBig = Math.abs(calcDist(n, bigTarget));
+                lastZoneBigHit = (dBig <= 9);
+                zoneBigHistory.push(lastZoneBigHit ? 'win' : 'loss');
+            }
+        }
+
+        // Evaluate ZONE SMALL prediction — N9 of +1, 0, or -1 targets
+        if (history.length >= 1) {
+            const prevForZone = history[history.length - 1];
+            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
+            if (idxZ !== -1) {
+                const tPlus1  = WHEEL_NUMS[(idxZ + 1 + 37) % 37];
+                const tZero   = prevForZone;
+                const tMinus1 = WHEEL_NUMS[(idxZ - 1 + 37) % 37];
+                const dP1 = Math.abs(calcDist(n, tPlus1));
+                const dZ  = Math.abs(calcDist(n, tZero));
+                const dM1 = Math.abs(calcDist(n, tMinus1));
+                lastZoneSmallHit = (dP1 <= 9 || dZ <= 9 || dM1 <= 9);
+                zoneSmallHistory.push(lastZoneSmallHit ? 'win' : 'loss');
+            }
         }
 
         // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 75)
