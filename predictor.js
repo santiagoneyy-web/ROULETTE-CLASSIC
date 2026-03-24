@@ -149,44 +149,59 @@ function getIAMasterSignals(prox, sig, history) {
 }
 
 function predictZonePattern(history) {
-    if (history.length < 2) return 'SMALL';
+    if (history.length < 2) return { magnitude: 'SMALL', direction: 'CW' };
 
     const distances = [];
     for (let i = 1; i < history.length; i++) {
         distances.push(getDistance(history[i-1], history[i]));
     }
 
-    // Look at last 12 jumps
     const recent = distances.slice(-12);
-    if (recent.length === 0) return 'SMALL';
+    if (recent.length === 0) return { magnitude: 'SMALL', direction: 'CW' };
 
-    // Map to 'B' (Big: 10-18) or 'S' (Small: 1-9 or 0)
+    // --- MAGNITUDE LOGIC ---
     const zones = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
     const lastZone = zones[zones.length - 1];
+    let predMag = lastZone === 'B' ? 'BIG' : 'SMALL';
 
     if (zones.length >= 4) {
-        // Pattern 1: ZigZag (B S B S)
         const last4Str = zones.slice(-4).join('');
         if (last4Str === 'BSBS' || last4Str === 'SBSB') {
-            return lastZone === 'B' ? 'SMALL' : 'BIG'; // Predict opposite to continue zigzag
+            predMag = lastZone === 'B' ? 'SMALL' : 'BIG'; 
+        } else {
+            const bCount4 = zones.slice(-4).filter(z => z === 'B').length;
+            if (bCount4 >= 3) predMag = 'BIG';
+            else if (bCount4 <= 1) predMag = 'SMALL';
         }
-
-        // Pattern 2: Short-term Dominance
-        const bCount4 = zones.slice(-4).filter(z => z === 'B').length;
-        if (bCount4 >= 3) return 'BIG';
-        if (bCount4 <= 1) return 'SMALL';
     }
-
-    // Pattern 3: Global 12-spin Momentum
     if (zones.length >= 8) {
-        const bCountAll = zones.filter(z => z === 'B').length;
-        const bRatio = bCountAll / zones.length;
-        if (bRatio >= 0.6) return 'BIG';
-        if (bRatio <= 0.4) return 'SMALL';
+        const bRatio = zones.filter(z => z === 'B').length / zones.length;
+        if (bRatio >= 0.6) predMag = 'BIG';
+        else if (bRatio <= 0.4) predMag = 'SMALL';
     }
 
-    // Default: follow the most recent momentum
-    return lastZone === 'B' ? 'BIG' : 'SMALL';
+    // --- DIRECTION LOGIC ---
+    const dirs = recent.map(d => d >= 0 ? 'CW' : 'CCW');
+    const lastDir = dirs[dirs.length - 1];
+    let predDir = lastDir;
+
+    if (dirs.length >= 4) {
+        const last4DirStr = dirs.slice(-4).map(x => x === 'CW' ? 'R' : 'L').join('');
+        if (last4DirStr === 'RLRL' || last4DirStr === 'LRLR') {
+            predDir = lastDir === 'CW' ? 'CCW' : 'CW';
+        } else {
+            const cwCount4 = dirs.slice(-4).filter(d => d === 'CW').length;
+            if (cwCount4 >= 3) predDir = 'CW';
+            else if (cwCount4 <= 1) predDir = 'CCW';
+        }
+    }
+    if (dirs.length >= 8) {
+        const cwRatio = dirs.filter(d => d === 'CW').length / dirs.length;
+        if (cwRatio >= 0.6) predDir = 'CW';
+        else if (cwRatio <= 0.4) predDir = 'CCW';
+    }
+
+    return { magnitude: predMag, direction: predDir };
 }
 
 // Ensure calcDist is available globally if needed by predictor.js

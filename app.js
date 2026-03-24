@@ -23,7 +23,7 @@ let lastZoneMainHit    = false;
 let lastZoneInverseHit = false;
 
 // ─── JUGADAS STATE ───────────────────────────────────────────
-let jugView = 'SMALL';
+let jugView = { magnitude: 'SMALL', direction: 'CW' };
 const jugHistory = [];
 let lastJugHit = false;
 
@@ -182,35 +182,40 @@ function renderShadowPanel() {
         // ─── JUGADAS MODE (🎯) ───
         if (iconEl)  iconEl.innerText = '🎯';
         if (nameEl)  nameEl.innerText = 'JUGADAS / SNIPER';
-        if (lblL)    lblL.innerText   = 'SMALL';
-        if (lblR)    lblR.innerText   = 'BIG';
-        if (subL)    subL.innerText   = 'n4';
+        if (lblL)    lblL.innerText   = 'PRED. DIR';
+        if (lblR)    lblR.innerText   = 'PRED. DIR';
+        if (subL)    subL.innerText   = '-';
         if (subC)    subC.innerText   = 'n4';
-        if (subR)    subR.innerText   = 'n4';
+        if (subR)    subR.innerText   = '-';
 
         const btnSide = document.getElementById('btn-switch-side');
         if (btnSide) btnSide.style.display = 'none';
 
         if (!lastSignal) return;
         
-        // Show BOTH CW/CCW snipers corresponding to the jugView (BIG/SMALL)
-        const isSmall = jugView === 'SMALL';
-        const pCW  = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
-        const pCCW = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
+        const isSmall = jugView.magnitude === 'SMALL';
+        const isCW = jugView.direction === 'CW';
         
-        if (dirEl) dirEl.innerText = isSmall ? 'PLAY SMALL' : 'PLAY BIG';
-        if (stratEl) stratEl.innerText = isSmall ? 'SNIPER SMALL (DIST 1-9) · N4' : 'SNIPER BIG (DIST 10-18) · N4';
+        let pTarget = '--';
+        if (isCW) {
+            pTarget = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
+        } else {
+            pTarget = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
+        }
         
-        if (targetEl) targetEl.innerText = isSmall ? 'SML' : 'BIG'; // abstract center
-        if (smallEl)  smallEl.innerText  = pCW !== undefined ? pCW : '--'; // Right
-        if (bigEl)    bigEl.innerText    = pCCW !== undefined ? pCCW : '--'; // Left
+        if (dirEl) dirEl.innerText = `PLAY ${jugView.magnitude}`;
+        if (stratEl) stratEl.innerText = `SNIPER ${jugView.magnitude} ${jugView.direction} · N4`;
+        
+        if (targetEl) targetEl.innerText = pTarget !== undefined ? pTarget : '--';
+        if (smallEl)  smallEl.innerText  = isCW ? 'CW ↺' : '--'; 
+        if (bigEl)    bigEl.innerText    = !isCW ? 'CCW ↻' : '--'; 
 
-        if (hitSEl) hitSEl.innerText = lastJugHit ? '✔ HIT' : '';
-        if (hitBEl) hitBEl.innerText = lastJugHit ? '✔ HIT' : '';
+        if (hitSEl) hitSEl.innerText = (isCW && lastJugHit) ? '✔ HIT' : '';
+        if (hitBEl) hitBEl.innerText = (!isCW && lastJugHit) ? '✔ HIT' : '';
 
         if (tendEl && history.length >= 2) {
-            const d = Math.abs(calcDist(history[history.length-2], history[history.length-1]));
-            tendEl.innerText = `LAST JUMP: ${ d >= 10 ? 'BIG' : 'SMALL'} (${d}p)`;
+            const jump = calcDist(history[history.length-2], history[history.length-1]);
+            tendEl.innerText = `LAST JUMP: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SMALL'} (${Math.abs(jump)}p)`;
         }
 
         const last12j = jugHistory.slice(-12);
@@ -345,15 +350,15 @@ function submitNumber(val, silent = false, batch = false) {
             lastZoneInverseHit = (dInv <= 9);
         }
 
-        // Evaluate JUGADAS prediction — checking jump magnitude
+        // Evaluate JUGADAS prediction — checking jump magnitude and direction
         if (history.length >= 1) {
-            const jump = Math.abs(calcDist(history[history.length - 1], n));
-            // A Small jump is <= 9, A Big jump is >= 10
-            if (jugView === 'SMALL') {
-                lastJugHit = (jump <= 9);
-            } else {
-                lastJugHit = (jump >= 10);
-            }
+            const jump = calcDist(history[history.length - 1], n);
+            const mag = Math.abs(jump);
+            
+            const hitMag = jugView.magnitude === 'SMALL' ? (mag <= 9 && mag >= 1) : (mag >= 10 && mag <= 18);
+            const hitDir = jugView.direction === 'CW' ? (jump >= 0) : (jump < 0);
+            
+            lastJugHit = hitMag && hitDir;
             jugHistory.push(lastJugHit ? 'win' : 'loss');
         }
 
