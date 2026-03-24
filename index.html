@@ -81,6 +81,49 @@
 
             </section>
 
+            <!-- Zone Panel (BIG / SMALL support) -->
+            <section class="shadow-panel" id="zone-panel">
+                <div class="agent-card-header">
+                    <span class="agent-icon">📐</span>
+                    <span class="agent-card-name">ZONE SUPPORT</span>
+                    <span class="side-badge" id="zone-mode-badge">BIG 🔺</span>
+                    <button id="btn-switch-zone" class="btn-switch-inline">⇄</button>
+                </div>
+
+                <div class="agent-strategy-label" id="zone-strategy">SOPORTE ZONA · N4</div>
+
+                <!-- 3-Column Prediction Grid -->
+                <div class="prediction-grid-3" id="zone-prediction-grid">
+                    <div class="p-box pb-left">
+                        <span class="p-label">SOPORTE</span>
+                        <span class="p-val" id="zone-support-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="hit-zone-support"></span>
+                    </div>
+                    <div class="p-box pb-center">
+                        <div class="p-val-main" id="zone-main-val">--</div>
+                        <div class="p-sub-main">n4</div>
+                        <div class="p-tendency" id="zone-tendency">LAST ZONE</div>
+                    </div>
+                    <div class="p-box pb-right">
+                        <span class="p-label">INVERSO</span>
+                        <span class="p-val" id="zone-inverse-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="hit-zone-inverse"></span>
+                    </div>
+                </div>
+
+                <!-- W/L Stats (Last 12) -->
+                <div class="agent-footer-stats">
+                    <span class="st">LAST 12 ➔ W:<span id="zone-wins">0</span> L:<span id="zone-losses">0</span></span>
+                    <span class="status-msg">RATE: <span id="zone-rate">0.00%</span></span>
+                </div>
+
+                <!-- Recent streak -->
+                <div class="performance-string" id="zone-performance"></div>
+
+            </section>
+
         </div><!-- /col-left -->
 
         <!-- ── RIGHT COLUMN ── -->
@@ -119,7 +162,7 @@
 
 </div>
 
-<script src="predictor.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="predictor.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
