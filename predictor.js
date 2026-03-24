@@ -256,14 +256,10 @@ function predictZonePattern(history, patternStats = null) {
     const dirProb = Math.round(finalDirProb * 100);
     const confidence = Math.round(Math.sqrt(magProb * dirProb));
 
-    // Decisión propia de cargar batería (CHARGING):
-    // Entra en confusión si hay contradicción extrema en las metodologías (probabilidad < 55%)
-    // o si el historial está apenas empezando.
+    // Solo cargar batería si no hay suficiente historial
     let isCharging = false;
-    if (history.length < 6) {
-        isCharging = true; // Calentamiento necesario
-    } else if (finalMagProb < 0.55 || finalDirProb < 0.55) {
-        isCharging = true; // Mucha errática/incertidumbre, prefiere no disparar
+    if (history.length < 5) {
+        isCharging = true;
     }
 
     return { magnitude: predMag, direction: predDir, confidence: confidence, isCharging: isCharging };
