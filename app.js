@@ -216,7 +216,7 @@ function renderShadowPanel() {
         if (btnSide) btnSide.style.display = 'none';
 
         const conf = jugView.confidence || 0;
-        const isCharging = conf < 75;
+        const isCharging = conf < 50;
 
         if (isCharging) {
             // CHARGING MODE
@@ -407,8 +407,8 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 75)
-        if (history.length >= 1 && jugView.confidence >= 75) {
+        // Evaluate JUGADAS prediction — only when ACTIVE (confidence >= 50)
+        if (history.length >= 1 && jugView.confidence >= 50) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
             
