@@ -149,7 +149,7 @@ function getIAMasterSignals(prox, sig, history) {
 }
 
 function predictZonePattern(history) {
-    if (history.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
+    if (history.length < 4) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 
     const distances = [];
     for (let i = 1; i < history.length; i++) {
@@ -157,76 +157,59 @@ function predictZonePattern(history) {
     }
 
     const recent = distances.slice(-12);
-    if (recent.length < 2) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
+    if (recent.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 
-    let magConf = 0; // Magnitude confidence points
-    let dirConf = 0; // Direction confidence points
-
-    // --- MAGNITUDE LOGIC ---
-    const zones = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
-    const lastZone = zones[zones.length - 1];
-    let predMag = lastZone === 'B' ? 'BIG' : 'SMALL';
-
-    if (zones.length >= 4) {
-        const last4Str = zones.slice(-4).join('');
-        if (last4Str === 'BSBS' || last4Str === 'SBSB') {
-            predMag = lastZone === 'B' ? 'SMALL' : 'BIG';
-            magConf += 40; // Strong zigzag pattern
-        } else {
-            const bCount4 = zones.slice(-4).filter(z => z === 'B').length;
-            if (bCount4 >= 3) { predMag = 'BIG'; magConf += 30; }
-            else if (bCount4 <= 1) { predMag = 'SMALL'; magConf += 30; }
-            else { magConf += 10; } // 2/4 is inconclusive
-        }
-    }
-    if (zones.length >= 6) {
-        const last6 = zones.slice(-6);
-        const bCount6 = last6.filter(z => z === 'B').length;
-        const bRatio6 = bCount6 / last6.length;
-        if (bRatio6 >= 0.67) { predMag = 'BIG'; magConf += 30; }
-        else if (bRatio6 <= 0.33) { predMag = 'SMALL'; magConf += 30; }
-        else { magConf += 5; }
-    }
-    if (zones.length >= 10) {
-        const bRatio = zones.filter(z => z === 'B').length / zones.length;
-        if (bRatio >= 0.7) { predMag = 'BIG'; magConf += 30; }
-        else if (bRatio <= 0.3) { predMag = 'SMALL'; magConf += 30; }
-        else { magConf += 5; }
-    }
-
-    // --- DIRECTION LOGIC ---
+    // Classify each jump
+    const mags = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
     const dirs = recent.map(d => d >= 0 ? 'CW' : 'CCW');
-    const lastDir = dirs[dirs.length - 1];
-    let predDir = lastDir;
 
-    if (dirs.length >= 4) {
-        const last4DirStr = dirs.slice(-4).map(x => x === 'CW' ? 'R' : 'L').join('');
-        if (last4DirStr === 'RLRL' || last4DirStr === 'LRLR') {
-            predDir = lastDir === 'CW' ? 'CCW' : 'CW';
-            dirConf += 40;
+    // ─── MARKOV CHAIN: MAGNITUDE ───
+    // Count transitions: what follows B? what follows S?
+    const magTrans = { B: { B: 0, S: 0 }, S: { B: 0, S: 0 } };
+    for (let i = 0; i < mags.length - 1; i++) {
+        magTrans[mags[i]][mags[i + 1]]++;
+    }
+    const lastMag = mags[mags.length - 1];
+    const magTotal = magTrans[lastMag].B + magTrans[lastMag].S;
+    let predMag, magProb;
+    if (magTotal === 0) {
+        predMag = lastMag === 'B' ? 'BIG' : 'SMALL';
+        magProb = 50;
+    } else {
+        const pBig = (magTrans[lastMag].B / magTotal) * 100;
+        if (pBig >= 50) {
+            predMag = 'BIG';
+            magProb = Math.round(pBig);
         } else {
-            const cwCount4 = dirs.slice(-4).filter(d => d === 'CW').length;
-            if (cwCount4 >= 3) { predDir = 'CW'; dirConf += 30; }
-            else if (cwCount4 <= 1) { predDir = 'CCW'; dirConf += 30; }
-            else { dirConf += 10; }
+            predMag = 'SMALL';
+            magProb = Math.round(100 - pBig);
         }
     }
-    if (dirs.length >= 6) {
-        const last6d = dirs.slice(-6);
-        const cwRatio6 = last6d.filter(d => d === 'CW').length / last6d.length;
-        if (cwRatio6 >= 0.67) { predDir = 'CW'; dirConf += 30; }
-        else if (cwRatio6 <= 0.33) { predDir = 'CCW'; dirConf += 30; }
-        else { dirConf += 5; }
+
+    // ─── MARKOV CHAIN: DIRECTION ───
+    const dirTrans = { CW: { CW: 0, CCW: 0 }, CCW: { CW: 0, CCW: 0 } };
+    for (let i = 0; i < dirs.length - 1; i++) {
+        dirTrans[dirs[i]][dirs[i + 1]]++;
     }
-    if (dirs.length >= 10) {
-        const cwRatio = dirs.filter(d => d === 'CW').length / dirs.length;
-        if (cwRatio >= 0.7) { predDir = 'CW'; dirConf += 30; }
-        else if (cwRatio <= 0.3) { predDir = 'CCW'; dirConf += 30; }
-        else { dirConf += 5; }
+    const lastDir = dirs[dirs.length - 1];
+    const dirTotal = dirTrans[lastDir].CW + dirTrans[lastDir].CCW;
+    let predDir, dirProb;
+    if (dirTotal === 0) {
+        predDir = lastDir;
+        dirProb = 50;
+    } else {
+        const pCW = (dirTrans[lastDir].CW / dirTotal) * 100;
+        if (pCW >= 50) {
+            predDir = 'CW';
+            dirProb = Math.round(pCW);
+        } else {
+            predDir = 'CCW';
+            dirProb = Math.round(100 - pCW);
+        }
     }
 
-    // Combined confidence: average of mag and dir, capped at 100
-    const confidence = Math.min(100, Math.round((magConf + dirConf) / 2));
+    // Combined confidence: geometric mean of both probabilities
+    const confidence = Math.round(Math.sqrt(magProb * dirProb));
 
     return { magnitude: predMag, direction: predDir, confidence: confidence };
 }

@@ -172,31 +172,26 @@ function renderShadowPanel() {
             if (smallEl)  smallEl.innerText  = '';
             if (bigEl)    bigEl.innerText    = '';
 
-            if (hitSEl) hitSEl.innerText = '';
+            if (hitSEl) hitSEl.innerText = lastZoneBigHit ? '✔ HIT' : '';
             if (hitBEl) hitBEl.innerText = '';
-            if (lastZoneBigHit && hitSEl) hitSEl.innerText = '✔ HIT';
         } else {
-            // SMALL: Three targets at +1, 0, -1
-            if (lblL)    lblL.innerText   = '+1';
-            if (lblR)    lblR.innerText   = '-1';
-            if (subL)    subL.innerText   = 'n9';
+            // SMALL: Single target at +1
+            if (lblL)    lblL.innerText   = '';
+            if (lblR)    lblR.innerText   = '';
+            if (subL)    subL.innerText   = '';
             if (subC)    subC.innerText   = 'n9';
-            if (subR)    subR.innerText   = 'n9';
+            if (subR)    subR.innerText   = '';
 
             if (dirEl)   dirEl.innerText   = 'SMALL 🔻';
-            if (stratEl) stratEl.innerText = 'DIST +1 / 0 / -1 · N9';
+            if (stratEl) stratEl.innerText = 'DIST +1 · N9';
 
-            const tPlus1  = WHEEL_NUMS[(idx + 1 + 37) % 37];
-            const tZero   = lastNum;
-            const tMinus1 = WHEEL_NUMS[(idx - 1 + 37) % 37];
+            const smallTarget = WHEEL_NUMS[(idx + 1 + 37) % 37];
+            if (targetEl) targetEl.innerText = smallTarget;
+            if (smallEl)  smallEl.innerText  = '';
+            if (bigEl)    bigEl.innerText    = '';
 
-            if (smallEl)  smallEl.innerText  = tPlus1;
-            if (targetEl) targetEl.innerText = tZero;
-            if (bigEl)    bigEl.innerText    = tMinus1;
-
-            if (hitSEl) hitSEl.innerText = '';
+            if (hitSEl) hitSEl.innerText = lastZoneSmallHit ? '✔ HIT' : '';
             if (hitBEl) hitBEl.innerText = '';
-            if (lastZoneSmallHit && hitSEl) hitSEl.innerText = '✔ HIT';
         }
 
         if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
@@ -400,18 +395,14 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate ZONE SMALL prediction — N9 of +1, 0, or -1 targets
+        // Evaluate ZONE SMALL prediction — N9 of +1 target only
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
             if (idxZ !== -1) {
-                const tPlus1  = WHEEL_NUMS[(idxZ + 1 + 37) % 37];
-                const tZero   = prevForZone;
-                const tMinus1 = WHEEL_NUMS[(idxZ - 1 + 37) % 37];
-                const dP1 = Math.abs(calcDist(n, tPlus1));
-                const dZ  = Math.abs(calcDist(n, tZero));
-                const dM1 = Math.abs(calcDist(n, tMinus1));
-                lastZoneSmallHit = (dP1 <= 9 || dZ <= 9 || dM1 <= 9);
+                const smallTarget = WHEEL_NUMS[(idxZ + 1 + 37) % 37];
+                const dSmall = Math.abs(calcDist(n, smallTarget));
+                lastZoneSmallHit = (dSmall <= 9);
                 zoneSmallHistory.push(lastZoneSmallHit ? 'win' : 'loss');
             }
         }
