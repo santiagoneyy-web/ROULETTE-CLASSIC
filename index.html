@@ -31,20 +31,20 @@
             <!-- Visual Panel (Table Image + Mini History) -->
             <section class="visual-panel-mini">
                 <div class="table-image-container" style="text-align: center; margin-bottom: 10px;">
-                    <!-- The image switches automatically between table-1.jpg and table-2.jpg depending on the dropdown -->
                     <img src="table-1.jpg" alt="Mesa de Ruleta" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                 </div>
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
 
-            <!-- Prediction Panel -->
+            <!-- Unified Prediction Panel (DIR mode / ZONE mode) -->
             <section class="shadow-panel" id="prediction-panel">
-                <!-- Header row: title + side switch together -->
+                <!-- Header -->
                 <div class="agent-card-header">
-                    <span class="agent-icon">🤖</span>
-                    <span class="agent-card-name">ANDROID 1717</span>
+                    <span class="agent-icon" id="panel-icon">🤖</span>
+                    <span class="agent-card-name" id="panel-name">ANDROID 1717</span>
                     <span class="side-badge" id="pred-dir">CW ↺</span>
-                    <button id="btn-switch-side" class="btn-switch-inline">⇄</button>
+                    <button id="btn-switch-side" class="btn-switch-inline" title="Cambiar lado">⇄</button>
+                    <button id="btn-switch-mode" class="btn-switch-inline" title="Cambiar modo DIR/ZONE" style="background:rgba(240,192,64,0.15);border-color:rgba(240,192,64,0.4);color:#f0c040">📐</button>
                 </div>
 
                 <div class="agent-strategy-label" id="agent-strategy">DISTANCE 10 · N9</div>
@@ -52,20 +52,20 @@
                 <!-- 3-Column Prediction Grid -->
                 <div class="prediction-grid-3" id="prediction-grid">
                     <div class="p-box pb-left">
-                        <span class="p-label">SMALL</span>
+                        <span class="p-label" id="label-left">SMALL</span>
                         <span class="p-val" id="psn-small-val">--</span>
-                        <span class="p-sub">n4</span>
+                        <span class="p-sub" id="sub-left">n4</span>
                         <span class="hit-text" id="hit-small"></span>
                     </div>
                     <div class="p-box pb-center">
                         <div class="p-val-main" id="target-number">--</div>
-                        <div class="p-sub-main">n9</div>
+                        <div class="p-sub-main" id="sub-center">n9</div>
                         <div class="p-tendency" id="pi-tendency">MAIN PRED.</div>
                     </div>
                     <div class="p-box pb-right">
-                        <span class="p-label">BIG</span>
+                        <span class="p-label" id="label-right">BIG</span>
                         <span class="p-val" id="psn-big-val">--</span>
-                        <span class="p-sub">n4</span>
+                        <span class="p-sub" id="sub-right">n4</span>
                         <span class="hit-text" id="hit-big"></span>
                     </div>
                 </div>
@@ -75,52 +75,9 @@
                     <span class="st">LAST 12 ➔ W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
                     <span class="status-msg">RATE: <span id="w-rate">0.00%</span></span>
                 </div>
-                
+
                 <!-- Recent streak -->
                 <div class="performance-string" id="agent-performance"></div>
-
-            </section>
-
-            <!-- Zone Panel (BIG / SMALL support) -->
-            <section class="shadow-panel" id="zone-panel">
-                <div class="agent-card-header">
-                    <span class="agent-icon">📐</span>
-                    <span class="agent-card-name">ZONE SUPPORT</span>
-                    <span class="side-badge" id="zone-mode-badge">BIG 🔺</span>
-                    <button id="btn-switch-zone" class="btn-switch-inline">⇄</button>
-                </div>
-
-                <div class="agent-strategy-label" id="zone-strategy">SOPORTE ZONA · N4</div>
-
-                <!-- 3-Column Prediction Grid -->
-                <div class="prediction-grid-3" id="zone-prediction-grid">
-                    <div class="p-box pb-left">
-                        <span class="p-label">SOPORTE</span>
-                        <span class="p-val" id="zone-support-val">--</span>
-                        <span class="p-sub">n4</span>
-                        <span class="hit-text" id="hit-zone-support"></span>
-                    </div>
-                    <div class="p-box pb-center">
-                        <div class="p-val-main" id="zone-main-val">--</div>
-                        <div class="p-sub-main">n4</div>
-                        <div class="p-tendency" id="zone-tendency">LAST ZONE</div>
-                    </div>
-                    <div class="p-box pb-right">
-                        <span class="p-label">INVERSO</span>
-                        <span class="p-val" id="zone-inverse-val">--</span>
-                        <span class="p-sub">n4</span>
-                        <span class="hit-text" id="hit-zone-inverse"></span>
-                    </div>
-                </div>
-
-                <!-- W/L Stats (Last 12) -->
-                <div class="agent-footer-stats">
-                    <span class="st">LAST 12 ➔ W:<span id="zone-wins">0</span> L:<span id="zone-losses">0</span></span>
-                    <span class="status-msg">RATE: <span id="zone-rate">0.00%</span></span>
-                </div>
-
-                <!-- Recent streak -->
-                <div class="performance-string" id="zone-performance"></div>
 
             </section>
 
@@ -162,7 +119,7 @@
 
 </div>
 
-<script src="predictor.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="predictor.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

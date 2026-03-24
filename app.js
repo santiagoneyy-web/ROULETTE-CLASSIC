@@ -6,20 +6,21 @@ const history = [];
 const cwHistory = [];
 const ccwHistory = [];
 
-let currentView = 'CW'; // toggled by SWITCH SIDE
-let lastSignal = null;
+let currentView = 'CW'; 
+let panelMode   = 'DIR';  // 'DIR' or 'ZONE'
+let lastSignal  = null;
 let currentTableId = null;
 
 let lastOverHitCW = false;
-let lastBigHitCW = false;
+let lastBigHitCW  = false;
 let lastOverHitCCW = false;
-let lastBigHitCCW = false;
+let lastBigHitCCW  = false;
 
-// ─── ZONE PANEL STATE ────────────────────────────────────────
-let zoneView = 'BIG';     // 'BIG' or 'SMALL'
-const zoneHistory = [];   // 'win' / 'loss'
-let lastZoneHitSupport  = false;
-let lastZoneHitInverse  = false;
+// ─── ZONE STATE ──────────────────────────────────────────────
+let zoneView = 'BIG';     
+const zoneHistory = [];   
+let lastZoneMainHit    = false;
+let lastZoneInverseHit = false;
 
 const RED_NUMS  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
@@ -34,139 +35,136 @@ function calcDist(from, to) {
     return d;
 }
 
-/// ─── RENDER: SHADOW PANEL ────────────────────────────────
-function renderShadowPanel() {
-    if (!lastSignal) return;
-    const isCW = currentView === 'CW';
+/// ─── RENDER: UNIFIED PANEL ───────────────────────────────
 
-    const activeHistory = isCW ? cwHistory : ccwHistory;
-    const activeTarget  = isCW ? lastSignal.targetCW  : lastSignal.targetCCW;
-    const activeSmall   = isCW ? lastSignal.targetOverCW  : lastSignal.targetOverCCW;
-    const activeBig     = isCW ? lastSignal.targetBigCW   : lastSignal.targetBigCCW;
-
-    // Main prediction
-    const targetEl = document.getElementById('target-number');
-    if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
-
-    // SMALL and BIG snipes
-    const smallEl = document.getElementById('psn-small-val');
-    const bigEl   = document.getElementById('psn-big-val');
-    if (smallEl) smallEl.innerText = activeSmall !== undefined ? activeSmall : '--';
-    if (bigEl)   bigEl.innerText   = activeBig   !== undefined ? activeBig   : '--';
-
-    // Direction badge
-    const dirEl = document.getElementById('pred-dir');
-    if (dirEl) dirEl.innerText = isCW ? 'CW ↺' : 'CCW ↻';
-
-    // Hit indicators
-    const hitSEl = document.getElementById('hit-small');
-    const hitBEl = document.getElementById('hit-big');
-    const smallHit = isCW ? lastOverHitCW : lastOverHitCCW;
-    const bigHit   = isCW ? lastBigHitCW  : lastBigHitCCW;
-    if (hitSEl) hitSEl.innerText = smallHit ? '✔ HIT' : '';
-    if (hitBEl) hitBEl.innerText = bigHit   ? '✔ HIT' : '';
-
-    // W/L (Last 12)
-    const last12 = activeHistory.slice(-12);
-    const wins = last12.filter(x => x === 'win').length;
-    const losses = last12.length - wins;
-    const rate = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(1) : '0.0';
-    
-    const wEl  = document.getElementById('agent-wins');
-    const lEl  = document.getElementById('agent-losses');
-    const wrEl = document.getElementById('w-rate');
-    if (wEl)  wEl.innerText  = wins;
-    if (lEl)  lEl.innerText  = losses;
-    if (wrEl) wrEl.innerText = `${rate}%`;
-
-    // W/L Streak string
-    const perfEl = document.getElementById('agent-performance');
-    if (perfEl) {
-        perfEl.innerHTML = last12.map(r =>
-            `<span class="${r === 'win' ? 'perf-w' : 'perf-l'}">${r === 'win' ? 'W' : 'L'}</span>`
-        ).join('');
-    }
-
-    // Tendency
-    const tendEl = document.getElementById('pi-tendency');
-    if (tendEl && history.length >= 2) {
-        const d = calcDist(history[history.length-2], history[history.length-1]);
-        tendEl.innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
-    }
-}
-
-// ─── RENDER: ZONE SUPPORT PANEL ──────────────────────────────
 function getZoneTargets(lastNum) {
-    // BIG mode  → normal=+19  support=+10  inverse=-19
-    // SMALL mode → normal=+1   support=0    inverse=-1
-    const bigMain    = WHEEL_NUMS[(WHEEL_NUMS.indexOf(lastNum) + 19 + 37) % 37];
-    const bigSupport = WHEEL_NUMS[(WHEEL_NUMS.indexOf(lastNum) + 10 + 37) % 37];
-    const bigInverse = WHEEL_NUMS[(WHEEL_NUMS.indexOf(lastNum) - 19 + 37) % 37];
-    const smMain    = WHEEL_NUMS[(WHEEL_NUMS.indexOf(lastNum) + 1  + 37) % 37];
-    const smSupport = lastNum; // 0 distance = stays near same position
-    const smInverse = WHEEL_NUMS[(WHEEL_NUMS.indexOf(lastNum) - 1  + 37) % 37];
+    const idx = WHEEL_NUMS.indexOf(lastNum);
+    if (idx === -1) return {};
+    
     if (zoneView === 'BIG') {
-        return { main: bigMain, support: bigSupport, inverse: bigInverse };
+        return {
+            // BIG mode: Anchor is at +19 distance
+            // Targets: Principal(+19), Soporte(+10), Inverso(-19)
+            main:    WHEEL_NUMS[(idx + 19 + 37) % 37],
+            support: WHEEL_NUMS[(idx + 10 + 37) % 37],
+            inverse: WHEEL_NUMS[(idx - 19 + 37) % 37]
+        };
     } else {
-        return { main: smMain, support: smSupport, inverse: smInverse };
+        // SMALL mode: Anchor is at 0/1/-1 distance
+        // Targets: Principal(+1), Soporte(0), Inverso(-1)
+        return {
+            main:    WHEEL_NUMS[(idx + 1 + 37) % 37],
+            support: lastNum,
+            inverse: WHEEL_NUMS[(idx - 1 + 37) % 37]
+        };
     }
 }
 
-function renderZonePanel() {
-    if (history.length < 2) return;
-    const lastNum = history[history.length - 1];
-    const prevNum = history[history.length - 2];
-    const lastDist = Math.abs(calcDist(prevNum, lastNum));
+function renderShadowPanel() {
+    // Elements
+    const iconEl   = document.getElementById('panel-icon');
+    const nameEl   = document.getElementById('panel-name');
+    const dirEl    = document.getElementById('pred-dir');
+    const stratEl  = document.getElementById('agent-strategy');
+    const targetEl = document.getElementById('target-number');
+    const smallEl  = document.getElementById('psn-small-val');
+    const bigEl    = document.getElementById('psn-big-val');
+    const hitSEl   = document.getElementById('hit-small');
+    const hitBEl   = document.getElementById('hit-big');
+    const lblL     = document.getElementById('label-left');
+    const lblR     = document.getElementById('label-right');
+    const subL     = document.getElementById('sub-left');
+    const subC     = document.getElementById('sub-center');
+    const subR     = document.getElementById('sub-right');
+    const tendEl   = document.getElementById('pi-tendency');
+    const wEl      = document.getElementById('agent-wins');
+    const lEl      = document.getElementById('agent-losses');
+    const wrEl     = document.getElementById('w-rate');
+    const perfEl   = document.getElementById('agent-performance');
 
-    const isBigZone = lastDist >= 10;
-    const t = getZoneTargets(lastNum);
+    if (panelMode === 'DIR') {
+        // ─── DIR MODE (ANDROID 1717) ───
+        if (iconEl)  iconEl.innerText = '🤖';
+        if (nameEl)  nameEl.innerText = 'ANDROID 1717';
+        if (lblL)    lblL.innerText   = 'SMALL';
+        if (lblR)    lblR.innerText   = 'BIG';
+        if (subL)    subL.innerText   = 'n4';
+        if (subC)    subC.innerText   = 'n9';
+        if (subR)    subR.innerText   = 'n4';
 
-    // Main prediction
-    const mainEl = document.getElementById('zone-main-val');
-    if (mainEl) mainEl.innerText = t.main !== undefined ? t.main : '--';
+        if (!lastSignal) return;
+        const isCW = currentView === 'CW';
+        const activeHistory = isCW ? cwHistory : ccwHistory;
+        const activeTarget  = isCW ? lastSignal.targetCW  : lastSignal.targetCCW;
+        const activeSmall   = isCW ? lastSignal.targetOverCW  : lastSignal.targetOverCCW;
+        const activeBig     = isCW ? lastSignal.targetBigCW   : lastSignal.targetBigCCW;
 
-    const supEl = document.getElementById('zone-support-val');
-    if (supEl) supEl.innerText = t.support !== undefined ? t.support : '--';
+        if (dirEl)    dirEl.innerText    = isCW ? 'CW ↺' : 'CCW ↻';
+        if (stratEl)  stratEl.innerText  = 'DISTANCE 10 · N9';
+        if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
+        if (smallEl)  smallEl.innerText  = activeSmall  !== undefined ? activeSmall  : '--';
+        if (bigEl)    bigEl.innerText    = activeBig    !== undefined ? activeBig    : '--';
 
-    const invEl = document.getElementById('zone-inverse-val');
-    if (invEl) invEl.innerText = t.inverse !== undefined ? t.inverse : '--';
+        const smallHit = isCW ? lastOverHitCW : lastOverHitCCW;
+        const bigHit   = isCW ? lastBigHitCW  : lastBigHitCCW;
+        if (hitSEl) hitSEl.innerText = smallHit ? '✔ HIT' : '';
+        if (hitBEl) hitBEl.innerText = bigHit   ? '✔ HIT' : '';
 
-    // Badge
-    const badgeEl = document.getElementById('zone-mode-badge');
-    if (badgeEl) badgeEl.innerText = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
+        if (tendEl && history.length >= 2) {
+            const d = calcDist(history[history.length-2], history[history.length-1]);
+            tendEl.innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
+        }
 
-    // Tendency (last zone)
-    const tendEl = document.getElementById('zone-tendency');
-    if (tendEl) tendEl.innerText = `LAST: ${isBigZone ? 'BIG' : 'SMALL'} (${lastDist}p)`;
+        const last12 = activeHistory.slice(-12);
+        const wins   = last12.filter(x => x === 'win').length;
+        const losses = last12.length - wins;
+        const rate   = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(1) : '0.0';
+        if (wEl)   wEl.innerText   = wins;
+        if (lEl)   lEl.innerText   = losses;
+        if (wrEl)  wrEl.innerText  = `${rate}%`;
+        if (perfEl) perfEl.innerHTML = last12.map(r =>
+            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
-    // Strategy label
-    const stratEl = document.getElementById('zone-strategy');
-    if (stratEl) stratEl.innerText = zoneView === 'BIG' ? 'SOPORTE BIG · POS +19 · N4' : 'SOPORTE SMALL · POS +1 · N4';
+    } else {
+        // ─── ZONE MODE (📐) ───
+        if (iconEl)  iconEl.innerText = '📐';
+        if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
+        if (lblL)    lblL.innerText   = 'SOPORTE';
+        if (lblR)    lblR.innerText   = 'INVERSO';
+        if (subL)    subL.innerText   = 'n9';
+        if (subC)    subC.innerText   = 'n9';
+        if (subR)    subR.innerText   = 'n9';
 
-    // Hit indicators for last spin
-    const hitSupEl = document.getElementById('hit-zone-support');
-    const hitInvEl = document.getElementById('hit-zone-inverse');
-    if (hitSupEl) hitSupEl.innerText = lastZoneHitSupport  ? '✔ HIT' : '';
-    if (hitInvEl) hitInvEl.innerText = lastZoneHitInverse  ? '✔ HIT' : '';
+        const badgeTxt = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
+        if (dirEl)   dirEl.innerText   = badgeTxt;
+        if (stratEl) stratEl.innerText = zoneView === 'BIG'
+            ? 'SOPORTE BIG · POS +19 · N9'
+            : 'SOPORTE SMALL · POS +1 · N9';
 
-    // W/L (Last 12)
-    const last12z = zoneHistory.slice(-12);
-    const winsZ   = last12z.filter(x => x === 'win').length;
-    const lossesZ  = last12z.length - winsZ;
-    const rateZ   = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) : '0.0';
-    const wZEl  = document.getElementById('zone-wins');
-    const lZEl  = document.getElementById('zone-losses');
-    const wrZEl = document.getElementById('zone-rate');
-    if (wZEl)  wZEl.innerText  = winsZ;
-    if (lZEl)  lZEl.innerText  = lossesZ;
-    if (wrZEl) wrZEl.innerText = `${rateZ}%`;
+        if (history.length < 2) return;
+        const lastNum  = history[history.length - 1];
+        const prevNum  = history[history.length - 2];
+        const lastDist = Math.abs(calcDist(prevNum, lastNum));
+        const t = getZoneTargets(lastNum);
 
-    // Streak string
-    const perfZEl = document.getElementById('zone-performance');
-    if (perfZEl) {
-        perfZEl.innerHTML = last12z.map(r =>
-            `<span class="${r === 'win' ? 'perf-w' : 'perf-l'}">${r === 'win' ? 'W' : 'L'}</span>`
-        ).join('');
+        if (targetEl) targetEl.innerText = t.main    !== undefined ? t.main    : '--';
+        if (smallEl)  smallEl.innerText  = t.support !== undefined ? t.support : '--';
+        if (bigEl)    bigEl.innerText    = t.inverse !== undefined ? t.inverse : '--';
+
+        if (hitSEl) hitSEl.innerText = (Math.abs(calcDist(lastNum, t.support)) <= 9) ? '✔ HIT' : '';
+        if (hitBEl) hitBEl.innerText = (Math.abs(calcDist(lastNum, t.inverse)) <= 9) ? '✔ HIT' : '';
+
+        if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
+
+        const last12z = zoneHistory.slice(-12);
+        const winsZ   = last12z.filter(x => x === 'win').length;
+        const lossesZ = last12z.length - winsZ;
+        const rateZ   = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) : '0.0';
+        if (wEl)   wEl.innerText   = winsZ;
+        if (lEl)   lEl.innerText   = lossesZ;
+        if (wrEl)  wrEl.innerText  = `${rateZ}%`;
+        if (perfEl) perfEl.innerHTML = last12z.map(r =>
+            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
     }
 }
 
@@ -224,15 +222,21 @@ function renderWheelAndHistory() {
     // drawWheel removed
 }
 
-// ─── SWITCH SIDE ─────────────────────────────────────────────
+// ─── BUTTON LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
+    // SWITCH SIDE (DIR Mode) or SWITCH ZONE (ZONE Mode)
     if (e.target && e.target.id === 'btn-switch-side') {
-        currentView = currentView === 'CW' ? 'CCW' : 'CW';
+        if (panelMode === 'DIR') {
+            currentView = currentView === 'CW' ? 'CCW' : 'CW';
+        } else {
+            zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
+        }
         renderShadowPanel();
     }
-    if (e.target && e.target.id === 'btn-switch-zone') {
-        zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
-        renderZonePanel();
+    // SWITCH MODE (DIR ↔ ZONE)
+    if (e.target && e.target.id === 'btn-switch-mode') {
+        panelMode = panelMode === 'DIR' ? 'ZONE' : 'DIR';
+        renderShadowPanel();
     }
 });
 
@@ -262,16 +266,25 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE prediction from previous signal
-        if (history.length >= 2) {
-            const prevNum2 = history[history.length - 1];
-            const prevT = getZoneTargets(prevNum2);
-            const hitMain    = Math.abs(calcDist(n, prevT.main))    <= 4;
-            const hitSupport = Math.abs(calcDist(n, prevT.support)) <= 4;
-            const hitInverse = Math.abs(calcDist(n, prevT.inverse)) <= 4;
-            zoneHistory.push((hitMain || hitSupport) ? 'win' : 'loss');
-            lastZoneHitSupport = hitSupport;
-            lastZoneHitInverse = hitInverse;
+        // Evaluate ZONE prediction — N9 RADIUS (<= 9)
+        if (history.length >= 1) {
+            const prevForZone = history[history.length - 1];
+            const pt = getZoneTargets(prevForZone);
+            // WIN if lands within N9 of MAIN or SUPPORT
+            const dMain = Math.abs(calcDist(n, pt.main));
+            const dSup  = Math.abs(calcDist(n, pt.support));
+            const dInv  = Math.abs(calcDist(n, pt.inverse));
+            
+            let hitLogic = false;
+            if (zoneView === 'BIG') {
+                hitLogic = (dMain <= 9); // BIG: Focus on +19 target
+            } else {
+                hitLogic = (dMain <= 9 || dSup <= 9 || dInv <= 9); // SMALL: 1, 0, -1
+            }
+            zoneHistory.push(hitLogic ? 'win' : 'loss');
+            
+            lastZoneMainHit    = hitLogic;
+            lastZoneInverseHit = (dInv <= 9);
         }
 
         history.push(n);
@@ -291,7 +304,6 @@ function submitNumber(val, silent = false, batch = false) {
 
     if (!batch) {
         renderShadowPanel();
-        renderZonePanel();
         renderWheelAndHistory();
         renderTravelPanel();
     }
