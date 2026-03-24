@@ -148,6 +148,47 @@ function getIAMasterSignals(prox, sig, history) {
     return signals;
 }
 
+function predictZonePattern(history) {
+    if (history.length < 2) return 'SMALL';
+
+    const distances = [];
+    for (let i = 1; i < history.length; i++) {
+        distances.push(getDistance(history[i-1], history[i]));
+    }
+
+    // Look at last 12 jumps
+    const recent = distances.slice(-12);
+    if (recent.length === 0) return 'SMALL';
+
+    // Map to 'B' (Big: 10-18) or 'S' (Small: 1-9 or 0)
+    const zones = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
+    const lastZone = zones[zones.length - 1];
+
+    if (zones.length >= 4) {
+        // Pattern 1: ZigZag (B S B S)
+        const last4Str = zones.slice(-4).join('');
+        if (last4Str === 'BSBS' || last4Str === 'SBSB') {
+            return lastZone === 'B' ? 'SMALL' : 'BIG'; // Predict opposite to continue zigzag
+        }
+
+        // Pattern 2: Short-term Dominance
+        const bCount4 = zones.slice(-4).filter(z => z === 'B').length;
+        if (bCount4 >= 3) return 'BIG';
+        if (bCount4 <= 1) return 'SMALL';
+    }
+
+    // Pattern 3: Global 12-spin Momentum
+    if (zones.length >= 8) {
+        const bCountAll = zones.filter(z => z === 'B').length;
+        const bRatio = bCountAll / zones.length;
+        if (bRatio >= 0.6) return 'BIG';
+        if (bRatio <= 0.4) return 'SMALL';
+    }
+
+    // Default: follow the most recent momentum
+    return lastZone === 'B' ? 'BIG' : 'SMALL';
+}
+
 // Ensure calcDist is available globally if needed by predictor.js
 function calcDist(from, to) {
     const i1 = WHEEL_INDEX[from];
@@ -165,6 +206,7 @@ if (typeof window !== 'undefined') {
     window.projectNextRound = projectNextRound;
     window.computeDealerSignature = computeDealerSignature;
     window.getIAMasterSignals = getIAMasterSignals;
+    window.predictZonePattern = predictZonePattern;
     window.WHEEL_ORDER = WHEEL_ORDER;
     window.WHEEL_INDEX = WHEEL_INDEX;
 }
@@ -172,6 +214,6 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         WHEEL_ORDER, WHEEL_INDEX, TERMINALS_MAP,
-        analyzeSpin, projectNextRound, computeDealerSignature, getIAMasterSignals
+        analyzeSpin, projectNextRound, computeDealerSignature, getIAMasterSignals, predictZonePattern
     };
 }

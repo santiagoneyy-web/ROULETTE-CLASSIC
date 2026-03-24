@@ -92,6 +92,9 @@ function renderShadowPanel() {
         if (subC)    subC.innerText   = 'n9';
         if (subR)    subR.innerText   = 'n4';
 
+        const btnSide = document.getElementById('btn-switch-side');
+        if (btnSide) btnSide.style.display = 'inline-block';
+
         if (!lastSignal) return;
         const isCW = currentView === 'CW';
         const activeHistory = isCW ? cwHistory : ccwHistory;
@@ -128,12 +131,15 @@ function renderShadowPanel() {
     } else {
         // ─── ZONE MODE (📐) ───
         if (iconEl)  iconEl.innerText = '📐';
-        if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
+        if (nameEl)  nameEl.innerText = 'ZONE SNIPER';
         if (lblL)    lblL.innerText   = 'SOPORTE';
         if (lblR)    lblR.innerText   = 'INVERSO';
         if (subL)    subL.innerText   = 'n9';
         if (subC)    subC.innerText   = 'n9';
         if (subR)    subR.innerText   = 'n9';
+
+        const btnSide = document.getElementById('btn-switch-side');
+        if (btnSide) btnSide.style.display = 'none'; // Agent automates choices
 
         const badgeTxt = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
         if (dirEl)   dirEl.innerText   = badgeTxt;
@@ -224,14 +230,12 @@ function renderWheelAndHistory() {
 
 // ─── BUTTON LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
-    // SWITCH SIDE (DIR Mode) or SWITCH ZONE (ZONE Mode)
+    // SWITCH SIDE (DIR Mode only)
     if (e.target && e.target.id === 'btn-switch-side') {
         if (panelMode === 'DIR') {
             currentView = currentView === 'CW' ? 'CCW' : 'CW';
-        } else {
-            zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
+            renderShadowPanel();
         }
-        renderShadowPanel();
     }
     // SWITCH MODE (DIR ↔ ZONE)
     if (e.target && e.target.id === 'btn-switch-mode') {
@@ -297,6 +301,11 @@ function submitNumber(val, silent = false, batch = false) {
                 const masterSignals = getIAMasterSignals(prox, sig, history);
                 if (masterSignals && masterSignals.length > 0) {
                     lastSignal = masterSignals[0];
+                }
+                
+                // Zone Sniper automatically reads the table
+                if (typeof predictZonePattern === 'function') {
+                    zoneView = predictZonePattern(history);
                 }
             } catch(e) { console.error('Predict error:', e); }
         }
