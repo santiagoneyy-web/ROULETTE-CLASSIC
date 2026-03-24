@@ -7,7 +7,7 @@ const cwHistory = [];
 const ccwHistory = [];
 
 let currentView = 'CW'; 
-let panelMode   = 'DIR';  // 'DIR' or 'ZONE'
+let panelMode   = 'DIR';  // 'DIR', 'SUP', 'JUG'
 let lastSignal  = null;
 let currentTableId = null;
 
@@ -21,6 +21,11 @@ let zoneView = 'BIG';
 const zoneHistory = [];   
 let lastZoneMainHit    = false;
 let lastZoneInverseHit = false;
+
+// ─── JUGADAS STATE ───────────────────────────────────────────
+let jugView = 'SMALL';
+const jugHistory = [];
+let lastJugHit = false;
 
 const RED_NUMS  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const WHEEL_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
@@ -94,6 +99,7 @@ function renderShadowPanel() {
 
         const btnSide = document.getElementById('btn-switch-side');
         if (btnSide) btnSide.style.display = 'inline-block';
+        if (btnSide) btnSide.innerText = '⇄';
 
         if (!lastSignal) return;
         const isCW = currentView === 'CW';
@@ -103,7 +109,7 @@ function renderShadowPanel() {
         const activeBig     = isCW ? lastSignal.targetBigCW   : lastSignal.targetBigCCW;
 
         if (dirEl)    dirEl.innerText    = isCW ? 'CW ↺' : 'CCW ↻';
-        if (stratEl)  stratEl.innerText  = 'DISTANCE 10 · N9';
+        if (stratEl)  stratEl.innerText  = 'DISTANCE 9 · N9';
         if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
         if (smallEl)  smallEl.innerText  = activeSmall  !== undefined ? activeSmall  : '--';
         if (bigEl)    bigEl.innerText    = activeBig    !== undefined ? activeBig    : '--';
@@ -128,10 +134,10 @@ function renderShadowPanel() {
         if (perfEl) perfEl.innerHTML = last12.map(r =>
             `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
-    } else {
+    } else if (panelMode === 'SUP') {
         // ─── ZONE MODE (📐) ───
         if (iconEl)  iconEl.innerText = '📐';
-        if (nameEl)  nameEl.innerText = 'ZONE SNIPER';
+        if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
         if (lblL)    lblL.innerText   = 'SOPORTE';
         if (lblR)    lblR.innerText   = 'INVERSO';
         if (subL)    subL.innerText   = 'n9';
@@ -139,7 +145,8 @@ function renderShadowPanel() {
         if (subR)    subR.innerText   = 'n9';
 
         const btnSide = document.getElementById('btn-switch-side');
-        if (btnSide) btnSide.style.display = 'none'; // Agent automates choices
+        if (btnSide) btnSide.style.display = 'inline-block'; // Manual control again
+        if (btnSide) btnSide.innerText = '⇄';
 
         const badgeTxt = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
         if (dirEl)   dirEl.innerText   = badgeTxt;
@@ -170,6 +177,50 @@ function renderShadowPanel() {
         if (lEl)   lEl.innerText   = lossesZ;
         if (wrEl)  wrEl.innerText  = `${rateZ}%`;
         if (perfEl) perfEl.innerHTML = last12z.map(r =>
+            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    } else {
+        // ─── JUGADAS MODE (🎯) ───
+        if (iconEl)  iconEl.innerText = '🎯';
+        if (nameEl)  nameEl.innerText = 'JUGADAS / SNIPER';
+        if (lblL)    lblL.innerText   = 'SMALL';
+        if (lblR)    lblR.innerText   = 'BIG';
+        if (subL)    subL.innerText   = 'n4';
+        if (subC)    subC.innerText   = 'n4';
+        if (subR)    subR.innerText   = 'n4';
+
+        const btnSide = document.getElementById('btn-switch-side');
+        if (btnSide) btnSide.style.display = 'none';
+
+        if (!lastSignal) return;
+        
+        // Show BOTH CW/CCW snipers corresponding to the jugView (BIG/SMALL)
+        const isSmall = jugView === 'SMALL';
+        const pCW  = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
+        const pCCW = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
+        
+        if (dirEl) dirEl.innerText = isSmall ? 'PLAY SMALL' : 'PLAY BIG';
+        if (stratEl) stratEl.innerText = isSmall ? 'SNIPER SMALL (DIST 1-9) · N4' : 'SNIPER BIG (DIST 10-18) · N4';
+        
+        if (targetEl) targetEl.innerText = isSmall ? 'SML' : 'BIG'; // abstract center
+        if (smallEl)  smallEl.innerText  = pCW !== undefined ? pCW : '--'; // Right
+        if (bigEl)    bigEl.innerText    = pCCW !== undefined ? pCCW : '--'; // Left
+
+        if (hitSEl) hitSEl.innerText = lastJugHit ? '✔ HIT' : '';
+        if (hitBEl) hitBEl.innerText = lastJugHit ? '✔ HIT' : '';
+
+        if (tendEl && history.length >= 2) {
+            const d = Math.abs(calcDist(history[history.length-2], history[history.length-1]));
+            tendEl.innerText = `LAST JUMP: ${ d >= 10 ? 'BIG' : 'SMALL'} (${d}p)`;
+        }
+
+        const last12j = jugHistory.slice(-12);
+        const winsJ   = last12j.filter(x => x === 'win').length;
+        const lossesJ = last12j.length - winsJ;
+        const rateJ   = last12j.length > 0 ? ((winsJ / last12j.length) * 100).toFixed(1) : '0.0';
+        if (wEl)   wEl.innerText   = winsJ;
+        if (lEl)   lEl.innerText   = lossesJ;
+        if (wrEl)  wrEl.innerText  = `${rateJ}%`;
+        if (perfEl) perfEl.innerHTML = last12j.map(r =>
             `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
     }
 }
@@ -230,16 +281,19 @@ function renderWheelAndHistory() {
 
 // ─── BUTTON LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
-    // SWITCH SIDE (DIR Mode only)
+    // SWITCH SIDE (DIR Mode / SUP Mode)
     if (e.target && e.target.id === 'btn-switch-side') {
         if (panelMode === 'DIR') {
             currentView = currentView === 'CW' ? 'CCW' : 'CW';
             renderShadowPanel();
+        } else if (panelMode === 'SUP') {
+            zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
+            renderShadowPanel();
         }
     }
-    // SWITCH MODE (DIR ↔ ZONE)
+    // SWITCH MODE (DIR ↔ SUP ↔ JUG)
     if (e.target && e.target.id === 'btn-switch-mode') {
-        panelMode = panelMode === 'DIR' ? 'ZONE' : 'DIR';
+        panelMode = (panelMode === 'DIR') ? 'SUP' : ((panelMode === 'SUP') ? 'JUG' : 'DIR');
         renderShadowPanel();
     }
 });
@@ -291,6 +345,18 @@ function submitNumber(val, silent = false, batch = false) {
             lastZoneInverseHit = (dInv <= 9);
         }
 
+        // Evaluate JUGADAS prediction — checking jump magnitude
+        if (history.length >= 1) {
+            const jump = Math.abs(calcDist(history[history.length - 1], n));
+            // A Small jump is <= 9, A Big jump is >= 10
+            if (jugView === 'SMALL') {
+                lastJugHit = (jump <= 9);
+            } else {
+                lastJugHit = (jump >= 10);
+            }
+            jugHistory.push(lastJugHit ? 'win' : 'loss');
+        }
+
         history.push(n);
 
         // Compute new predictions
@@ -303,9 +369,9 @@ function submitNumber(val, silent = false, batch = false) {
                     lastSignal = masterSignals[0];
                 }
                 
-                // Zone Sniper automatically reads the table
+                // JUGADAS Sniper automatically reads the table
                 if (typeof predictZonePattern === 'function') {
-                    zoneView = predictZonePattern(history);
+                    jugView = predictZonePattern(history);
                 }
             } catch(e) { console.error('Predict error:', e); }
         }

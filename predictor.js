@@ -119,12 +119,12 @@ function getIAMasterSignals(prox, sig, history) {
     const lastNum = history[history.length - 1];
     // CW Targets (+ to the right)
     const idx = WHEEL_INDEX[lastNum];
-    const targetCW = WHEEL_ORDER[(idx + 10) % 37];
+    const targetCW = WHEEL_ORDER[(idx + 9) % 37];
     const targetOverCW = WHEEL_ORDER[(idx + 5) % 37];
     const targetBigCW = WHEEL_ORDER[(idx + 14) % 37];
     
     // CCW Targets (- to the left)
-    const targetCCW = WHEEL_ORDER[(idx - 10 + 37) % 37];
+    const targetCCW = WHEEL_ORDER[(idx - 9 + 37) % 37];
     const targetOverCCW = WHEEL_ORDER[(idx - 5 + 37) % 37];
     const targetBigCCW = WHEEL_ORDER[(idx - 14 + 37) % 37];
 
@@ -141,7 +141,7 @@ function getIAMasterSignals(prox, sig, history) {
         targetBigCCW: targetBigCCW,
         betZoneCW: getWheelNeighbors(targetCW, 4), // n4
         betZoneCCW: getWheelNeighbors(targetCCW, 4), // n4
-        rule: "DISTANCE 10",
+        rule: "DISTANCE 9",
         mode: 'DUAL'
     });
 
