@@ -288,13 +288,23 @@ function renderDozens() {
             window.forEach(d => counts[d]++);
             
             const sorted = [1,2,3].sort((a,b) => counts[b] - counts[a]);
-            const top2 = [sorted[0], sorted[1]].sort();
+            let top2 = [sorted[0], sorted[1]].sort();
 
             if (cur.length === 0) {
                 cur = top2;
                 spins = 0;
             } else {
-                if (JSON.stringify(top2) !== JSON.stringify(cur)) {
+                // STICKY LOGIC: Only switch if the "outsider" dozen has significantly 
+                // more momentum than a current dominant member.
+                const outsider = [1,2,3].find(d => !cur.includes(d));
+                const lowerDominant = cur[0]; // arbitrary, we check both
+                const higherDominant = cur[1];
+                
+                // If outsider is now clearly stronger than at least ONE dominant member
+                // (Difference > 1 ensures it's not just a momentary fluke)
+                const shouldSwitch = counts[outsider] > counts[lowerDominant] || counts[outsider] > counts[higherDominant];
+
+                if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
                     // Dominance Shift
                     prev = [...cur];
                     cur = top2;
@@ -334,15 +344,23 @@ function renderDozens() {
         // Transition status indicator
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
-            if (spins <= 2 && prev.length > 0) {
-                // Just switched! Flash danger
-                statusEl.innerText = `⚠️ NUEVA! +${spins} tiro(s)`;
-                statusEl.classList.add('danger');
-                if (arrow) arrow.innerText = '⇨';
-            } else if (spins <= 6) {
-                // Warming up
-                statusEl.innerText = `NUEVO +${spins}t`;
+            if (spins <= 4 && prev.length > 0) {
+                // Just switched or new: Warning
+                statusEl.innerText = `⚠️ TRANSICIÓN (+${spins}t)`;
                 statusEl.classList.add('warning');
+                if (arrow) arrow.innerText = '⇨';
+            } else if (spins <= 8) {
+                // Consolidating
+                statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
+                statusEl.classList.add('warning');
+                if (arrow) arrow.style.color = 'var(--text2)';
+            } else {
+                // Stable
+                statusEl.innerText = `✅ ESTABLE (${spins}t)`;
+                statusEl.classList.add('stable');
+                if (arrow) arrow.innerText = '•';
+            }
+        }
                 if (arrow) arrow.innerText = '→';
             } else {
                 // Stable dominance

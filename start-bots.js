@@ -7,8 +7,8 @@ module.exports = function startBots(port) {
 
     const { result } = concurrently(
       [
-        { command: `node crawler.js --table 1 --url "https://www.casino.org/casinoscores/es/auto-roulette/" --interval 12000 --delay 8000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-1', prefixColor: 'magenta' },
-        { command: `node crawler.js --table 2 --url "https://www.casino.org/casinoscores/es/immersive-roulette/" --interval 15000 --delay 12000 --api http://0.0.0.0:${port}/api/spin`, name: 'BOT-2', prefixColor: 'cyan' }
+        { command: `node crawler.js --table 1 --url "https://www.casino.org/casinoscores/es/auto-roulette/" --interval 12000 --delay 8000 --api http://localhost:${port}/api/spin`, name: 'BOT-1', prefixColor: 'magenta' },
+        { command: `node crawler.js --table 2 --url "https://www.casino.org/casinoscores/es/immersive-roulette/" --interval 15000 --delay 12000 --api http://localhost:${port}/api/spin`, name: 'BOT-2', prefixColor: 'cyan' }
       ],
       {
         prefix: 'name',

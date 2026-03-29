@@ -171,6 +171,13 @@ async function getHistory(tableId, limit, cb) {
 async function addSpin(tableId, number, source, extra = {}, cb) {
     if (useMongo) {
         try {
+            if (extra.event_id) {
+                const existing = await Spin.findOne({ table_id: parseInt(tableId), event_id: extra.event_id }).exec();
+                if (existing) {
+                    if (typeof cb === 'function') cb(null, existing.id);
+                    return;
+                }
+            }
             const maxSpin = await Spin.findOne().sort('-id').exec();
             const id = maxSpin ? maxSpin.id + 1 : 1;
             
@@ -195,21 +202,29 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
                 sector: sector
             });
             await newSpin.save();
-            cb(null, id);
-        } catch (e) { cb(e); }
+            if (typeof cb === 'function') cb(null, id);
+        } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
+        if (extra && extra.event_id) {
+            const exists = fallbackData.spins.find(s => s.table_id == tableId && s.event_id === extra.event_id);
+            if (exists) {
+                if (typeof cb === 'function') cb(null, exists.id);
+                return;
+            }
+        }
         const id = fallbackData.spins.length > 0 ? Math.max(...fallbackData.spins.map(s => s.id)) + 1 : 1;
         const newSpin = {
             id,
             table_id: parseInt(tableId),
             number: parseInt(number),
             source: source || 'manual',
+            event_id: extra ? extra.event_id : null,
             timestamp: new Date().toISOString()
         };
         fallbackData.spins.push(newSpin);
         if (fallbackData.spins.length > 5000) fallbackData.spins.shift(); 
         saveFallback();
-        cb(null, id);
+        if (typeof cb === 'function') cb(null, id);
     }
 }
 
@@ -217,12 +232,12 @@ async function clearHistory(tableId, cb) {
     if (useMongo) {
         try {
             await Spin.deleteMany({ table_id: tableId });
-            cb(null);
-        } catch (e) { cb(e); }
+            if (typeof cb === 'function') cb(null);
+        } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
         fallbackData.spins = fallbackData.spins.filter(s => s.table_id != tableId);
         saveFallback();
-        cb(null);
+        if (typeof cb === 'function') cb(null);
     }
 }
 
@@ -231,12 +246,12 @@ async function getStats(tableId, cb) {
         try {
             const total = await Spin.countDocuments({ table_id: tableId });
             const zeros = await Spin.countDocuments({ table_id: tableId, number: 0 });
-            cb(null, { total, zeros });
-        } catch (e) { cb(e); }
+            if (typeof cb === 'function') cb(null, { total, zeros });
+        } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
         const spins = fallbackData.spins.filter(s => s.table_id == tableId);
         const zeros = spins.filter(s => s.number === 0).length;
-        cb(null, { total: spins.length, zeros });
+        if (typeof cb === 'function') cb(null, { total: spins.length, zeros });
     }
 }
 
@@ -244,12 +259,12 @@ async function wipeAllSpins(cb) {
     if (useMongo) {
         try {
             await Spin.deleteMany({});
-            cb(null);
-        } catch (e) { cb(e); }
+            if (typeof cb === 'function') cb(null);
+        } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
         fallbackData.spins = [];
         saveFallback();
-        cb(null);
+        if (typeof cb === 'function') cb(null);
     }
 }
 

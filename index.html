@@ -22,11 +22,11 @@
         </div>
     </header>
 
-    <!-- ═══ TWO-COLUMN BODY ═══ -->
-    <div class="two-col-body">
-
-        <!-- ── LEFT COLUMN ── -->
-        <div class="col-left">
+    <!-- ═══ THREE-COLUMN BODY ═══ -->
+    <div class="three-col-body">
+ 
+         <!-- ── COL 1: VISUAL & DOCENAS ── -->
+         <div class="col-visual">
 
             <!-- Visual Panel (Table Image + Mini History) -->
             <section class="visual-panel-mini">
@@ -35,12 +35,36 @@
                 </div>
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
-
-            <!-- ═══ TABS NAVIGATION ═══ -->
-            <div class="strategy-tabs">
-                <button class="tab-btn active" id="tab-btn-dir">N1717</button>
-                <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>
-            </div>
+ 
+             <!-- Moved Panel Dozens here (under visual) -->
+             <section class="shadow-panel" id="panel-dozens">
+                 <div class="agent-card-header">
+                     <span class="agent-icon">👑</span>
+                     <span class="agent-card-name">DOCENAS DOMINANTES</span>
+                     <button class="wipe-btn" id="wipe-btn" onclick="wipeData()">🗑 WIPE</button>
+                 </div>
+                 <div class="dozens-tracker">
+                     <div class="dozen-ball" id="dz-1">1st<br>1-12</div>
+                     <div class="dozen-ball" id="dz-2">2nd<br>13-24</div>
+                     <div class="dozen-ball" id="dz-3">3rd<br>25-36</div>
+                 </div>
+                 <div class="dozens-transition-row">
+                     <span class="transition-label">PREV:</span>
+                     <span class="transition-badge" id="doc-memory-badge">--</span>
+                     <span class="transition-arrow" id="doc-transition-arrow">→</span>
+                     <span class="transition-badge active" id="doc-current-badge">--</span>
+                     <span class="transition-status" id="doc-transition-status">ESTABLE</span>
+                 </div>
+                 <div class="dozens-info" id="doc-info">Cargando...</div>
+             </section>
+         </div><!-- /col-visual -->
+ 
+         <!-- ── COL 2: PREDICIONES ── -->
+         <div class="col-predictions">
+             <div class="strategy-tabs">
+                 <button class="tab-btn active" id="tab-btn-dir">N1717</button>
+                 <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>
+             </div>
 
             <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
@@ -163,33 +187,10 @@
                     <div class="performance-string" id="sup-b-perf"></div>
                 </div>
             </section>
-
-            <!-- 3. DOCENAS DOMINANTES -->
-            <section class="shadow-panel" id="panel-dozens">
-                <div class="agent-card-header">
-                    <span class="agent-icon">👑</span>
-                    <span class="agent-card-name">DOCENAS DOMINANTES</span>
-                    <button class="wipe-btn" id="wipe-btn" onclick="wipeData()">🗑 WIPE</button>
-                </div>
-                <div class="dozens-tracker">
-                    <div class="dozen-ball" id="dz-1">1st<br>1-12</div>
-                    <div class="dozen-ball" id="dz-2">2nd<br>13-24</div>
-                    <div class="dozen-ball" id="dz-3">3rd<br>25-36</div>
-                </div>
-                <div class="dozens-transition-row">
-                    <span class="transition-label">PREV:</span>
-                    <span class="transition-badge" id="doc-memory-badge">--</span>
-                    <span class="transition-arrow" id="doc-transition-arrow">→</span>
-                    <span class="transition-badge active" id="doc-current-badge">--</span>
-                    <span class="transition-status" id="doc-transition-status">ESTABLE</span>
-                </div>
-                <div class="dozens-info" id="doc-info">Cargando...</div>
-            </section>
-
-        </div><!-- /col-left -->
-
-        <!-- ── RIGHT COLUMN ── -->
-        <div class="col-right">
+         </div><!-- /col-predictions -->
+ 
+         <!-- ── COL 3: TRAVEL DATA ── -->
+         <div class="col-travel">
             <section class="travel-section">
                 <div class="travel-top-bar">
                     <span class="section-title">📊 TRAVEL DATA</span>
@@ -218,9 +219,9 @@
                     </table>
                 </div>
             </section>
-        </div><!-- /col-right -->
-
-    </div><!-- /two-col-body -->
+         </div><!-- /col-travel -->
+ 
+     </div><!-- /three-col-body -->
 
 </div>
 
