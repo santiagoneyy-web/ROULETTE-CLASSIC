@@ -23,6 +23,11 @@ const zoneSmallHistory = [];
 let lastZoneBigHit   = false;
 let lastZoneSmallHit = false;
 
+// ─── DOZENS STATE ──────────────────────────────────────────────
+let dzCurrent = [];
+let dzPrevious = [];
+let dzSpinsSinceChange = 0;
+
 // ─── JUGADAS STATE ───────────────────────────────────────────
 let jugView = { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
 const jugHistory = [];
@@ -102,89 +107,34 @@ function getZoneTargets(lastNum) {
 }
 
 function renderShadowPanel() {
-    // Elements
-    const iconEl   = document.getElementById('panel-icon');
-    const nameEl   = document.getElementById('panel-name');
-    const dirEl    = document.getElementById('pred-dir');
-    const stratEl  = document.getElementById('agent-strategy');
-    const targetEl = document.getElementById('target-number');
-    const smallEl  = document.getElementById('psn-small-val');
-    const bigEl    = document.getElementById('psn-big-val');
-    const hitSEl   = document.getElementById('hit-small');
-    const hitBEl   = document.getElementById('hit-big');
-    const lblL     = document.getElementById('label-left');
-    const lblR     = document.getElementById('label-right');
-    const subL     = document.getElementById('sub-left');
-    const subC     = document.getElementById('sub-center');
-    const subR     = document.getElementById('sub-right');
-    const tendEl   = document.getElementById('pi-tendency');
-    const wEl      = document.getElementById('agent-wins');
-    const lEl      = document.getElementById('agent-losses');
-    const wrEl     = document.getElementById('w-rate');
-    const perfEl   = document.getElementById('agent-performance');
-
-    if (panelMode === 'DIR') {
-        // ─── DIR MODE (ANDROID 1717) ───
-        if (iconEl)  iconEl.innerText = '🤖';
-        if (nameEl)  nameEl.innerText = 'ANDROID 1717';
-        if (lblL)    lblL.innerText   = 'SMALL';
-        if (lblR)    lblR.innerText   = 'BIG';
-        if (subL)    subL.innerText   = 'n4';
-        if (subC)    subC.innerText   = 'n9';
-        if (subR)    subR.innerText   = 'n4';
-
-        const btnSide = document.getElementById('btn-switch-side');
-        if (btnSide) btnSide.style.display = 'inline-block';
-        if (btnSide) btnSide.innerText = '⇄';
-
-        if (!lastSignal) return;
+    // 1. DIR (ANDROID 1717)
+    if (lastSignal) {
         const isCW = currentView === 'CW';
         const activeHistory = isCW ? cwHistory : ccwHistory;
-        const activeTarget  = isCW ? lastSignal.targetCW  : lastSignal.targetCCW;
-        const activeSmall   = isCW ? lastSignal.targetOverCW  : lastSignal.targetOverCCW;
-        const activeBig     = isCW ? lastSignal.targetBigCW   : lastSignal.targetBigCCW;
+        document.getElementById('dir-badge').innerText = isCW ? 'CW ↺' : 'CCW ↻';
+        document.getElementById('dir-c-val').innerText = isCW ? lastSignal.targetCW : lastSignal.targetCCW;
+        document.getElementById('dir-l-val').innerText = isCW ? lastSignal.targetOverCW : lastSignal.targetOverCCW;
+        document.getElementById('dir-r-val').innerText = isCW ? lastSignal.targetBigCW : lastSignal.targetBigCCW;
+        document.getElementById('dir-l-hit').innerText = (isCW ? lastOverHitCW : lastOverHitCCW) ? '✔ HIT' : '';
+        document.getElementById('dir-r-hit').innerText = (isCW ? lastBigHitCW : lastBigHitCCW) ? '✔ HIT' : '';
 
-        if (dirEl)    dirEl.innerText    = isCW ? 'CW ↺' : 'CCW ↻';
-        if (stratEl)  stratEl.innerText  = 'DISTANCE 9 · N9';
-        if (targetEl) targetEl.innerText = activeTarget !== undefined ? activeTarget : '--';
-        if (smallEl)  smallEl.innerText  = activeSmall  !== undefined ? activeSmall  : '--';
-        if (bigEl)    bigEl.innerText    = activeBig    !== undefined ? activeBig    : '--';
-
-        const smallHit = isCW ? lastOverHitCW : lastOverHitCCW;
-        const bigHit   = isCW ? lastBigHitCW  : lastBigHitCCW;
-        if (hitSEl) hitSEl.innerText = smallHit ? '✔ HIT' : '';
-        if (hitBEl) hitBEl.innerText = bigHit   ? '✔ HIT' : '';
-
-        if (tendEl && history.length >= 2) {
+        if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            tendEl.innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
+            document.getElementById('dir-trend').innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
         }
 
         const last12 = activeHistory.slice(-12);
         const wins   = last12.filter(x => x === 'win').length;
-        const losses = last12.length - wins;
-        const rate   = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(1) : '0.0';
-        if (wEl)   wEl.innerText   = wins;
-        if (lEl)   lEl.innerText   = losses;
-        if (wrEl)  wrEl.innerText  = `${rate}%`;
-        if (perfEl) perfEl.innerHTML = last12.map(r =>
-            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('dir-w').innerText = wins;
+        document.getElementById('dir-l').innerText = last12.length - wins;
+        document.getElementById('dir-rate').innerText = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('dir-perf').innerHTML = last12.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    }
 
-    } else if (panelMode === 'SUP') {
-        // ─── ZONE MODE (📐) ───
-        if (iconEl)  iconEl.innerText = '📐';
-        if (nameEl)  nameEl.innerText = 'ZONE SUPPORT';
-
-        const btnSide = document.getElementById('btn-switch-side');
-        if (btnSide) btnSide.style.display = 'inline-block';
-        if (btnSide) btnSide.innerText = '⇄';
-
-        if (history.length < 2) {
-            if (dirEl)   dirEl.innerText   = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
-            if (stratEl) stratEl.innerText = zoneView === 'BIG' ? 'DIST +19 · N9' : 'DIST +1/0/-1 · N9';
-            if (targetEl) targetEl.innerText = '--';
-            return;
-        }
+    // 2. SUP (ZONE SUPPORT)
+    if (history.length >= 2) {
+        document.getElementById('sup-badge').innerText = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
+        document.getElementById('sup-strat').innerText = zoneView === 'BIG' ? 'DIST +19 · N9' : 'DIST +1 · N9';
 
         const lastNum  = history[history.length - 1];
         const prevNum  = history[history.length - 2];
@@ -192,63 +142,37 @@ function renderShadowPanel() {
         const idx = WHEEL_NUMS.indexOf(lastNum);
 
         if (zoneView === 'BIG') {
-            // BIG: Single target at +19
-            if (lblL)    lblL.innerText   = '';
-            if (lblR)    lblR.innerText   = '';
-            if (subL)    subL.innerText   = '';
-            if (subC)    subC.innerText   = 'n9';
-            if (subR)    subR.innerText   = '';
-
-            if (dirEl)   dirEl.innerText   = 'BIG 🔺';
-            if (stratEl) stratEl.innerText = 'DIST +19 · N9';
-
+            document.getElementById('sup-l-lbl').innerText = '';
+            document.getElementById('sup-r-lbl').innerText = '';
+            document.getElementById('sup-l-sub').innerText = '';
+            document.getElementById('sup-r-sub').innerText = '';
+            
             const bigTarget = WHEEL_NUMS[(idx + 19 + 37) % 37];
-            if (targetEl) targetEl.innerText = bigTarget;
-            if (smallEl)  smallEl.innerText  = '';
-            if (bigEl)    bigEl.innerText    = '';
-
-            if (hitSEl) hitSEl.innerText = lastZoneBigHit ? '✔ HIT' : '';
-            if (hitBEl) hitBEl.innerText = '';
+            document.getElementById('sup-c-val').innerText = bigTarget;
+            document.getElementById('sup-l-val').innerText = '';
+            document.getElementById('sup-r-val').innerText = '';
+            document.getElementById('sup-l-hit').innerText = lastZoneBigHit ? '✔ HIT' : '';
+            document.getElementById('sup-r-hit').innerText = '';
         } else {
-            // SMALL: Single target at +1
-            if (lblL)    lblL.innerText   = '';
-            if (lblR)    lblR.innerText   = '';
-            if (subL)    subL.innerText   = '';
-            if (subC)    subC.innerText   = 'n9';
-            if (subR)    subR.innerText   = '';
-
-            if (dirEl)   dirEl.innerText   = 'SMALL 🔻';
-            if (stratEl) stratEl.innerText = 'DIST +1 · N9';
+            // SMALL
+            document.getElementById('sup-l-lbl').innerText = '';
+            document.getElementById('sup-r-lbl').innerText = '';
+            document.getElementById('sup-l-sub').innerText = '';
+            document.getElementById('sup-r-sub').innerText = '';
 
             const smallTarget = WHEEL_NUMS[(idx + 1 + 37) % 37];
-            if (targetEl) targetEl.innerText = smallTarget;
-            if (smallEl)  smallEl.innerText  = '';
-            if (bigEl)    bigEl.innerText    = '';
-
-            if (hitSEl) hitSEl.innerText = lastZoneSmallHit ? '✔ HIT' : '';
-            if (hitBEl) hitBEl.innerText = '';
+            document.getElementById('sup-c-val').innerText = smallTarget;
+            document.getElementById('sup-l-val').innerText = '';
+            document.getElementById('sup-r-val').innerText = '';
+            document.getElementById('sup-l-hit').innerText = lastZoneSmallHit ? '✔ HIT' : '';
+            document.getElementById('sup-r-hit').innerText = '';
         }
 
-        if (tendEl) tendEl.innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
+        document.getElementById('sup-trend').innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
-        // Show W/L for the ACTIVE zone mode
         const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
         const last12z = activeZoneHist.slice(-12);
         const winsZ   = last12z.filter(x => x === 'win').length;
-        const lossesZ = last12z.length - winsZ;
-        const rateZ   = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) : '0.0';
-        if (wEl)   wEl.innerText   = winsZ;
-        if (lEl)   lEl.innerText   = lossesZ;
-        if (wrEl)  wrEl.innerText  = `${rateZ}%`;
-        if (perfEl) perfEl.innerHTML = last12z.map(r =>
-            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
-    } else {
-        // ─── JUGADAS MODE (🎯) ───
-        if (iconEl)  iconEl.innerText = '🎯';
-        if (nameEl)  nameEl.innerText = 'JUGADAS / SNIPER';
-
-        const btnSide = document.getElementById('btn-switch-side');
-        if (btnSide) btnSide.style.display = 'none';
 
         const conf = jugView.confidence || 0;
         const isCharging = jugView.isCharging === true;
@@ -375,19 +299,14 @@ function renderWheelAndHistory() {
 
 // ─── BUTTON LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
-    // SWITCH SIDE (DIR Mode / SUP Mode)
-    if (e.target && e.target.id === 'btn-switch-side') {
-        if (panelMode === 'DIR') {
-            currentView = currentView === 'CW' ? 'CCW' : 'CW';
-            renderShadowPanel();
-        } else if (panelMode === 'SUP') {
-            zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
-            renderShadowPanel();
-        }
+    // SWITCH DIR SIDE (CW ↔ CCW)
+    if (e.target && e.target.id === 'btn-switch-dir') {
+        currentView = currentView === 'CW' ? 'CCW' : 'CW';
+        renderShadowPanel();
     }
-    // SWITCH MODE (DIR ↔ SUP ↔ JUG)
-    if (e.target && e.target.id === 'btn-switch-mode') {
-        panelMode = (panelMode === 'DIR') ? 'SUP' : ((panelMode === 'SUP') ? 'JUG' : 'DIR');
+    // SWITCH SUP ZONE (BIG ↔ SMALL)
+    if (e.target && e.target.id === 'btn-switch-sup') {
+        zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
         renderShadowPanel();
     }
 });

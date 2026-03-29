@@ -36,49 +36,123 @@
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
 
-            <!-- Unified Prediction Panel (DIR mode / ZONE mode) -->
-            <section class="shadow-panel" id="prediction-panel">
-                <!-- Header -->
+            <!-- 1. DIR (ANDROID 1717) -->
+            <section class="shadow-panel" id="panel-dir">
                 <div class="agent-card-header">
-                    <span class="agent-icon" id="panel-icon">🤖</span>
-                    <span class="agent-card-name" id="panel-name">ANDROID 1717</span>
-                    <span class="side-badge" id="pred-dir">CW ↺</span>
-                    <button id="btn-switch-side" class="btn-switch-inline" title="Cambiar lado">⇄</button>
-                    <button id="btn-switch-mode" class="btn-switch-inline" title="Cambiar modo DIR/ZONE" style="background:rgba(240,192,64,0.15);border-color:rgba(240,192,64,0.4);color:#f0c040">📐</button>
+                    <span class="agent-icon">🤖</span>
+                    <span class="agent-card-name">ANDROID 1717</span>
+                    <span class="side-badge" id="dir-badge">CW ↺</span>
+                    <button id="btn-switch-dir" class="btn-switch-inline" title="Cambiar CW/CCW">⇄</button>
                 </div>
-
-                <div class="agent-strategy-label" id="agent-strategy">DISTANCE 10 · N9</div>
-
-                <!-- 3-Column Prediction Grid -->
-                <div class="prediction-grid-3" id="prediction-grid">
+                <div class="agent-strategy-label" id="dir-strat">DISTANCE 9 · N9</div>
+                <div class="prediction-grid-3">
                     <div class="p-box pb-left">
-                        <span class="p-label" id="label-left">SMALL</span>
-                        <span class="p-val" id="psn-small-val">--</span>
-                        <span class="p-sub" id="sub-left">n4</span>
-                        <span class="hit-text" id="hit-small"></span>
+                        <span class="p-label">SMALL</span>
+                        <span class="p-val" id="dir-l-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="dir-l-hit"></span>
                     </div>
                     <div class="p-box pb-center">
-                        <div class="p-val-main" id="target-number">--</div>
-                        <div class="p-sub-main" id="sub-center">n9</div>
-                        <div class="p-tendency" id="pi-tendency">MAIN PRED.</div>
+                        <div class="p-val-main" id="dir-c-val">--</div>
+                        <div class="p-sub-main">n9</div>
+                        <div class="p-tendency" id="dir-trend">MAIN PRED.</div>
                     </div>
                     <div class="p-box pb-right">
-                        <span class="p-label" id="label-right">BIG</span>
-                        <span class="p-val" id="psn-big-val">--</span>
-                        <span class="p-sub" id="sub-right">n4</span>
-                        <span class="hit-text" id="hit-big"></span>
+                        <span class="p-label">BIG</span>
+                        <span class="p-val" id="dir-r-val">--</span>
+                        <span class="p-sub">n4</span>
+                        <span class="hit-text" id="dir-r-hit"></span>
                     </div>
                 </div>
-
-                <!-- W/L Stats (Last 12) -->
                 <div class="agent-footer-stats">
-                    <span class="st">LAST 12 ➔ W:<span id="agent-wins">0</span> L:<span id="agent-losses">0</span></span>
-                    <span class="status-msg">RATE: <span id="w-rate">0.00%</span></span>
+                    <span class="st">LAST 12 ➔ W:<span id="dir-w">0</span> L:<span id="dir-l">0</span></span>
+                    <span class="status-msg">RATE: <span id="dir-rate">0.0%</span></span>
                 </div>
+                <div class="performance-string" id="dir-perf"></div>
+            </section>
 
-                <!-- Recent streak -->
-                <div class="performance-string" id="agent-performance"></div>
+            <!-- 2. SUP (ZONE SUPPORT) -->
+            <section class="shadow-panel" id="panel-sup">
+                <div class="agent-card-header">
+                    <span class="agent-icon">📐</span>
+                    <span class="agent-card-name">ZONE SUPPORT</span>
+                    <span class="side-badge" id="sup-badge">BIG 🔺</span>
+                    <button id="btn-switch-sup" class="btn-switch-inline" title="Cambiar Zona">⇄</button>
+                </div>
+                <div class="agent-strategy-label" id="sup-strat">DIST +19 · N9</div>
+                <div class="prediction-grid-3">
+                    <div class="p-box pb-left">
+                        <span class="p-label" id="sup-l-lbl"></span>
+                        <span class="p-val" id="sup-l-val">--</span>
+                        <span class="p-sub" id="sup-l-sub"></span>
+                        <span class="hit-text" id="sup-l-hit"></span>
+                    </div>
+                    <div class="p-box pb-center">
+                        <div class="p-val-main" id="sup-c-val">--</div>
+                        <div class="p-sub-main" id="sup-c-sub">n9</div>
+                        <div class="p-tendency" id="sup-trend">LAST: --</div>
+                    </div>
+                    <div class="p-box pb-right">
+                        <span class="p-label" id="sup-r-lbl"></span>
+                        <span class="p-val" id="sup-r-val">--</span>
+                        <span class="p-sub" id="sup-r-sub"></span>
+                        <span class="hit-text" id="sup-r-hit"></span>
+                    </div>
+                </div>
+                <div class="agent-footer-stats">
+                    <span class="st">LAST 12 ➔ W:<span id="sup-w">0</span> L:<span id="sup-l">0</span></span>
+                    <span class="status-msg">RATE: <span id="sup-rate">0.0%</span></span>
+                </div>
+                <div class="performance-string" id="sup-perf"></div>
+            </section>
 
+            <!-- 3. JUG (JUGADAS / SNIPER) -->
+            <section class="shadow-panel" id="panel-jug">
+                <div class="agent-card-header">
+                    <span class="agent-icon">🎯</span>
+                    <span class="agent-card-name">JUGADAS SNIPER</span>
+                    <span class="side-badge" id="jug-badge">CHARGING ⚡</span>
+                </div>
+                <div class="agent-strategy-label" id="jug-strat">Analizando patrones...</div>
+                <div class="prediction-grid-3">
+                    <div class="p-box pb-left">
+                        <span class="p-label"></span>
+                        <span class="p-val"></span>
+                        <span class="p-sub"></span>
+                        <span class="hit-text"></span>
+                    </div>
+                    <div class="p-box pb-center">
+                        <div class="p-val-main" id="jug-c-val">--</div>
+                        <div class="p-sub-main" id="jug-c-sub">n4</div>
+                        <div class="p-tendency" id="jug-trend">LAST: --</div>
+                    </div>
+                    <div class="p-box pb-right">
+                        <span class="p-label"></span>
+                        <span class="p-val"></span>
+                        <span class="p-sub"></span>
+                        <span class="hit-text"></span>
+                    </div>
+                </div>
+                <div class="agent-footer-stats">
+                    <span class="st">LAST 12 ➔ W:<span id="jug-w">0</span> L:<span id="jug-l">0</span></span>
+                    <span class="status-msg">RATE: <span id="jug-rate">0.0%</span></span>
+                </div>
+                <div class="performance-string" id="jug-perf"></div>
+            </section>
+
+            <!-- 4. DOCENAS DOMINANTES -->
+            <section class="shadow-panel" id="panel-dozens">
+                <div class="agent-card-header">
+                    <span class="agent-icon">👑</span>
+                    <span class="agent-card-name">DOCENAS DOMINANTES</span>
+                    <span class="side-badge doc-memory" id="doc-memory-badge">PREV: --</span>
+                </div>
+                <div class="dozens-tracker">
+                    <div class="dozen-ball" id="dz-1">1st<br>1-12</div>
+                    <div class="dozen-ball" id="dz-2">2nd<br>13-24</div>
+                    <div class="dozen-ball" id="dz-3">3rd<br>25-36</div>
+                </div>
+                <div class="dozens-info" id="doc-info">Calculando dominancia global y local...</div>
             </section>
 
         </div><!-- /col-left -->
