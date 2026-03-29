@@ -173,6 +173,7 @@ function renderShadowPanel() {
 
         const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
         const last12z = activeZoneHist.slice(-12);
+        const winsZ = last12z.filter(x => x === 'win').length;
         document.getElementById('sup-w').innerText = winsZ;
         document.getElementById('sup-l').innerText = last12z.length - winsZ;
         document.getElementById('sup-rate').innerText = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) + '%' : '0.0%';
