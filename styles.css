@@ -44,7 +44,7 @@ html, body {
 
 .three-col-body {
   display: grid;
-  grid-template-columns: 280px 1fr 340px;
+  grid-template-columns: 260px 1fr 460px; /* Center is now flexible but restricted by larger third column */
   gap: 12px;
   padding: 12px;
   align-items: start;
@@ -132,13 +132,16 @@ html, body {
 
 .compact-select {
   background: var(--card2);
-  color: var(--text);
+  color: var(--accent);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
   outline: none;
-  max-width: 130px;
+  cursor: pointer;
+  min-width: 140px;
+  text-transform: uppercase;
 }
 .compact-select option { background: var(--card); }
 

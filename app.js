@@ -361,13 +361,6 @@ function renderDozens() {
                 if (arrow) arrow.innerText = '•';
             }
         }
-                if (arrow) arrow.innerText = '→';
-            } else {
-                // Stable dominance
-                statusEl.innerText = `ESTABLE ${spins}t`;
-                if (arrow) arrow.innerText = '→';
-            }
-        }
 
         if (infoEl) {
             infoEl.innerText = `Ventana 18: Dom· ${fmtDoz(cur)}`;
@@ -787,29 +780,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ts = await r.json();
             const tableSelect = document.getElementById('table-select');
             if (tableSelect && ts.length > 0) {
-                tableSelect.innerHTML = ts.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-                tableSelect.addEventListener('change', () => {
+                // Clear existing options
+                tableSelect.innerHTML = '';
+                
+                // Populate options
+                ts.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.name;
+                    tableSelect.appendChild(opt);
+                });
+
+                tableSelect.addEventListener('change', async () => {
                     currentTableId = tableSelect.value;
-                    
-                    // Switch the table thumbnail image
                     const tImg = document.querySelector('.table-image-container img');
-                    if (tImg) {
-                        tImg.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
-                    }
+                    if (tImg) tImg.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
 
                     history.length = 0;
                     cwHistory.length = 0;
                     ccwHistory.length = 0;
                     lastSignal = null;
                     renderWheelAndHistory();
-                    syncData().then(() => connectSSE(currentTableId));
+                    
+                    const infoEl = document.getElementById('doc-info');
+                    if (infoEl) infoEl.innerText = 'Sincronizando...';
+                    
+                    await syncData();
+                    connectSSE(currentTableId);
                 });
+
+                // Force initial selection
                 currentTableId = ts[0].id;
+                tableSelect.value = currentTableId;
                 const tImgInit = document.querySelector('.table-image-container img');
                 if (tImgInit) tImgInit.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
+                
                 await syncData();
                 connectSSE(currentTableId);
+            } else {
+                console.warn('No tables returned from API');
             }
         }
-    } catch (e) { console.warn('API not reachable, offline mode.'); }
+    } catch (e) { 
+        console.warn('API not reachable, offline mode.', e);
+        const info = document.getElementById('doc-info');
+        if (info) info.innerText = '⚠️ API OFFLINE';
+    }
 });
