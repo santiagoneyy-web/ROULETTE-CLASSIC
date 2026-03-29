@@ -94,10 +94,10 @@ function getFilteredNeighborsHTML(target, radius) {
     if (target===undefined||target===null||target==='--') return '';
     const all = getNeighbors(Number(target), radius);
     const hasFilt = dzCurrent && dzCurrent.length > 0;
-    return all.map(n => {
-        const inDom = !hasFilt || dzCurrent.includes(numToDoz(n)) || n===0;
-        return `<span class="fn-ball ${numToDozClass(n)}${inDom?'':' fn-faded'}">${n}</span>`;
-    }).join('');
+    return all
+        .filter(n => !hasFilt || dzCurrent.includes(numToDoz(n)) || n===0)
+        .map(n => `<span class="fn-ball ${numToDozClass(n)}">${n}</span>`)
+        .join('');
 }
 function renderShadowPanelNeighborsOnly() {
     try {
