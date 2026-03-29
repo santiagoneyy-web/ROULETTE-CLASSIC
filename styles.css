@@ -152,12 +152,53 @@ html, body {
   color: var(--muted);
 }
 
+/* ══════════ TABS NAVIGATION ══════════ */
+.strategy-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--card);
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 2px;
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tab-btn:hover {
+  background: rgba(255,255,255,0.03);
+  color: var(--text2);
+}
+.tab-btn.active {
+  background: rgba(0, 229, 200, 0.1);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(0, 229, 200, 0.3);
+}
+
 /* ══════════ PREDICTION PANEL (OFI STYLE) ══════════ */
 .shadow-panel {
   background: #090e15;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dual-block {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Agent card header */
@@ -165,7 +206,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px 8px;
+  padding: 8px 14px 6px;
   border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.2);
 }
@@ -210,8 +251,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 8px 10px;
-  gap: 3px;
+  padding: 10px 8px 8px;
+  gap: 2px;
   position: relative;
 }
 .pb-left  { border-right: 1px solid var(--border); }
@@ -220,40 +261,40 @@ html, body {
 
 .p-label {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--muted);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 .p-val {
   font-family: var(--mono);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 900;
   color: var(--accent);
   line-height: 1;
-  text-shadow: 0 0 16px rgba(0,229,200,0.4);
+  text-shadow: 0 0 12px rgba(0,229,200,0.4);
 }
 .p-sub {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 8px;
   color: var(--muted);
   background: rgba(0,0,0,0.4);
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   border: 1px solid var(--border);
 }
 .p-val-main {
   font-family: var(--mono);
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 900;
   color: #fff;
   line-height: 1;
-  text-shadow: 0 0 20px rgba(255,255,255,0.3);
+  text-shadow: 0 0 16px rgba(255,255,255,0.3);
 }
 .p-sub-main {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--accent);
   background: rgba(0,229,200,0.1);
   padding: 2px 8px;
@@ -280,10 +321,10 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
+  padding: 6px 14px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text2);
 }
 .agent-footer-stats .st { color: var(--text); }
@@ -295,7 +336,7 @@ html, body {
   flex-wrap: nowrap;
   overflow-x: auto;
   gap: 2px;
-  padding: 6px 14px;
+  padding: 4px 14px 6px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
 }
 .perf-w {

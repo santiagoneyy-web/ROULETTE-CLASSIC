@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=999" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -36,74 +36,120 @@
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
 
+            <!-- ═══ TABS NAVIGATION ═══ -->
+            <div class="strategy-tabs">
+                <button class="tab-btn active" id="tab-btn-dir">N1717</button>
+                <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>
+            </div>
+
             <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
-                <div class="agent-card-header">
-                    <span class="agent-icon">🤖</span>
-                    <span class="agent-card-name">ANDROID 1717</span>
-                    <span class="side-badge" id="dir-badge">CW ↺</span>
-                    <button id="btn-switch-dir" class="btn-switch-inline" title="Cambiar CW/CCW">⇄</button>
-                </div>
-                <div class="agent-strategy-label" id="dir-strat">DISTANCE 9 · N9</div>
-                <div class="prediction-grid-3">
-                    <div class="p-box pb-left">
-                        <span class="p-label">SMALL</span>
-                        <span class="p-val" id="dir-l-val">--</span>
-                        <span class="p-sub">n4</span>
-                        <span class="hit-text" id="dir-l-hit"></span>
+                <!-- CW BLOCK -->
+                <div class="dual-block">
+                    <div class="agent-card-header">
+                        <span class="agent-icon">🤖</span>
+                        <span class="agent-card-name">ANDROID 1717</span>
+                        <span class="side-badge">CW ↺</span>
                     </div>
-                    <div class="p-box pb-center">
-                        <div class="p-val-main" id="dir-c-val">--</div>
-                        <div class="p-sub-main">n9</div>
-                        <div class="p-tendency" id="dir-trend">MAIN PRED.</div>
+                    <div class="agent-strategy-label" id="dir-cw-strat">DISTANCE 9 · N9</div>
+                    <div class="prediction-grid-3">
+                        <div class="p-box pb-left">
+                            <span class="p-label">SMALL</span><span class="p-val" id="dir-cw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-l-hit"></span>
+                        </div>
+                        <div class="p-box pb-center">
+                            <div class="p-val-main" id="dir-cw-c-val">--</div><div class="p-sub-main">n9</div><div class="p-tendency" id="dir-cw-trend">MAIN PRED.</div>
+                        </div>
+                        <div class="p-box pb-right">
+                            <span class="p-label">BIG</span><span class="p-val" id="dir-cw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-r-hit"></span>
+                        </div>
                     </div>
-                    <div class="p-box pb-right">
-                        <span class="p-label">BIG</span>
-                        <span class="p-val" id="dir-r-val">--</span>
-                        <span class="p-sub">n4</span>
-                        <span class="hit-text" id="dir-r-hit"></span>
+                    <div class="agent-footer-stats">
+                        <span class="st">LAST 12 ➔ W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
+                        <span class="status-msg">RATE: <span id="dir-cw-rate">0.0%</span></span>
                     </div>
+                    <div class="performance-string" id="dir-cw-perf"></div>
                 </div>
-                <div class="agent-footer-stats">
-                    <span class="st">LAST 12 ➔ W:<span id="dir-w">0</span> L:<span id="dir-l">0</span></span>
-                    <span class="status-msg">RATE: <span id="dir-rate">0.0%</span></span>
+
+                <!-- CCW BLOCK -->
+                <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
+                    <div class="agent-card-header" style="background: rgba(0,0,0,0.4);">
+                        <span class="agent-icon" style="opacity: 0.5;">🤖</span>
+                        <span class="agent-card-name" style="opacity: 0.8;">ANDROID 1717</span>
+                        <span class="side-badge">CCW ↻</span>
+                    </div>
+                    <div class="agent-strategy-label" id="dir-ccw-strat">DISTANCE 9 · N9</div>
+                    <div class="prediction-grid-3">
+                        <div class="p-box pb-left">
+                            <span class="p-label">SMALL</span><span class="p-val" id="dir-ccw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-l-hit"></span>
+                        </div>
+                        <div class="p-box pb-center">
+                            <div class="p-val-main" id="dir-ccw-c-val">--</div><div class="p-sub-main">n9</div><div class="p-tendency" id="dir-ccw-trend">MAIN PRED.</div>
+                        </div>
+                        <div class="p-box pb-right">
+                            <span class="p-label">BIG</span><span class="p-val" id="dir-ccw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-r-hit"></span>
+                        </div>
+                    </div>
+                    <div class="agent-footer-stats">
+                        <span class="st">LAST 12 ➔ W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
+                        <span class="status-msg">RATE: <span id="dir-ccw-rate">0.0%</span></span>
+                    </div>
+                    <div class="performance-string" id="dir-ccw-perf"></div>
                 </div>
-                <div class="performance-string" id="dir-perf"></div>
             </section>
 
             <!-- 2. SUP (ZONE SUPPORT) -->
-            <section class="shadow-panel" id="panel-sup">
-                <div class="agent-card-header">
-                    <span class="agent-icon">📐</span>
-                    <span class="agent-card-name">ZONE SUPPORT</span>
-                    <span class="side-badge" id="sup-badge">BIG 🔺</span>
-                    <button id="btn-switch-sup" class="btn-switch-inline" title="Cambiar Zona">⇄</button>
-                </div>
-                <div class="agent-strategy-label" id="sup-strat">DIST +19 · N9</div>
-                <div class="prediction-grid-3">
-                    <div class="p-box pb-left">
-                        <span class="p-label" id="sup-l-lbl"></span>
-                        <span class="p-val" id="sup-l-val">--</span>
-                        <span class="p-sub" id="sup-l-sub"></span>
-                        <span class="hit-text" id="sup-l-hit"></span>
+            <section class="shadow-panel" id="panel-sup" style="display: none;">
+                <!-- SMALL BLOCK -->
+                <div class="dual-block">
+                    <div class="agent-card-header">
+                        <span class="agent-icon">📐</span>
+                        <span class="agent-card-name">ZONE SUPPORT</span>
+                        <span class="side-badge">SMALL 🔻</span>
                     </div>
-                    <div class="p-box pb-center">
-                        <div class="p-val-main" id="sup-c-val">--</div>
-                        <div class="p-sub-main" id="sup-c-sub">n9</div>
-                        <div class="p-tendency" id="sup-trend">LAST: --</div>
+                    <div class="agent-strategy-label" id="sup-s-strat">DIST +19 · N9</div>
+                    <div class="prediction-grid-3">
+                        <div class="p-box pb-left">
+                            <span class="p-label" id="sup-s-l-lbl"></span><span class="p-val" id="sup-s-l-val">--</span><span class="p-sub" id="sup-s-l-sub"></span><span class="hit-text" id="sup-s-l-hit"></span>
+                        </div>
+                        <div class="p-box pb-center">
+                            <div class="p-val-main" id="sup-s-c-val">--</div><div class="p-sub-main" id="sup-s-c-sub">n9</div><div class="p-tendency" id="sup-s-trend">LAST: --</div>
+                        </div>
+                        <div class="p-box pb-right">
+                            <span class="p-label" id="sup-s-r-lbl"></span><span class="p-val" id="sup-s-r-val">--</span><span class="p-sub" id="sup-s-r-sub"></span><span class="hit-text" id="sup-s-r-hit"></span>
+                        </div>
                     </div>
-                    <div class="p-box pb-right">
-                        <span class="p-label" id="sup-r-lbl"></span>
-                        <span class="p-val" id="sup-r-val">--</span>
-                        <span class="p-sub" id="sup-r-sub"></span>
-                        <span class="hit-text" id="sup-r-hit"></span>
+                    <div class="agent-footer-stats">
+                        <span class="st">LAST 12 ➔ W:<span id="sup-s-w">0</span> L:<span id="sup-s-l">0</span></span>
+                        <span class="status-msg">RATE: <span id="sup-s-rate">0.0%</span></span>
                     </div>
+                    <div class="performance-string" id="sup-s-perf"></div>
                 </div>
-                <div class="agent-footer-stats">
-                    <span class="st">LAST 12 ➔ W:<span id="sup-w">0</span> L:<span id="sup-l">0</span></span>
-                    <span class="status-msg">RATE: <span id="sup-rate">0.0%</span></span>
+
+                <!-- BIG BLOCK -->
+                <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
+                    <div class="agent-card-header" style="background: rgba(0,0,0,0.4);">
+                        <span class="agent-icon" style="opacity: 0.5;">📐</span>
+                        <span class="agent-card-name" style="opacity: 0.8;">ZONE SUPPORT</span>
+                        <span class="side-badge">BIG 🔺</span>
+                    </div>
+                    <div class="agent-strategy-label" id="sup-b-strat">DIST +19 · N9</div>
+                    <div class="prediction-grid-3">
+                        <div class="p-box pb-left">
+                            <span class="p-label" id="sup-b-l-lbl"></span><span class="p-val" id="sup-b-l-val">--</span><span class="p-sub" id="sup-b-l-sub"></span><span class="hit-text" id="sup-b-l-hit"></span>
+                        </div>
+                        <div class="p-box pb-center">
+                            <div class="p-val-main" id="sup-b-c-val">--</div><div class="p-sub-main" id="sup-b-c-sub">n9</div><div class="p-tendency" id="sup-b-trend">LAST: --</div>
+                        </div>
+                        <div class="p-box pb-right">
+                            <span class="p-label" id="sup-b-r-lbl"></span><span class="p-val" id="sup-b-r-val">--</span><span class="p-sub" id="sup-b-r-sub"></span><span class="hit-text" id="sup-b-r-hit"></span>
+                        </div>
+                    </div>
+                    <div class="agent-footer-stats">
+                        <span class="st">LAST 12 ➔ W:<span id="sup-b-w">0</span> L:<span id="sup-b-l">0</span></span>
+                        <span class="status-msg">RATE: <span id="sup-b-rate">0.0%</span></span>
+                    </div>
+                    <div class="performance-string" id="sup-b-perf"></div>
                 </div>
-                <div class="performance-string" id="sup-perf"></div>
             </section>
 
             <!-- 3. DOCENAS DOMINANTES -->
@@ -159,7 +205,7 @@
 
 </div>
 
-<script src="predictor.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="predictor.js?v=999"></script>
+<script src="app.js?v=999"></script>
 </body>
 </html>

@@ -6,8 +6,6 @@ const history = [];
 const cwHistory = [];
 const ccwHistory = [];
 
-let currentView = 'CW'; 
-let panelMode   = 'DIR';  // 'DIR', 'SUP', 'JUG'
 let lastSignal  = null;
 let currentTableId = null;
 
@@ -17,7 +15,6 @@ let lastOverHitCCW = false;
 let lastBigHitCCW  = false;
 
 // ─── ZONE STATE ──────────────────────────────────────────────
-let zoneView = 'BIG';     
 const zoneBigHistory = [];   
 const zoneSmallHistory = [];
 let lastZoneBigHit   = false;
@@ -110,74 +107,77 @@ function renderShadowPanel() {
     try {
     // 1. DIR (ANDROID 1717)
     if (lastSignal) {
-        const isCW = currentView === 'CW';
-        const activeHistory = isCW ? cwHistory : ccwHistory;
-        document.getElementById('dir-badge').innerText = isCW ? 'CW ↺' : 'CCW ↻';
-        document.getElementById('dir-c-val').innerText = isCW ? lastSignal.targetCW : lastSignal.targetCCW;
-        document.getElementById('dir-l-val').innerText = isCW ? lastSignal.targetOverCW : lastSignal.targetOverCCW;
-        document.getElementById('dir-r-val').innerText = isCW ? lastSignal.targetBigCW : lastSignal.targetBigCCW;
-        document.getElementById('dir-l-hit').innerText = (isCW ? lastOverHitCW : lastOverHitCCW) ? '✔ HIT' : '';
-        document.getElementById('dir-r-hit').innerText = (isCW ? lastBigHitCW : lastBigHitCCW) ? '✔ HIT' : '';
+        // --- CW BLOCK ---
+        document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW;
+        document.getElementById('dir-cw-l-val').innerText = lastSignal.targetOverCW;
+        document.getElementById('dir-cw-r-val').innerText = lastSignal.targetBigCW;
+        document.getElementById('dir-cw-l-hit').innerText = lastOverHitCW ? '✔ HIT' : '';
+        document.getElementById('dir-cw-r-hit').innerText = lastBigHitCW ? '✔ HIT' : '';
 
+        // --- CCW BLOCK ---
+        document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW;
+        document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetOverCCW;
+        document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetBigCCW;
+        document.getElementById('dir-ccw-l-hit').innerText = lastOverHitCCW ? '✔ HIT' : '';
+        document.getElementById('dir-ccw-r-hit').innerText = lastBigHitCCW ? '✔ HIT' : '';
+
+        // Shared Tendency
         if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            document.getElementById('dir-trend').innerText = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
+            const trendTxt = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
+            document.getElementById('dir-cw-trend').innerText = trendTxt;
+            document.getElementById('dir-ccw-trend').innerText = trendTxt;
         }
 
-        const last12 = activeHistory.slice(-12);
-        const wins   = last12.filter(x => x === 'win').length;
-        document.getElementById('dir-w').innerText = wins;
-        document.getElementById('dir-l').innerText = last12.length - wins;
-        document.getElementById('dir-rate').innerText = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('dir-perf').innerHTML = last12.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        // CW Stats
+        const last12cw = cwHistory.slice(-12);
+        const winsCW   = last12cw.filter(x => x === 'win').length;
+        document.getElementById('dir-cw-w').innerText = winsCW;
+        document.getElementById('dir-cw-l').innerText = last12cw.length - winsCW;
+        document.getElementById('dir-cw-rate').innerText = last12cw.length > 0 ? ((winsCW / last12cw.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('dir-cw-perf').innerHTML = last12cw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+
+        // CCW Stats
+        const last12ccw = ccwHistory.slice(-12);
+        const winsCCW   = last12ccw.filter(x => x === 'win').length;
+        document.getElementById('dir-ccw-w').innerText = winsCCW;
+        document.getElementById('dir-ccw-l').innerText = last12ccw.length - winsCCW;
+        document.getElementById('dir-ccw-rate').innerText = last12ccw.length > 0 ? ((winsCCW / last12ccw.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('dir-ccw-perf').innerHTML = last12ccw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
     }
 
     // 2. SUP (ZONE SUPPORT)
     if (history.length >= 2) {
-        document.getElementById('sup-badge').innerText = zoneView === 'BIG' ? 'BIG 🔺' : 'SMALL 🔻';
-        document.getElementById('sup-strat').innerText = zoneView === 'BIG' ? 'DIST +19 · N9' : 'DIST +1 · N9';
-
         const lastNum  = history[history.length - 1];
         const prevNum  = history[history.length - 2];
         const lastDist = Math.abs(calcDist(prevNum, lastNum));
         const idx = WHEEL_NUMS.indexOf(lastNum);
 
-        if (zoneView === 'BIG') {
-            document.getElementById('sup-l-lbl').innerText = '';
-            document.getElementById('sup-r-lbl').innerText = '';
-            document.getElementById('sup-l-sub').innerText = '';
-            document.getElementById('sup-r-sub').innerText = '';
-            
-            const bigTarget = WHEEL_NUMS[(idx + 19 + 37) % 37];
-            document.getElementById('sup-c-val').innerText = bigTarget;
-            document.getElementById('sup-l-val').innerText = '';
-            document.getElementById('sup-r-val').innerText = '';
-            document.getElementById('sup-l-hit').innerText = lastZoneBigHit ? '✔ HIT' : '';
-            document.getElementById('sup-r-hit').innerText = '';
-        } else {
-            // SMALL
-            document.getElementById('sup-l-lbl').innerText = '';
-            document.getElementById('sup-r-lbl').innerText = '';
-            document.getElementById('sup-l-sub').innerText = '';
-            document.getElementById('sup-r-sub').innerText = '';
+        // --- SMALL BLOCK (DIST +1) ---
+        const smallTarget = WHEEL_NUMS[(idx + 1 + 37) % 37];
+        document.getElementById('sup-s-c-val').innerText = smallTarget;
+        document.getElementById('sup-s-l-hit').innerText = lastZoneSmallHit ? '✔ HIT' : '';
+        document.getElementById('sup-s-trend').innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
-            const smallTarget = WHEEL_NUMS[(idx + 1 + 37) % 37];
-            document.getElementById('sup-c-val').innerText = smallTarget;
-            document.getElementById('sup-l-val').innerText = '';
-            document.getElementById('sup-r-val').innerText = '';
-            document.getElementById('sup-l-hit').innerText = lastZoneSmallHit ? '✔ HIT' : '';
-            document.getElementById('sup-r-hit').innerText = '';
-        }
+        const last12s = zoneSmallHistory.slice(-12);
+        const winsS = last12s.filter(x => x === 'win').length;
+        document.getElementById('sup-s-w').innerText = winsS;
+        document.getElementById('sup-s-l').innerText = last12s.length - winsS;
+        document.getElementById('sup-s-rate').innerText = last12s.length > 0 ? ((winsS / last12s.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('sup-s-perf').innerHTML = last12s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
-        document.getElementById('sup-trend').innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
+        // --- BIG BLOCK (DIST +19) ---
+        const bigTarget = WHEEL_NUMS[(idx + 19 + 37) % 37];
+        document.getElementById('sup-b-c-val').innerText = bigTarget;
+        document.getElementById('sup-b-l-hit').innerText = lastZoneBigHit ? '✔ HIT' : '';
+        document.getElementById('sup-b-trend').innerText = `LAST: ${lastDist >= 10 ? 'BIG' : 'SMALL'} (${lastDist}p)`;
 
-        const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
-        const last12z = activeZoneHist.slice(-12);
-        const winsZ = last12z.filter(x => x === 'win').length;
-        document.getElementById('sup-w').innerText = winsZ;
-        document.getElementById('sup-l').innerText = last12z.length - winsZ;
-        document.getElementById('sup-rate').innerText = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-perf').innerHTML = last12z.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        const last12b = zoneBigHistory.slice(-12);
+        const winsB = last12b.filter(x => x === 'win').length;
+        document.getElementById('sup-b-w').innerText = winsB;
+        document.getElementById('sup-b-l').innerText = last12b.length - winsB;
+        document.getElementById('sup-b-rate').innerText = last12b.length > 0 ? ((winsB / last12b.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('sup-b-perf').innerHTML = last12b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
         
         renderDozens();
     } } catch (err) { 
@@ -317,16 +317,20 @@ function renderWheelAndHistory() {
     // drawWheel removed
 }
 
-// ─── BUTTON LISTENERS ─────────────────────────────────────
+// ─── TAB LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
-    // SWITCH DIR SIDE (CW ↔ CCW)
-    if (e.target && e.target.id === 'btn-switch-dir') {
-        currentView = currentView === 'CW' ? 'CCW' : 'CW';
+    if (e.target && e.target.id === 'tab-btn-dir') {
+        document.getElementById('tab-btn-dir').classList.add('active');
+        document.getElementById('tab-btn-sup').classList.remove('active');
+        document.getElementById('panel-dir').style.display = 'flex';
+        document.getElementById('panel-sup').style.display = 'none';
         renderShadowPanel();
     }
-    // SWITCH SUP ZONE (BIG ↔ SMALL)
-    if (e.target && e.target.id === 'btn-switch-sup') {
-        zoneView = zoneView === 'BIG' ? 'SMALL' : 'BIG';
+    if (e.target && e.target.id === 'tab-btn-sup') {
+        document.getElementById('tab-btn-sup').classList.add('active');
+        document.getElementById('tab-btn-dir').classList.remove('active');
+        document.getElementById('panel-dir').style.display = 'none';
+        document.getElementById('panel-sup').style.display = 'flex';
         renderShadowPanel();
     }
 });
