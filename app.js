@@ -173,73 +173,8 @@ function renderShadowPanel() {
         const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
         const last12z = activeZoneHist.slice(-12);
         const winsZ   = last12z.filter(x => x === 'win').length;
-
-        const conf = jugView.confidence || 0;
-        const isCharging = jugView.isCharging === true;
-
-        if (isCharging) {
-            // CHARGING MODE
-            if (lblL) lblL.innerText = '';
-            if (lblR) lblR.innerText = '';
-            if (subL) subL.innerText = '';
-            if (subC) subC.innerText = '';
-            if (subR) subR.innerText = '';
-            if (dirEl) dirEl.innerText = '⚡ CHARGING...';
-            if (stratEl) stratEl.innerText = `Analyzing patterns... (${conf}%)`;
-            if (targetEl) targetEl.innerText = '⌓';
-            if (smallEl) smallEl.innerText = '--';
-            if (bigEl) bigEl.innerText = '--';
-            if (hitSEl) hitSEl.innerText = '';
-            if (hitBEl) hitBEl.innerText = '';
-            if (tendEl && history.length >= 2) {
-                const jump = calcDist(history[history.length-2], history[history.length-1]);
-                tendEl.innerText = `LAST: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SML'} (${Math.abs(jump)}p)`;
-            }
-        } else {
-            // ACTIVE PREDICTION
-            if (lblL) lblL.innerText = '';
-            if (lblR) lblR.innerText = '';
-            if (subL) subL.innerText = '';
-            if (subC) subC.innerText = 'n4';
-            if (subR) subR.innerText = '';
-
-            if (!lastSignal) return;
-
-            const isSmall = jugView.magnitude === 'SMALL';
-            const isCW = jugView.direction === 'CW';
-
-            let pTarget = '--';
-            if (isCW) {
-                pTarget = isSmall ? lastSignal.targetOverCW : lastSignal.targetBigCW;
-            } else {
-                pTarget = isSmall ? lastSignal.targetOverCCW : lastSignal.targetBigCCW;
-            }
-
-            if (dirEl) dirEl.innerText = `🎯 ${jugView.magnitude} ${jugView.direction}`;
-            if (stratEl) stratEl.innerText = `SNIPER ${jugView.magnitude} ${jugView.direction} · N4 · ${conf}%`;
-
-            if (targetEl) targetEl.innerText = pTarget !== undefined ? pTarget : '--';
-            if (smallEl)  smallEl.innerText  = '';
-            if (bigEl)    bigEl.innerText    = '';
-
-            if (hitSEl) hitSEl.innerText = lastJugHit ? '✔ HIT' : '';
-            if (hitBEl) hitBEl.innerText = '';
-
-            if (tendEl && history.length >= 2) {
-                const jump = calcDist(history[history.length-2], history[history.length-1]);
-                tendEl.innerText = `LAST: ${jump >= 0 ? 'CW' : 'CCW'} ${Math.abs(jump) >= 10 ? 'BIG' : 'SML'} (${Math.abs(jump)}p)`;
-            }
-        }
-
-        const last12j = jugHistory.slice(-12);
-        const winsJ   = last12j.filter(x => x === 'win').length;
-        const lossesJ = last12j.length - winsJ;
-        const rateJ   = last12j.length > 0 ? ((winsJ / last12j.length) * 100).toFixed(1) : '0.0';
-        if (wEl)   wEl.innerText   = winsJ;
-        if (lEl)   lEl.innerText   = lossesJ;
-        if (wrEl)  wrEl.innerText  = `${rateJ}%`;
-        if (perfEl) perfEl.innerHTML = last12j.map(r =>
-            `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        
+        renderDozens();
     }
 }
 
