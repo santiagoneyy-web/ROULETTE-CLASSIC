@@ -107,6 +107,7 @@ function getZoneTargets(lastNum) {
 }
 
 function renderShadowPanel() {
+    try {
     // 1. DIR (ANDROID 1717)
     if (lastSignal) {
         const isCW = currentView === 'CW';
@@ -172,9 +173,103 @@ function renderShadowPanel() {
 
         const activeZoneHist = zoneView === 'BIG' ? zoneBigHistory : zoneSmallHistory;
         const last12z = activeZoneHist.slice(-12);
-        const winsZ   = last12z.filter(x => x === 'win').length;
+        document.getElementById('sup-w').innerText = winsZ;
+        document.getElementById('sup-l').innerText = last12z.length - winsZ;
+        document.getElementById('sup-rate').innerText = last12z.length > 0 ? ((winsZ / last12z.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('sup-perf').innerHTML = last12z.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
         
         renderDozens();
+    } } catch (err) { 
+        document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:50px">${err.stack}</div>`;
+        console.error('Error in renderShadowPanel:', err); 
+    }
+}
+
+function renderDozens() {
+    try {
+        if (history.length === 0) return;
+
+        // Convert history numbers to dozens (1, 2, 3), ignore 0
+        const historyDozens = history.map(n => {
+            if (n === 0) return 0;
+            if (n >= 1 && n <= 12) return 1;
+            if (n >= 13 && n <= 24) return 2;
+            return 3;
+        });
+
+        const recent = historyDozens.slice(-15).filter(d => d !== 0);
+        const global = historyDozens.slice(-50).filter(d => d !== 0);
+
+        function getTopDozens(arr) {
+            if (arr.length === 0) return [];
+            const counts = {1:0, 2:0, 3:0};
+            arr.forEach(d => counts[d]++);
+            const max = Math.max(counts[1], counts[2], counts[3]);
+            if (max === 0) return [];
+            return Object.keys(counts).filter(k => counts[k] === max).map(Number);
+        }
+
+        const topRecent = getTopDozens(recent);
+        const topGlobal = getTopDozens(global);
+
+        // State Machine logic
+        let newDom = [...dzCurrent];
+        if (dzCurrent.length === 0) {
+            newDom = topRecent.length > 0 ? topRecent : topGlobal; 
+        } else {
+            // Did topRecent shift entirely away from current dominant?
+            const isDifferent = topRecent.every(d => !dzCurrent.includes(d));
+            if (isDifferent && topRecent.length > 0) {
+                // Is topRecent the precise previous dominant returning?
+                const isReturning = topRecent.some(d => dzPrevious.includes(d));
+                const recentMaxCount = Math.max(...[1,2,3].map(d => recent.filter(x => x===d).length));
+                
+                // If returning, needs fewer hits to confirm (5 in last 15). Else means new shift, needs 6 hits.
+                if ((isReturning && recentMaxCount >= 5) || (!isReturning && recentMaxCount >= 6)) {
+                    dzPrevious = [...dzCurrent];
+                    newDom = [...topRecent];
+                    dzSpinsSinceChange = 0;
+                }
+            }
+        }
+
+        // If change confirmed, overwrite state
+        if (newDom.length > 0 && JSON.stringify(newDom) !== JSON.stringify(dzCurrent)) {
+            dzCurrent = newDom;
+        } else {
+            dzSpinsSinceChange++;
+        }
+
+        // UI Update
+        [1,2,3].forEach(dz => {
+            const el = document.getElementById(`dz-${dz}`);
+            if(el) {
+                if (dzCurrent.includes(dz)) el.classList.add('dominant');
+                else el.classList.remove('dominant');
+            }
+        });
+
+        const infoEl = document.getElementById('doc-info');
+        const badgeEl = document.getElementById('doc-memory-badge');
+
+        if (infoEl) {
+            if (dzCurrent.length > 0) {
+                infoEl.innerText = `Dominancia mantenida por ${dzSpinsSinceChange} tirada(s).`;
+            } else {
+                infoEl.innerText = `Calculando docenas...`;
+            }
+        }
+
+        if (badgeEl) {
+            if (dzPrevious.length > 0) {
+                badgeEl.innerText = `PREV: ${dzPrevious.map(d => d+'°').join(', ')}`;
+            } else {
+                badgeEl.innerText = 'PREV: --';
+            }
+        }
+    } catch (err) { 
+        document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:0">${err.stack}</div>`;
+        console.error('Error in renderDozens:', err); 
     }
 }
 
@@ -343,6 +438,7 @@ function submitNumber(val, silent = false, batch = false) {
 
 // ─── RENDER: TRAVEL CHART (OFI-Style canvas) ──────────────
 function renderTravelChart() {
+    try {
     const canvas = document.getElementById('travelChart');
     if (!canvas || history.length < 3) return;
     const ctx = canvas.getContext('2d');
@@ -449,12 +545,13 @@ function renderTravelChart() {
         ctx.fillStyle='#7a9bb8';ctx.textAlign='left';
         ctx.fillText(label,lx2+10,13);
         lx2+=ctx.measureText(label).width+22;
-    });
+    }); } catch(err) { console.error(err); }
 }
 
 // ─── TRAVEL TABLE ──────────────────────────────────────────
 function renderTravelPanel() {
-    const tbody   = document.getElementById('travel-tbody');
+    try {
+        const tbody   = document.getElementById('travel-tbody');
     const patEl   = document.getElementById('travel-pattern');
     const lastZEl = document.getElementById('travel-last-zone');
     if (!tbody) return;
@@ -524,7 +621,7 @@ function renderTravelPanel() {
         </tr>`;
     }).join('');
 
-    renderTravelChart();
+    renderTravelChart(); } catch (err) { console.error(err); }
 }
 
 // ─── SYNC FROM SERVER ────────────────────────────────────────
