@@ -190,55 +190,40 @@ function renderDozens() {
     try {
         if (history.length === 0) return;
 
-        // Convert history numbers to dozens (1, 2, 3), ignore 0
+        // Convert ALL history numbers to dozens (1, 2, 3), ignore 0
         const historyDozens = history.map(n => {
             if (n === 0) return 0;
             if (n >= 1 && n <= 12) return 1;
             if (n >= 13 && n <= 24) return 2;
             return 3;
-        });
+        }).filter(d => d !== 0);
 
-        const recent = historyDozens.slice(-15).filter(d => d !== 0);
-        const global = historyDozens.slice(-50).filter(d => d !== 0);
+        if (historyDozens.length === 0) return;
 
-        function getTopDozens(arr) {
-            if (arr.length === 0) return [];
-            const counts = {1:0, 2:0, 3:0};
-            arr.forEach(d => counts[d]++);
-            const max = Math.max(counts[1], counts[2], counts[3]);
-            if (max === 0) return [];
-            return Object.keys(counts).filter(k => counts[k] === max).map(Number);
-        }
+        // Calculate global frequency (sin limite, toda la mesa)
+        const counts = {1:0, 2:0, 3:0};
+        historyDozens.forEach(d => counts[d]++);
 
-        const topRecent = getTopDozens(recent);
-        const topGlobal = getTopDozens(global);
+        // Sort dozens by frequency (highest first)
+        const sortedDozens = [1, 2, 3].sort((a, b) => counts[b] - counts[a]);
+        
+        // Take the top 2 dozens
+        const top2 = [sortedDozens[0], sortedDozens[1]].sort();
 
         // State Machine logic
-        let newDom = [...dzCurrent];
         if (dzCurrent.length === 0) {
-            newDom = topRecent.length > 0 ? topRecent : topGlobal; 
+            dzCurrent = top2;
+            dzSpinsSinceChange = 0;
         } else {
-            // Did topRecent shift entirely away from current dominant?
-            const isDifferent = topRecent.every(d => !dzCurrent.includes(d));
-            if (isDifferent && topRecent.length > 0) {
-                // Is topRecent the precise previous dominant returning?
-                const isReturning = topRecent.some(d => dzPrevious.includes(d));
-                const recentMaxCount = Math.max(...[1,2,3].map(d => recent.filter(x => x===d).length));
-                
-                // If returning, needs fewer hits to confirm (5 in last 15). Else means new shift, needs 6 hits.
-                if ((isReturning && recentMaxCount >= 5) || (!isReturning && recentMaxCount >= 6)) {
-                    dzPrevious = [...dzCurrent];
-                    newDom = [...topRecent];
-                    dzSpinsSinceChange = 0;
-                }
+            // Check if top2 has changed compared to dzCurrent
+            if (JSON.stringify(top2) !== JSON.stringify(dzCurrent)) {
+                // Dominance shifted!
+                dzPrevious = [...dzCurrent];
+                dzCurrent = top2;
+                dzSpinsSinceChange = 0;
+            } else {
+                dzSpinsSinceChange++;
             }
-        }
-
-        // If change confirmed, overwrite state
-        if (newDom.length > 0 && JSON.stringify(newDom) !== JSON.stringify(dzCurrent)) {
-            dzCurrent = newDom;
-        } else {
-            dzSpinsSinceChange++;
         }
 
         // UI Update
@@ -254,16 +239,13 @@ function renderDozens() {
         const badgeEl = document.getElementById('doc-memory-badge');
 
         if (infoEl) {
-            if (dzCurrent.length > 0) {
-                infoEl.innerText = `Dominancia mantenida por ${dzSpinsSinceChange} tirada(s).`;
-            } else {
-                infoEl.innerText = `Calculando docenas...`;
-            }
+            infoEl.innerText = `Dominancia mantenida por ${dzSpinsSinceChange} tirada(s).`;
+            infoEl.innerHTML += `<br><span style="font-size:9px;color:rgba(255,255,255,0.4)">Hits: 1st(${counts[1]}), 2nd(${counts[2]}), 3rd(${counts[3]})</span>`;
         }
 
         if (badgeEl) {
             if (dzPrevious.length > 0) {
-                badgeEl.innerText = `PREV: ${dzPrevious.map(d => d+'°').join(', ')}`;
+                badgeEl.innerText = `PREV: ${dzPrevious.map(d => d+'°').join(' y ')}`;
             } else {
                 badgeEl.innerText = 'PREV: --';
             }
