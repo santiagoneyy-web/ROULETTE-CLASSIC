@@ -198,16 +198,20 @@ function renderDozens() {
             return 3;
         }).filter(d => d !== 0);
 
-        if (historyDozens.length === 0) return;
+        // El usuario pide basarse SOLO en el momentum corto (ej: últimas ~18 tiradas)
+        // para decidir quiénes son las 2 docenas dominantes actualmente.
+        const recentHistory = historyDozens.slice(-18);
 
-        // Calculate global frequency (sin limite, toda la mesa)
+        if (recentHistory.length === 0) return;
+
+        // Calculate frequency only for the recent momentum window
         const counts = {1:0, 2:0, 3:0};
-        historyDozens.forEach(d => counts[d]++);
+        recentHistory.forEach(d => counts[d]++);
 
         // Sort dozens by frequency (highest first)
         const sortedDozens = [1, 2, 3].sort((a, b) => counts[b] - counts[a]);
         
-        // Take the top 2 dozens
+        // Take the top 2 dozens of this momentum window
         const top2 = [sortedDozens[0], sortedDozens[1]].sort();
 
         // State Machine logic
@@ -226,6 +230,10 @@ function renderDozens() {
             }
         }
 
+        // Global counts alone just for the UI label
+        const globalCounts = {1:0, 2:0, 3:0};
+        historyDozens.forEach(d => globalCounts[d]++);
+
         // UI Update
         [1,2,3].forEach(dz => {
             const el = document.getElementById(`dz-${dz}`);
@@ -240,7 +248,7 @@ function renderDozens() {
 
         if (infoEl) {
             infoEl.innerText = `Dominancia mantenida por ${dzSpinsSinceChange} tirada(s).`;
-            infoEl.innerHTML += `<br><span style="font-size:9px;color:rgba(255,255,255,0.4)">Hits: 1st(${counts[1]}), 2nd(${counts[2]}), 3rd(${counts[3]})</span>`;
+            infoEl.innerHTML += `<br><span style="font-size:9px;color:rgba(255,255,255,0.4)">Hits Globales: 1st(${globalCounts[1]}), 2nd(${globalCounts[2]}), 3rd(${globalCounts[3]})</span>`;
         }
 
         if (badgeEl) {
