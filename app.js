@@ -806,6 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (infoEl) infoEl.innerText = 'Sincronizando...';
                     
                     await syncData();
+                    if (infoEl) infoEl.innerText = 'Listo'; // Clear syncing state
                     connectSSE(currentTableId);
                 });
 

@@ -364,7 +364,7 @@ app.post('/api/spin', async (req, res) => {
             res.json(savedSpin);
         } else {
             // Fallback
-            db.addSpin(table_id, number, source || 'bot', (err, id) => {
+            db.addSpin(table_id, number, source || 'bot', { event_id: req.body.event_id }, (err, id) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (sseClients[table_id]) {
                     sseClients[table_id].forEach(client => {
