@@ -188,72 +188,71 @@ function renderShadowPanel() {
 
 function renderDozens() {
     try {
-        if (history.length === 0) return;
+        if (history.length < 18) return;
 
-        // Convert ALL history numbers to dozens (1, 2, 3), ignore 0
-        const historyDozens = history.map(n => {
+        // Map everything to dozens first.
+        const dozens = history.map(n => {
             if (n === 0) return 0;
             if (n >= 1 && n <= 12) return 1;
             if (n >= 13 && n <= 24) return 2;
             return 3;
-        }).filter(d => d !== 0);
+        });
 
-        // El usuario pide basarse SOLO en el momentum corto (ej: últimas ~18 tiradas)
-        // para decidir quiénes son las 2 docenas dominantes actualmente.
-        const recentHistory = historyDozens.slice(-18);
+        let cur = [];
+        let prev = [];
+        let spins = 0;
 
-        if (recentHistory.length === 0) return;
+        // Replay history to build accurate State Machine for Dozens
+        for (let i = 18; i <= dozens.length; i++) {
+            const window = dozens.slice(i - 18, i).filter(d => d !== 0);
+            if (window.length === 0) continue;
 
-        // Calculate frequency only for the recent momentum window
-        const counts = {1:0, 2:0, 3:0};
-        recentHistory.forEach(d => counts[d]++);
+            const counts = {1:0, 2:0, 3:0};
+            window.forEach(d => counts[d]++);
+            
+            const sorted = [1,2,3].sort((a,b) => counts[b] - counts[a]);
+            const top2 = [sorted[0], sorted[1]].sort();
 
-        // Sort dozens by frequency (highest first)
-        const sortedDozens = [1, 2, 3].sort((a, b) => counts[b] - counts[a]);
-        
-        // Take the top 2 dozens of this momentum window
-        const top2 = [sortedDozens[0], sortedDozens[1]].sort();
-
-        // State Machine logic
-        if (dzCurrent.length === 0) {
-            dzCurrent = top2;
-            dzSpinsSinceChange = 0;
-        } else {
-            // Check if top2 has changed compared to dzCurrent
-            if (JSON.stringify(top2) !== JSON.stringify(dzCurrent)) {
-                // Dominance shifted!
-                dzPrevious = [...dzCurrent];
-                dzCurrent = top2;
-                dzSpinsSinceChange = 0;
+            if (cur.length === 0) {
+                cur = top2;
+                spins = 0;
             } else {
-                dzSpinsSinceChange++;
+                if (JSON.stringify(top2) !== JSON.stringify(cur)) {
+                    // Dominance Shift
+                    prev = [...cur];
+                    cur = top2;
+                    spins = 0;
+                } else {
+                    spins++;
+                }
             }
         }
+        
+        // Sync to global vars for safety
+        dzCurrent = cur;
+        dzPrevious = prev;
+        dzSpinsSinceChange = spins;
 
-        // Global counts alone just for the UI label
-        const globalCounts = {1:0, 2:0, 3:0};
-        historyDozens.forEach(d => globalCounts[d]++);
-
-        // UI Update
+        // UI Update: Balls
         [1,2,3].forEach(dz => {
             const el = document.getElementById(`dz-${dz}`);
             if(el) {
-                if (dzCurrent.includes(dz)) el.classList.add('dominant');
+                if (cur.includes(dz)) el.classList.add('dominant');
                 else el.classList.remove('dominant');
             }
         });
 
+        // UI Update: Text
         const infoEl = document.getElementById('doc-info');
         const badgeEl = document.getElementById('doc-memory-badge');
 
         if (infoEl) {
-            infoEl.innerText = `Dominancia mantenida por ${dzSpinsSinceChange} tirada(s).`;
-            infoEl.innerHTML += `<br><span style="font-size:9px;color:rgba(255,255,255,0.4)">Hits Globales: 1st(${globalCounts[1]}), 2nd(${globalCounts[2]}), 3rd(${globalCounts[3]})</span>`;
+            infoEl.innerText = `Dominancia mantenida por ${spins} tirada(s).`;
         }
 
         if (badgeEl) {
-            if (dzPrevious.length > 0) {
-                badgeEl.innerText = `PREV: ${dzPrevious.map(d => d+'°').join(' y ')}`;
+            if (prev.length > 0) {
+                badgeEl.innerText = `PREV: ${prev.map(d => d+'°').join(' y ')}`;
             } else {
                 badgeEl.innerText = 'PREV: --';
             }
