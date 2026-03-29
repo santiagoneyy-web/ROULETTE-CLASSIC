@@ -79,25 +79,26 @@ async function startScraper() {
 
 async function poll() {
     try {
-        // ── Fetch from casino.org API ──────────────────────────
-        const response = await axios.get(CASINO_API_URL, {
-            timeout: 15000,
+        // ── Fetch from casino.org API using native fetch to bypass Cloudflare ──
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(CASINO_API_URL, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
                 'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
                 'Referer': TARGET_URL,
-                'Origin': 'https://www.casino.org',
-                'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site'
-            }
+                'Origin': 'https://www.casino.org'
+            },
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
-        const body = response.data;
+        if (!response.ok) {
+            throw new Error(`Request failed with status code ${response.status}`);
+        }
+
+        const body = await response.json();
         let events = Array.isArray(body) ? body : (body?.content || []);
 
         if (!events.length) {
