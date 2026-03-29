@@ -78,6 +78,62 @@ function calcDist(from, to) {
     return d;
 }
 
+
+// HELPERS: WHEEL NEIGHBORS + DOZEN FILTER
+const RED_NUMS_SET = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+function numToDozClass(n) { return n===0?'fn-zero':(RED_NUMS_SET.has(n)?'fn-red':'fn-black'); }
+function numToDoz(n) { return n>=1&&n<=12?1:(n>=13&&n<=24?2:(n>=25&&n<=36?3:0)); }
+function getNeighbors(target, radius) {
+    const idx = WHEEL_NUMS.indexOf(target);
+    if (idx === -1) return [];
+    const out = [];
+    for (let i = -radius; i <= radius; i++) out.push(WHEEL_NUMS[(idx+i+37)%37]);
+    return out;
+}
+function getFilteredNeighborsHTML(target, radius) {
+    if (target===undefined||target===null||target==='--') return '';
+    const all = getNeighbors(Number(target), radius);
+    const hasFilt = dzCurrent && dzCurrent.length > 0;
+    return all.map(n => {
+        const inDom = !hasFilt || dzCurrent.includes(numToDoz(n)) || n===0;
+        return `<span class="fn-ball ${numToDozClass(n)}${inDom?'':' fn-faded'}">${n}</span>`;
+    }).join('');
+}
+function renderShadowPanelNeighborsOnly() {
+    try {
+        if (lastSignal) {
+            document.getElementById('dir-cw-c-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetCW, 9);
+            document.getElementById('dir-cw-l-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetOverCW, 4);
+            document.getElementById('dir-cw-r-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetBigCW, 4);
+            document.getElementById('dir-ccw-c-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetCCW, 9);
+            document.getElementById('dir-ccw-l-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetOverCCW, 4);
+            document.getElementById('dir-ccw-r-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetBigCCW, 4);
+        }
+        if (history.length >= 2) {
+            const idx = WHEEL_NUMS.indexOf(history[history.length-1]);
+            const sT = WHEEL_NUMS[(idx+1+37)%37], bT = WHEEL_NUMS[(idx+19+37)%37];
+            const sEl = document.getElementById('sup-s-c-balls');
+            const bEl = document.getElementById('sup-b-c-balls');
+            if (sEl) sEl.innerHTML = getFilteredNeighborsHTML(sT, 9);
+            if (bEl) bEl.innerHTML = getFilteredNeighborsHTML(bT, 9);
+        }
+    } catch(e) { console.error('neighborsOnly:', e); }
+}
+function wipeData() {
+    if (!confirm('⚠️ WIPE ALL DATA?')) return;
+    const tableId = currentTableId;
+    if (!tableId) { alert('Selecciona una mesa primero'); return; }
+    fetch('/api/history/' + tableId, { method: 'DELETE' })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(() => {
+            history.length=0; cwHistory.length=0; ccwHistory.length=0;
+            zoneBigHistory.length=0; zoneSmallHistory.length=0;
+            dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; lastSignal=null;
+            renderShadowPanel(); renderWheelAndHistory();
+            alert('✅ Datos borrados.');
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+}
+
 /// ─── RENDER: UNIFIED PANEL ───────────────────────────────
 
 function getZoneTargets(lastNum) {
@@ -144,6 +200,15 @@ function renderShadowPanel() {
         document.getElementById('dir-ccw-l').innerText = last12ccw.length - winsCCW;
         document.getElementById('dir-ccw-rate').innerText = last12ccw.length > 0 ? ((winsCCW / last12ccw.length) * 100).toFixed(1) + '%' : '0.0%';
         document.getElementById('dir-ccw-perf').innerHTML = last12ccw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+
+        // --- NEIGHBOR BALLS: CW blocks ---
+        document.getElementById('dir-cw-c-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetCW, 9);
+        document.getElementById('dir-cw-l-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetOverCW, 4);
+        document.getElementById('dir-cw-r-balls').innerHTML  = getFilteredNeighborsHTML(lastSignal.targetBigCW, 4);
+        // --- NEIGHBOR BALLS: CCW blocks ---
+        document.getElementById('dir-ccw-c-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetCCW, 9);
+        document.getElementById('dir-ccw-l-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetOverCCW, 4);
+        document.getElementById('dir-ccw-r-balls').innerHTML = getFilteredNeighborsHTML(lastSignal.targetBigCCW, 4);
     }
 
     // 2. SUP (ZONE SUPPORT)
@@ -178,6 +243,14 @@ function renderShadowPanel() {
         document.getElementById('sup-b-l').innerText = last12b.length - winsB;
         document.getElementById('sup-b-rate').innerText = last12b.length > 0 ? ((winsB / last12b.length) * 100).toFixed(1) + '%' : '0.0%';
         document.getElementById('sup-b-perf').innerHTML = last12b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+
+        // --- NEIGHBOR BALLS: SUP blocks ---
+        document.getElementById('sup-s-c-balls').innerHTML = getFilteredNeighborsHTML(smallTarget, 9);
+        document.getElementById('sup-s-l-balls').innerHTML = '';
+        document.getElementById('sup-s-r-balls').innerHTML = '';
+        document.getElementById('sup-b-c-balls').innerHTML = getFilteredNeighborsHTML(bigTarget, 9);
+        document.getElementById('sup-b-l-balls').innerHTML = '';
+        document.getElementById('sup-b-r-balls').innerHTML = '';
         
         renderDozens();
     } } catch (err) { 
@@ -188,7 +261,11 @@ function renderShadowPanel() {
 
 function renderDozens() {
     try {
-        if (history.length < 18) return;
+        if (history.length < 18) {
+            // Not enough data yet — refresh neighbor balls with unfiltered view
+            renderShadowPanelNeighborsOnly();
+            return;
+        }
 
         // Map everything to dozens first.
         const dozens = history.map(n => {
@@ -228,12 +305,12 @@ function renderDozens() {
             }
         }
         
-        // Sync to global vars for safety
+        // Sync to global vars
         dzCurrent = cur;
         dzPrevious = prev;
         dzSpinsSinceChange = spins;
 
-        // UI Update: Balls
+        // UI: Dozen balls highlight
         [1,2,3].forEach(dz => {
             const el = document.getElementById(`dz-${dz}`);
             if(el) {
@@ -242,23 +319,46 @@ function renderDozens() {
             }
         });
 
-        // UI Update: Text
-        const infoEl = document.getElementById('doc-info');
-        const badgeEl = document.getElementById('doc-memory-badge');
+        // UI: Transition row
+        const prevBadge    = document.getElementById('doc-memory-badge');
+        const currBadge    = document.getElementById('doc-current-badge');
+        const arrow        = document.getElementById('doc-transition-arrow');
+        const statusEl     = document.getElementById('doc-transition-status');
+        const infoEl       = document.getElementById('doc-info');
 
-        if (infoEl) {
-            infoEl.innerText = `Dominancia mantenida por ${spins} tirada(s).`;
-        }
+        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + '°').join(' & ') : '--';
 
-        if (badgeEl) {
-            if (prev.length > 0) {
-                badgeEl.innerText = `PREV: ${prev.map(d => d+'°').join(' y ')}`;
+        if (prevBadge) prevBadge.innerText = fmtDoz(prev);
+        if (currBadge) currBadge.innerText = fmtDoz(cur);
+
+        // Transition status indicator
+        if (statusEl) {
+            statusEl.className = 'transition-status'; // reset
+            if (spins <= 2 && prev.length > 0) {
+                // Just switched! Flash danger
+                statusEl.innerText = `⚠️ NUEVA! +${spins} tiro(s)`;
+                statusEl.classList.add('danger');
+                if (arrow) arrow.innerText = '⇨';
+            } else if (spins <= 6) {
+                // Warming up
+                statusEl.innerText = `NUEVO +${spins}t`;
+                statusEl.classList.add('warning');
+                if (arrow) arrow.innerText = '→';
             } else {
-                badgeEl.innerText = 'PREV: --';
+                // Stable dominance
+                statusEl.innerText = `ESTABLE ${spins}t`;
+                if (arrow) arrow.innerText = '→';
             }
         }
+
+        if (infoEl) {
+            infoEl.innerText = `Ventana 18: Dom· ${fmtDoz(cur)}`;
+        }
+
+        // Refresh neighbor balls now that dzCurrent is updated
+        renderShadowPanelNeighborsOnly();
+
     } catch (err) { 
-        document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:0">${err.stack}</div>`;
         console.error('Error in renderDozens:', err); 
     }
 }
