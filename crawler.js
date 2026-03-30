@@ -60,10 +60,10 @@ async function startDomScraper() {
     });
 
     const page = await browser.newPage();
-    // Bloquear recursos pesados para ahorrar RAM en Render
+    // Bloquear solo lo ABSOLUTAMENTE pesado para no romper el renderizado
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if (['image', 'font', 'media', 'stylesheet', 'other'].includes(req.resourceType())) {
+        if (['image', 'media', 'font'].includes(req.resourceType())) {
             req.abort();
         } else {
             req.continue();
@@ -72,40 +72,63 @@ async function startDomScraper() {
 
     try {
         console.log(`📡 Navigating to: ${TARGET_URL}`);
-        // 'domcontentloaded' es más rápido y suficiente para leer el texto del DOM
         await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        console.log(`📍 Actual URL: ${page.url()}`);
         
-        // El contenedor de los resultados en casino.org
-        const selector = 'div.flex.flex-col.gap-px > div:first-child span';
-        await page.waitForSelector(selector, { timeout: 30000 });
-        console.log("✅ DOM Loaded. Reading numbers...");
+        // Lista de posibles selectores si el diseño cambia
+        const selectors = [
+            'div.flex.flex-col.gap-px > div:first-child span', // Tabla Historial
+            'div.flex.overflow-x-scroll > div:first-child span', // Fila superior (si existe)
+            '.history-number', // Clásicos
+            'div[class*="History"] div:first-child span' // Genérico por clase
+        ];
+
+        let activeSelector = null;
+        for (const sel of selectors) {
+            try {
+                await page.waitForSelector(sel, { timeout: 15000 });
+                activeSelector = sel;
+                console.log(`✅ Selector found: ${sel}`);
+                break;
+            } catch (e) {
+                console.log(`🔁 Selector ${sel} failed, trying next...`);
+            }
+        }
+
+        if (!activeSelector) {
+            console.error("❌ FAILED: All selectors failed. The page layout might be blocked or different.");
+            // Loguear el contenido HTML básico para debuguear en Render
+            const content = await page.evaluate(() => document.body.innerText.substring(0, 500));
+            console.log(`📄 Page Text Preview: ${content}...`);
+            await browser.close();
+            process.exit(1);
+        }
 
         setInterval(async () => {
             try {
                 const detection = await page.evaluate((sel) => {
                     const el = document.querySelector(sel);
                     if (!el) return null;
-                    const val = parseInt(el.innerText);
+                    const val = parseInt(el.innerText.replace(/[^0-9]/g, ''));
                     return isNaN(val) ? null : val;
-                }, selector);
+                }, activeSelector);
 
                 if (detection !== null && detection !== lastNum) {
                     console.log(`✨ [DOM-T${TABLE_ID}] Detectado: ${detection}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(detection),
-                        source: 'dom_scraper_v3',
-                        timestamp: new Date().toISOString()
+                        source: 'dom_scraper_v4'
                     }, { timeout: 5000 }).catch(() => {});
                     lastNum = detection;
                 }
             } catch (e) {
                 console.error(`⚠️ [DOM-T${TABLE_ID}] Read error: ${e.message}`);
             }
-        }, 2000 + Math.random() * 2000); // Polleo rápido: cada 2-4 segundos
+        }, 3000 + Math.random() * 2000);
 
     } catch (e) {
-        console.error(`❌ [DOM-T${TABLE_ID}] Failed to start: ${e.message}`);
+        console.error(`❌ [DOM-T${TABLE_ID}] Navigation failed: ${e.message}`);
         await browser.close();
         process.exit(1);
     }
