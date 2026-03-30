@@ -102,7 +102,7 @@ async function startDomScraper() {
             } catch (e) {
                 console.error(`⚠️ [DOM-T${TABLE_ID}] Read error: ${e.message}`);
             }
-        }, 8000 + Math.random() * 4000);
+        }, 2000 + Math.random() * 2000); // Polleo rápido: cada 2-4 segundos
 
     } catch (e) {
         console.error(`❌ [DOM-T${TABLE_ID}] Failed to start: ${e.message}`);
