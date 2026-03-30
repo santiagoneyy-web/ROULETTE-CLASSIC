@@ -16,74 +16,78 @@ const TABLE_ID   = args.table || 1;
 const TARGET_URL = args.url   || "https://www.casino.org/casinoscores/es/auto-roulette/";
 const API_URL    = args.api   || "http://127.0.0.1:3000/api/spin";
 
-// ── DOM-BASED SCRAPER (V7 - Magic Detector) ──────────────────
+// ── DOM-BASED SCRAPER (V8 - Ultra Light & RAM Optimized) ──────
 async function startDomScraper() {
-    console.log(`\n📺 [V7] Starting Magic-DOM Scraper for Table ${TABLE_ID}`);
+    console.log(`\n📺 [V8] Starting RAM-Optimized Scraper for Table ${TABLE_ID}`);
     let lastNum = null;
-
-    const browser = await puppeteer.launch({
-        headless: true,
-        ignoreDefaultArgs: ['--enable-automation'],
-        args: [
-            '--no-sandbox', 
-            '--disable-setuid-sandbox', 
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-zygote',
-            '--single-process',
-            '--disable-blink-features=AutomationControlled'
-        ]
-    });
-
-    const page = await browser.newPage();
-    // Identidad de iPhone para saltar protecciones de escritorio
-    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-    await page.setViewport({ width: 390, height: 844 });
+    let browser = null;
 
     try {
-        console.log(`📡 [V7] Navigating: ${TARGET_URL}`);
-        const response = await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
+        // Pausa inicial para escalonamiento de RAM
+        await new Promise(r => setTimeout(r, 5000 + (parseInt(TABLE_ID) * 2000)));
+
+        browser = await puppeteer.launch({
+            headless: true,
+            ignoreDefaultArgs: ['--enable-automation'],
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process', // Ahorra mucha RAM pero es sensible
+                '--disable-blink-features=AutomationControlled'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
+        await page.setViewport({ width: 390, height: 844 });
+        page.setDefaultTimeout(90000);
+
+        // Bloqueo ULTRA de recursos (solo dejamos el HTML y los scripts esenciales)
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            const type = req.resourceType();
+            if (['image', 'stylesheet', 'font', 'media', 'other'].includes(type)) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        console.log(`📡 [V8] Navigating: ${TARGET_URL}`);
+        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded' });
         
-        console.log(`📍 [V7] Final URL: ${page.url()}`);
-        console.log(`📊 [V7] Status: ${response?.status() || 'unknown'}`);
-        console.log(`🏷️ [V6] Title: ${await page.title()}`);
+        console.log(`🏷️ [V8] Title: ${await page.title()}`);
 
         const magicDetector = async () => {
             return await page.evaluate(() => {
-                // Función auxiliar para limpiar números
                 const clean = (t) => {
                     if (!t) return null;
                     const n = parseInt(t.trim().replace(/[^0-9]/g, ''));
                     return (isNaN(n) || n < 0 || n > 36) ? null : n;
                 };
 
-                // 1. Selector Hardcoded (si funciona)
-                const primary = document.querySelector('div.flex.flex-col.gap-px > div:first-child span');
-                if (primary) {
-                    const n = clean(primary.innerText);
-                    if (n !== null) return n;
-                }
-
-                // 2. Magic Search: Buscar "Historial" y el número de abajo
-                const els = Array.from(document.querySelectorAll('*'));
-                const hIdx = els.findIndex(e => e.innerText && e.innerText.includes('Historial'));
-                if (hIdx !== -1) {
-                    for(let i=hIdx; i < hIdx + 100 && i < els.length; i++) {
-                        const n = clean(els[i].innerText);
-                        if (n !== null && els[i].innerText.length <= 2) return n;
+                // Detector Mágico (V2)
+                const all = Array.from(document.querySelectorAll('span, div'));
+                const hist = all.find(e => e.innerText && e.innerText.includes('Historial'));
+                if (hist) {
+                    const idx = all.indexOf(hist);
+                    for(let i=idx; i < idx + 50 && i < all.length; i++) {
+                        const val = clean(all[i].innerText);
+                        if (val !== null && all[i].innerText.length <= 2) return val;
                     }
                 }
-
-                // 3. Cualquier span/div con número dentro de un flex
-                const guess = document.querySelector('div.flex span');
-                if (guess) return clean(guess.innerText);
-
-                return null;
+                
+                // Fallback directo
+                const p = document.querySelector('div.flex.flex-col > div:first-child span');
+                return p ? clean(p.innerText) : null;
             });
         };
 
-        // Esperar a que el JS pinte los números
-        await new Promise(r => setTimeout(r, 15000));
+        // Espera de seguridad para renderizado parcial
+        await new Promise(r => setTimeout(r, 10000));
 
         setInterval(async () => {
             try {
@@ -93,20 +97,18 @@ async function startDomScraper() {
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(detection),
-                        source: 'dom_v7_magic'
-                    }, { timeout: 5000 }).catch(() => {});
+                        source: 'dom_v8_light'
+                    }, { timeout: 4000 }).catch(() => {});
                     lastNum = detection;
                 }
             } catch (e) {
-                console.error(`⚠️ [DOM-T${TABLE_ID}] Loop error: ${e.message}`);
+                // Silencioso para no ensuciar el log
             }
-        }, 4000);
+        }, 5000);
 
     } catch (e) {
-        console.error(`❌ [DOM-T${TABLE_ID}] Bot Critical: ${e.message}`);
-        // Ver si nos bloquearon
-        const html = await page.content();
-        if (html.includes('Cloudflare') || html.includes('captcha')) console.error("🛑 BLOQUEO CLOUDFLARE DETECTADO");
+        console.error(`❌ [DOM-T${TABLE_ID}] Bot Crash: ${e.message}`);
+        if (browser) await browser.close().catch(() => {});
         process.exit(1);
     }
 }
