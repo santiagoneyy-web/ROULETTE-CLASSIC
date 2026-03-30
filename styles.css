@@ -509,6 +509,19 @@ html, body {
   box-shadow: 0 0 15px rgba(240, 64, 96, 0.5);
   transform: scale(1.1);
 }
+/* Blinking Transition (Golden Pulse) */
+.dozen-ball.dominant-transition {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(240, 192, 64, 0.1);
+  animation: pulse-transition 0.8s infinite alternate;
+  transform: scale(1.05);
+}
+
+@keyframes pulse-transition {
+  from { box-shadow: 0 0 5px rgba(240, 192, 64, 0.3); opacity: 0.8; }
+  to { box-shadow: 0 0 15px rgba(240, 192, 64, 0.7); opacity: 1; }
+}
 .dozens-info {
   text-align: center;
   font-size: 11px;

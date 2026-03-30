@@ -1,11 +1,19 @@
 /**
- * crawler.js — Casino.org Internal API Fetcher
- * Uses casino.org's own JSON API endpoints instead of DOM scraping.
- * This eliminates: ad issues, duplicate numbers, selenium detection, iframe confusion.
+ * crawler.js — Cloud-Stealth Scraper (Classic)
+ * Dual-mode: Uses Puppeteer locally and Hyper-Stealth Axios in the cloud.
  */
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+
+let puppeteer, StealthPlugin;
+try {
+    puppeteer = require('puppeteer-extra');
+    StealthPlugin = require('puppeteer-extra-plugin-stealth');
+    puppeteer.use(StealthPlugin());
+} catch (e) {
+    console.log("ℹ️ Puppeteer not found, falling back to Hyper-Stealth (Cloud Mode).");
+}
 
 const args = process.argv.slice(2);
 const getArg = (name, def) => {
@@ -14,165 +22,122 @@ const getArg = (name, def) => {
 };
 
 const TABLE_ID   = getArg('--table', '1');
-const TARGET_URL = getArg('--url', 'https://www.casino.org/casinoscores/es/immersive-roulette/');
-const API_URL    = getArg('--api', 'http://0.0.0.0:10000/api/spin');
-const INTERVAL   = parseInt(getArg('--interval', '12000'));
-
-// ── Casino.org API endpoint mapping (based on page URL) ───────
-function getCasinoApiUrl(pageUrl) {
-    const u = pageUrl.toLowerCase();
-    const BASE = 'https://api-cs.casino.org/svc-evolution-game-events/api';
-    if (u.includes('auto-roulette'))       return `${BASE}/autoroulette?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    if (u.includes('immersive-roulette'))  return `${BASE}/immersiveroulette?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    if (u.includes('speed-roulette'))      return `${BASE}/speedroulette?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    if (u.includes('lightning-roulette'))  return `${BASE}/lightningroulette?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    if (u.includes('roulette-1'))          return `${BASE}/roulette1?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    // Generic fallback: try to extract game slug from URL
-    const match = pageUrl.match(/casinoscores\/es\/([^\/]+)/);
-    if (match) {
-        const slug = match[1].replace(/-/g, '');
-        return `${BASE}/${slug}?page=0&size=20&sort=data.settledAt,desc&duration=6`;
-    }
-    return null;
-}
-
-// ── Logging ───────────────────────────────────────────────────
-const logDir = path.join(__dirname, 'logs', `table_${TABLE_ID}`);
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-const logFile = path.join(logDir, 'bot.log');
-
-const originalLog = console.log;
-console.log = function(...a) {
-    const msg = `[${new Date().toISOString()}] ` + a.join(' ');
-    originalLog(msg);
-    fs.appendFileSync(logFile, msg + '\n');
-};
-const originalError = console.error;
-console.error = function(...a) {
-    const msg = `[${new Date().toISOString()}] ERROR: ` + a.join(' ');
-    originalError(msg);
-    fs.appendFileSync(logFile, msg + '\n');
-};
-
-// ── State ─────────────────────────────────────────────────────
-let lastKnownEventId = null;
-let consecutiveErrors = 0;
-
-const CASINO_API_URL = getCasinoApiUrl(TARGET_URL);
+const TARGET_URL = getArg('--url', 'https://www.casino.org/casinoscores/es/auto-roulette/');
+const API_URL    = getArg('--api', 'http://localhost:3000/api/spin'); 
+const IS_CLOUD   = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || !puppeteer;
 
 async function startScraper() {
-    const delay = parseInt(getArg('--delay', '5000'));
-    console.log(`⏳ Waiting ${delay/1000}s for API server to stabilize...`);
-    await new Promise(r => setTimeout(r, delay));
-
-    console.log(`\n🤖 Starting API Scraper for Table ${TABLE_ID}`);
-    console.log(`🔗 Page: ${TARGET_URL}`);
-    console.log(`📡 Casino API: ${CASINO_API_URL}`);
-
-    if (!CASINO_API_URL) {
-        console.error('❌ Could not determine casino.org API URL from page URL. Exiting.');
-        return;
+    if (!IS_CLOUD) {
+        return startPuppeteer();
+    } else {
+        return startStealthAxios();
     }
-
-    poll();
 }
 
-async function poll() {
-    try {
-        // ── Fetch from casino.org API using native fetch to bypass Cloudflare ──
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        const response = await fetch(CASINO_API_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Referer': TARGET_URL,
-                'Origin': 'https://www.casino.org'
-            },
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+// ── HYPER-STEALTH AXIOS (For Render/Cloud) ────────────────────
+async function startStealthAxios() {
+    console.log(`\n☁️ Starting CLOUD-STEALTH Scraper (Classic) for Table ${TABLE_ID}`);
+    let lastKnownEventId = null;
 
-        if (!response.ok) {
-            throw new Error(`Request failed with status code ${response.status}`);
-        }
+    const poll = async () => {
+        try {
+            const slug = TARGET_URL.includes('immersive-roulette') ? 'immersiveroulette' : 'autoroulette';
+            const casinoApi = `https://api-cs.casino.org/svc-evolution-game-events/api/${slug}?page=0&size=20&sort=data.settledAt,desc&duration=6`;
 
-        const body = await response.json();
-        let events = Array.isArray(body) ? body : (body?.content || []);
+            const response = await axios.get(casinoApi, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Referer': TARGET_URL,
+                    'Origin': 'https://www.casino.org',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-site'
+                },
+                timeout: 10000
+            });
 
-        if (!events.length) {
-            console.log(`⚠️ [T${TABLE_ID}] API returned 0 events.`);
-            setTimeout(poll, INTERVAL);
-            return;
-        }
-
-        consecutiveErrors = 0;
-
-        // 1. Filter only RESOLVED events
-        const resolvedEvents = events.filter(e => e.data && e.data.status === 'Resolved');
-        
-        // 2. Find events NEWER than our last known ID
-        let newEvents = [];
-        if (!lastKnownEventId) {
-            // First run: send all 20 historical events to fill any gaps directly to the backend.
-            // The server's event_id duplicate guard will safely ignore any that are already in the DB.
-            newEvents = resolvedEvents.slice();
-        } else {
-            const lastIdx = resolvedEvents.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
+            const body = response.data;
+            let events = Array.isArray(body) ? body : (body?.content || []);
+            const resolved = events.filter(e => e.data && e.data.status === 'Resolved');
             
-            if (lastIdx === -1) {
-                // If last ID not found in the recent list (maybe we missed too many),
-                // take ALL 20 events to re-sync completely.
-                newEvents = resolvedEvents.slice(); 
-            } else if (lastIdx > 0) {
-                // Slice all elements from 0 to lastIdx (exclusive)
-                newEvents = resolvedEvents.slice(0, lastIdx);
+            let newEvents = [];
+            if (!lastKnownEventId) {
+                newEvents = [resolved[0]];
+            } else {
+                const idx = resolved.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
+                if (idx === -1) newEvents = [resolved[0]];
+                else if (idx > 0) newEvents = resolved.slice(0, idx);
             }
-        }
 
-        // 3. Post new events in CHRONOLOGICAL order (oldest to newest)
-        // Since original list is newest first, we reverse it.
-        const toPost = newEvents.reverse();
-
-        for (const ev of toPost) {
-            const evId = ev.data?.id || ev.id;
-            const num = ev.data?.result?.outcome?.number;
-            
-            // Critical: Extra check to prevent duplicate posts during rapid poll cycles
-            if (evId === lastKnownEventId) continue;
-
-            if (num !== undefined && num !== null) {
-                console.log(`✨ NEW SPIN [T${TABLE_ID}] EventId: ${evId} → Number: ${num}`);
-                try {
+            for (const ev of newEvents.reverse()) {
+                const evId = ev.data?.id || ev.id;
+                const num = ev.data?.result?.outcome?.number;
+                if (num !== undefined && num !== null && evId !== lastKnownEventId) {
+                    console.log(`✨ [CLOUD-T${TABLE_ID}] ${num}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(num),
-                        source: 'casino_api',
-                        event_id: evId // Pass ID for server-side guard too
-                    }, { timeout: 10000 });
-                    console.log(`✅ [T${TABLE_ID}] Posted: ${num}`);
-                    lastKnownEventId = evId; 
-                } catch (postErr) {
-                    console.error(`❌ [T${TABLE_ID}] API Post Error: ${postErr.message}`);
-                    break; // Stop and retry next poll if server is down
+                        source: 'cloud_stealth',
+                        event_id: evId
+                    }, { timeout: 5000 }).catch(() => {});
+                    lastKnownEventId = evId;
                 }
             }
+        } catch (e) {
+            console.error(`⚠️ [CLOUD-T${TABLE_ID}] Error: ${e.message}`);
         }
-
-
-    } catch (fetchErr) {
-        consecutiveErrors++;
-        console.error(`❌ [T${TABLE_ID}] Casino API Error (${consecutiveErrors}): ${fetchErr.message}`);
-        // Back off on repeated errors
-        if (consecutiveErrors > 5) {
-            console.log(`🔄 [T${TABLE_ID}] Multiple errors, extending retry interval...`);
-            setTimeout(poll, INTERVAL * 3);
-            return;
-        }
-    }
-
-    setTimeout(poll, INTERVAL);
+        setTimeout(poll, 12000 + (Math.random() * 5000));
+    };
+    poll();
 }
 
-startScraper();
+// ── PUPPETEER STEALTH (For Local) ───────────────────────────
+async function startPuppeteer() {
+    console.log(`\n🕵️ Starting Puppeteer Stealth (Local) for Table ${TABLE_ID}`);
+    const CHROME_PATHS = ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'];
+    let exePath = CHROME_PATHS.find(p => fs.existsSync(p));
+
+    const browser = await puppeteer.launch({
+        headless: true,
+        executablePath: exePath || null,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) req.abort();
+        else req.continue();
+    });
+
+    let lastId = null;
+    page.on('response', async (res) => {
+        if (res.url().includes('svc-evolution-game-events/api')) {
+            try {
+                const body = await res.json();
+                let events = Array.isArray(body) ? body : (body?.content || []);
+                const resolved = events.filter(e => e.data && e.data.status === 'Resolved');
+                if (resolved.length && (resolved[0].data?.id || resolved[0].id) !== lastId) {
+                    const num = resolved[0].data?.result?.outcome?.number;
+                    lastId = resolved[0].data?.id || resolved[0].id;
+                    console.log(`✨ [LOCAL-T${TABLE_ID}] ${num}`);
+                    await axios.post(API_URL, {
+                        table_id: parseInt(TABLE_ID),
+                        number: parseInt(num),
+                        source: 'stealth_bot',
+                        event_id: lastId
+                    }).catch(() => {});
+                }
+            } catch (e) {}
+        }
+    });
+
+    try {
+        await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
+        console.log(`✅ Monitoring Table ${TABLE_ID}...`);
+    } catch (e) {
+        process.exit(1);
+    }
+}
+
+startScraper().catch(() => process.exit(1));

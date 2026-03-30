@@ -1,41 +1,32 @@
 @echo off
-title ROULETTE CLASSIC - LOCAL SERVER
-echo ==========================================
-echo  ROULETTE CLASSIC - INICIANDO LOCAL...
-echo ==========================================
+echo.
+echo 🚀 --- SISTEMA ANTI-BLOQUEO ROULETTE CLASSIC ---
 echo.
 
-:: Ir al directorio del proyecto
+:: Moverse a la carpeta del script
 cd /d "%~dp0"
 
-:: Verificar que node_modules exista
-if not exist "node_modules" (
-    echo [SETUP] Instalando dependencias...
-    npm install
+echo [1/3] Verificando Node.js...
+node -v >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: Node.js no esta instalado o no esta en el PATH.
+    pause
+    exit /b
 )
 
-:: Abrir ventana del Servidor en una nueva consola
-echo [1/3] Iniciando Servidor Web en puerto 3000...
-start "SERVIDOR WEB" cmd /k "cd /d %~dp0 && node server.js"
+echo [2/3] Instalando/Actualizando motores de busqueda (Puppeteer)...
+echo      Esto puede tardar un poco... no cierres la ventana.
+call npm install --no-audit --no-fund
+call npx puppeteer browsers install chrome
 
-:: Esperar 4 segundos para que el servidor arranque
-timeout /t 4 /nobreak > nul
-
-:: Abrir ventana del Bot 1 (Auto Roulette)
-echo [2/3] Iniciando BOT-1 (Auto Roulette)...
-start "BOT-1 AUTO ROULETTE" cmd /k "cd /d %~dp0 && node crawler.js --table 1 --url https://www.casino.org/casinoscores/es/auto-roulette/ --api http://localhost:3000/api/spin --interval 12000"
-
-:: Esperar 2 segundos
-timeout /t 2 /nobreak > nul
-
-:: Abrir ventana del Bot 2 (Immersive Roulette)
-echo [3/3] Iniciando BOT-2 (Immersive Roulette)...
-start "BOT-2 IMMERSIVE ROULETTE" cmd /k "cd /d %~dp0 && node crawler.js --table 2 --url https://www.casino.org/casinoscores/es/immersive-roulette/ --api http://localhost:3000/api/spin --interval 15000"
-
+echo [3/3] Arrancando Servidor y Bots...
 echo.
-echo ==========================================
-echo  TODO CORRIENDO! Abre tu navegador en:
-echo  http://localhost:3000
-echo ==========================================
-echo.
+
+npx concurrently -n "SERV,BOT1,BOT2" -c "blue,magenta,cyan" "node server.js" "node crawler.js --table 1 --url https://www.casino.org/casinoscores/es/auto-roulette/ --delay 2000" "node crawler.js --table 2 --url https://www.casino.org/casinoscores/es/immersive-roulette/ --delay 4000"
+
+if %errorlevel% neq 0 (
+    echo.
+    echo ❌ El sistema se detuvo con un error.
+    pause
+)
 pause

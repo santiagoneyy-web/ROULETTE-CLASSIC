@@ -294,18 +294,17 @@ function renderDozens() {
                 cur = top2;
                 spins = 0;
             } else {
-                // STICKY LOGIC: Only switch if the "outsider" dozen has significantly 
-                // more momentum than a current dominant member.
+                // STICKY LOGIC: Only switch if the "outsider" has a CLEAR lead (+2)
+                // over the current dominant members to avoid flipping on every small change.
                 const outsider = [1,2,3].find(d => !cur.includes(d));
-                const lowerDominant = cur[0]; // arbitrary, we check both
-                const higherDominant = cur[1];
+                const dom1 = cur[0]; 
+                const dom2 = cur[1];
                 
-                // If outsider is now clearly stronger than at least ONE dominant member
-                // (Difference > 1 ensures it's not just a momentary fluke)
-                const shouldSwitch = counts[outsider] > counts[lowerDominant] || counts[outsider] > counts[higherDominant];
+                // Must be strictly stronger than at least one dominant by a margin of 1 (difference >= 2)
+                const shouldSwitch = (counts[outsider] > counts[dom1] + 1) || (counts[outsider] > counts[dom2] + 1);
 
                 if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
-                    // Dominance Shift
+                    // Start TRANSITION
                     prev = [...cur];
                     cur = top2;
                     spins = 0;
@@ -320,12 +319,25 @@ function renderDozens() {
         dzPrevious = prev;
         dzSpinsSinceChange = spins;
 
-        // UI: Dozen balls highlight
+        // UI: Dozen balls highlight logic (REFINED)
         [1,2,3].forEach(dz => {
             const el = document.getElementById(`dz-${dz}`);
-            if(el) {
+            if(!el) return;
+            
+            el.classList.remove('dominant', 'dominant-transition');
+            
+            if (spins > 10) {
+                // STABLE MODE: Highlight the current (new) dominants
                 if (cur.includes(dz)) el.classList.add('dominant');
-                else el.classList.remove('dominant');
+            } else {
+                // TRANSITION/CONSOLIDATION MODE:
+                // Special case: blink the PREVIOUS dominants until stability is reached
+                if (prev.length > 0) {
+                   if (prev.includes(dz)) el.classList.add('dominant-transition');
+                } else {
+                   // Initial state (no previous) -> just highlight current
+                   if (cur.includes(dz)) el.classList.add('dominant');
+                }
             }
         });
 
@@ -344,18 +356,15 @@ function renderDozens() {
         // Transition status indicator
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
-            if (spins <= 4 && prev.length > 0) {
-                // Just switched or new: Warning
+            if (spins <= 5 && prev.length > 0) {
                 statusEl.innerText = `⚠️ TRANSICIÓN (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = '⇨';
-            } else if (spins <= 8) {
-                // Consolidating
+                if (arrow) arrow.innerText = '→';
+            } else if (spins <= 10) {
                 statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.style.color = 'var(--text2)';
+                if (arrow) arrow.innerText = '→';
             } else {
-                // Stable
                 statusEl.innerText = `✅ ESTABLE (${spins}t)`;
                 statusEl.classList.add('stable');
                 if (arrow) arrow.innerText = '•';

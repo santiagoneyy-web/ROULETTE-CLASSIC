@@ -500,6 +500,11 @@ app.get('/api/stats/:tableId', (req, res) => {
     });
 });
 
+// Catch-all: Siempre servir el frontend para cualquier ruta no reconocida
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // ---- Start ----
 const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n🎰 Roulette Predictor Server running at http://0.0.0.0:${PORT}`);
