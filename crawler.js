@@ -42,43 +42,57 @@ async function startStealthAxios() {
     const poll = async () => {
         try {
             const slug = TARGET_URL.includes('immersive-roulette') ? 'immersiveroulette' : 'autoroulette';
-            const casinoApi = `https://api-cs.casino.org/svc-evolution-game-events/api/${slug}?page=0&size=20&sort=data.settledAt,desc&duration=6`;
+            const casinoApi = `https://api-cs.casino.org/svc-evolution-game-events/api/${slug}/latest`;
 
             const response = await axios.get(casinoApi, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Referer': TARGET_URL,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+                    'Accept': '*/*',
+                    'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br, zstd',
+                    'Referer': 'https://www.casino.org/',
                     'Origin': 'https://www.casino.org',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'same-site'
+                    'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'same-site',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 },
                 timeout: 10000
             });
 
             const body = response.data;
-            let events = Array.isArray(body) ? body : (body?.content || []);
-            const resolved = events.filter(e => e.data && e.data.status === 'Resolved');
+            let events = [];
+            if (Array.isArray(body)) events = body;
+            else if (body?.content) events = body.content;
+            else if (body?.data) events = [body.data];
+            else if (body?.id) events = [body]; // Single event case
+
+            const resolved = events.filter(e => e && (e.data?.status === 'Resolved' || e.status === 'Resolved' || e.result));
             
             let newEvents = [];
-            if (!lastKnownEventId) {
-                newEvents = [resolved[0]];
-            } else {
-                const idx = resolved.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
-                if (idx === -1) newEvents = [resolved[0]];
-                else if (idx > 0) newEvents = resolved.slice(0, idx);
+            if (resolved.length > 0) {
+                if (!lastKnownEventId) {
+                    newEvents = [resolved[0]];
+                } else {
+                    const idx = resolved.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
+                    if (idx === -1) newEvents = [resolved[0]];
+                    else if (idx > 0) newEvents = resolved.slice(0, idx);
+                }
             }
 
             for (const ev of newEvents.reverse()) {
                 const evId = ev.data?.id || ev.id;
-                const num = ev.data?.result?.outcome?.number;
+                const num = ev.data?.result?.outcome?.number !== undefined ? ev.data.result.outcome.number : ev.result?.outcome?.number;
                 if (num !== undefined && num !== null && evId !== lastKnownEventId) {
                     console.log(`✨ [CLOUD-T${TABLE_ID}] ${num}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(num),
-                        source: 'cloud_stealth',
+                        source: 'cloud_stealth_v2',
                         event_id: evId
                     }, { timeout: 5000 }).catch(() => {});
                     lastKnownEventId = evId;
@@ -87,7 +101,9 @@ async function startStealthAxios() {
         } catch (e) {
             console.error(`⚠️ [CLOUD-T${TABLE_ID}] Error: ${e.message}`);
         }
-        setTimeout(poll, 12000 + (Math.random() * 5000));
+        // Randomized delay: 10-18 seconds
+        const nextDelay = 10000 + Math.floor(Math.random() * 8000);
+        setTimeout(poll, nextDelay);
     };
     poll();
 }
