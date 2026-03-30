@@ -6,45 +6,39 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-let puppeteer, StealthPlugin;
-try {
-    puppeteer = require('puppeteer-extra');
-    StealthPlugin = require('puppeteer-extra-plugin-stealth');
-    puppeteer.use(StealthPlugin());
-} catch (e) {
-    console.log("ℹ️ Puppeteer not found, falling back to Hyper-Stealth (Cloud Mode).");
-}
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 
-const args = process.argv.slice(2);
-const getArg = (name, def) => {
-    const idx = args.indexOf(name);
-    return (idx > -1 && args[idx+1]) ? args[idx+1] : def;
-};
+const axios     = require('axios');
+const fs        = require('fs');
+const path      = require('path');
 
-const TABLE_ID   = getArg('--table', '1');
-const TARGET_URL = getArg('--url', 'https://www.casino.org/casinoscores/es/auto-roulette/');
-const API_URL    = getArg('--api', 'http://localhost:3000/api/spin'); 
-const IS_CLOUD   = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || !puppeteer;
+// ── CONFIG ────────────────────────────────────────────────────
+const args = process.argv.slice(2).reduce((acc, arg, i, arr) => {
+    if (arg.startsWith('--')) acc[arg.slice(2)] = arr[i+1];
+    return acc;
+}, {});
+
+const TABLE_ID   = args.table || 1;
+const TARGET_URL = args.url   || "https://www.casino.org/casinoscores/es/auto-roulette/";
+const API_URL    = args.api   || "http://127.0.0.1:3000/api/spin";
+const IS_CLOUD   = process.env.RENDER || process.env.RENDER_EXTERNAL_URL;
 
 async function startScraper() {
     if (IS_CLOUD) {
-        // En la nube, usamos "Lectura Directa" del DOM para evitar bloqueos 403 de la API
         return startDomScraper();
     } else {
-        // En local, seguimos usando el interceptor de red por ser más rápido
-        return startPuppeteer();
+        // En local usamos el interceptor de red
+        const puppeteerVanilla = require('puppeteer'); 
+        return startPuppeteer(puppeteerVanilla);
     }
 }
 
-// ── DOM-BASED SCRAPER (For Render/Cloud) ──────────────────────
+// ── DOM-BASED SCRAPER (V5 - Deep Search) ──────────────────────
 async function startDomScraper() {
-    console.log(`\n📺 Starting DOM-READING Scraper (Classic) for Table ${TABLE_ID}`);
+    console.log(`\n📺 [V5] Starting Deep-DOM Scraper for Table ${TABLE_ID}`);
     let lastNum = null;
-
-    if (!puppeteer) {
-        console.error("❌ ERROR: Puppeteer not available for DOM Scraping.");
-        process.exit(1);
-    }
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -53,82 +47,82 @@ async function startDomScraper() {
             '--disable-setuid-sandbox', 
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--disable-software-rasterizer',
             '--no-zygote',
-            '--single-process' // Reduce RAM significantly
+            '--single-process'
         ]
     });
 
     const page = await browser.newPage();
-    // Bloquear solo lo ABSOLUTAMENTE pesado para no romper el renderizado
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+    // Bloquear solo lo realmente pesado
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if (['image', 'media', 'font'].includes(req.resourceType())) {
-            req.abort();
-        } else {
-            req.continue();
-        }
+        if (['image', 'media', 'font'].includes(req.resourceType())) req.abort();
+        else req.continue();
     });
 
     try {
-        console.log(`📡 Navigating to: ${TARGET_URL}`);
+        console.log(`📡 [V5] Navigating: ${TARGET_URL}`);
         await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
-        console.log(`📍 Actual URL: ${page.url()}`);
-        
-        // Lista de posibles selectores si el diseño cambia
-        const selectors = [
-            'div.flex.flex-col.gap-px > div:first-child span', // Tabla Historial
-            'div.flex.overflow-x-scroll > div:first-child span', // Fila superior (si existe)
-            '.history-number', // Clásicos
-            'div[class*="History"] div:first-child span' // Genérico por clase
-        ];
+        console.log(`📍 [V5] URL: ${page.url()}`);
 
-        let activeSelector = null;
-        for (const sel of selectors) {
-            try {
-                await page.waitForSelector(sel, { timeout: 15000 });
-                activeSelector = sel;
-                console.log(`✅ Selector found: ${sel}`);
-                break;
-            } catch (e) {
-                console.log(`🔁 Selector ${sel} failed, trying next...`);
-            }
-        }
+        const findNumber = async () => {
+            return await page.evaluate(() => {
+                // 1. Intentar por selectores conocidos
+                const primary = document.querySelector('div.flex.flex-col.gap-px > div:first-child span');
+                if (primary && primary.innerText) {
+                    const n = parseInt(primary.innerText.replace(/[^0-9]/g, ''));
+                    if (!isNaN(n)) return n;
+                }
 
-        if (!activeSelector) {
-            console.error("❌ FAILED: All selectors failed. The page layout might be blocked or different.");
-            // Loguear el contenido HTML básico para debuguear en Render
-            const content = await page.evaluate(() => document.body.innerText.substring(0, 500));
-            console.log(`📄 Page Text Preview: ${content}...`);
-            await browser.close();
-            process.exit(1);
-        }
+                // 2. Búsqueda profunda: buscar "Historial" y el primer número cercano
+                const allSpans = Array.from(document.querySelectorAll('span, div'));
+                const historyIdx = allSpans.findIndex(s => s.innerText && s.innerText.includes('Historial'));
+                if (historyIdx !== -1) {
+                    // Buscar números en los siguientes 50 elementos
+                    for (let i = historyIdx; i < Math.min(historyIdx + 50, allSpans.length); i++) {
+                        const txt = allSpans[i].innerText.trim();
+                        if (txt.length > 0 && txt.length <= 2) {
+                            const n = parseInt(txt);
+                            if (!isNaN(n) && n >= 0 && n <= 36) return n;
+                        }
+                    }
+                }
+
+                // 3. Último recurso: cualquier span con clase flex-col gap-px
+                const fallback = document.querySelector('[class*="History"] span');
+                if (fallback) {
+                    const n = parseInt(fallback.innerText.replace(/[^0-9]/g, ''));
+                    if (!isNaN(n)) return n;
+                }
+                return null;
+            });
+        };
+
+        // Esperar un poco a que cargue el JS dinámico
+        await new Promise(r => setTimeout(r, 10000));
 
         setInterval(async () => {
             try {
-                const detection = await page.evaluate((sel) => {
-                    const el = document.querySelector(sel);
-                    if (!el) return null;
-                    const val = parseInt(el.innerText.replace(/[^0-9]/g, ''));
-                    return isNaN(val) ? null : val;
-                }, activeSelector);
-
+                const detection = await findNumber();
                 if (detection !== null && detection !== lastNum) {
-                    console.log(`✨ [DOM-T${TABLE_ID}] Detectado: ${detection}`);
+                    console.log(`✨ [DOM-T${TABLE_ID}] New: ${detection}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(detection),
-                        source: 'dom_scraper_v4'
+                        source: 'dom_v5_deep'
                     }, { timeout: 5000 }).catch(() => {});
                     lastNum = detection;
                 }
             } catch (e) {
-                console.error(`⚠️ [DOM-T${TABLE_ID}] Read error: ${e.message}`);
+                console.error(`⚠️ [DOM-T${TABLE_ID}] Loop error: ${e.message}`);
             }
-        }, 3000 + Math.random() * 2000);
+        }, 4000);
 
     } catch (e) {
-        console.error(`❌ [DOM-T${TABLE_ID}] Navigation failed: ${e.message}`);
+        console.error(`❌ [DOM-T${TABLE_ID}] Startup failed: ${e.message}`);
         await browser.close();
         process.exit(1);
     }
