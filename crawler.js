@@ -42,31 +42,37 @@ async function startDomScraper() {
 
     const browser = await puppeteer.launch({
         headless: true,
+        ignoreDefaultArgs: ['--enable-automation'], // Muy importante para evadir detección
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox', 
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--no-zygote',
-            '--single-process'
+            '--single-process',
+            '--disable-blink-features=AutomationControlled'
         ]
     });
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    // User-Agent más "real" y común
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-    // Bloquear solo lo realmente pesado
+    // Bloquear solo imágenes
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if (['image', 'media', 'font'].includes(req.resourceType())) req.abort();
+        if (['image'].includes(req.resourceType())) req.abort();
         else req.continue();
     });
 
     try {
-        console.log(`📡 [V5] Navigating: ${TARGET_URL}`);
-        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
-        console.log(`📍 [V5] URL: ${page.url()}`);
+        console.log(`📡 [V6] Navigating: ${TARGET_URL}`);
+        const response = await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
+        
+        console.log(`📍 [V6] Final URL: ${page.url()}`);
+        console.log(`🏷️ [V6] Page Title: ${await page.title()}`);
+        console.log(`📊 [V6] Status Code: ${response?.status() || 'unknown'}`);
 
         const findNumber = async () => {
             return await page.evaluate(() => {
