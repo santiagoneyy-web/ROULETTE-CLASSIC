@@ -80,19 +80,31 @@ function projectNextRound(history, stats) {
 }
 
 function computeDealerSignature(history) {
-    if (history.length < 2) return { directionState: 'measuring', recommendedPlay: 'NONE', avgTravel: null };
+    if (history.length < 12) return { directionState: 'measuring', recommendedPlay: 'CHARGING', avgTravel: 0 };
+    
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(getDistance(history[i-1], history[i]));
     
-    const lastT = travels[travels.length - 1];
-    const state = Math.abs(lastT) <= 9 ? 'stable' : 'chaos';
-    const rec = lastT > 0 ? 'BIG' : 'SMALL';
+    // Recent sample (last 10 travels)
+    const recentTravels = travels.slice(-10);
+    const avg = recentTravels.reduce((a,b) => a+b, 0) / recentTravels.length;
+    
+    // Calculate variability (Stability)
+    const variance = recentTravels.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / recentTravels.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // A stable dealer has a low standard deviation in their throw distance
+    const state = stdDev <= 6 ? 'STABLE' : (stdDev <= 10 ? 'ZIGZAG' : 'CHAOS');
+    
+    // Recommendation based on the weighted trend
+    const rec = avg > 0 ? 'BIG (CW)' : 'SMALL (CCW)';
     
     return { 
         directionState: state, 
         recommendedPlay: rec, 
-        avgTravel: lastT, 
-        travelHistory: travels,
+        avgTravel: Math.round(avg * 10) / 10, 
+        stdDev: Math.round(stdDev * 10) / 10,
+        travelHistory: recentTravels,
         casilla5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 5) % 37],
         casilla14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 14) % 37],
         casillaNeg5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 5 + 37) % 37],

@@ -676,36 +676,25 @@ function renderTravelPanel() {
         return;
     }
 
-    // Pattern badge
+    // Pattern & SD badges using predictor.js
     if (patEl) {
-        const last5 = history.slice(-5);
-        const bigCount   = last5.filter(n => n >= 10 && n <= 19).length;
-        const smallCount = last5.filter(n => n >= 1 && n <= 9).length;
-        const dirs = [];
-        const scanLength = 7; // Last 7 numbers gives up to 6 directions
-        const startIndex = Math.max(1, history.length - scanLength);
-        for (let i = startIndex; i < history.length; i++) {
-            const dist = calcDist(history[i-1], history[i]);
-            if (dist !== 0) {
-                dirs.push(dist > 0 ? 'D' : 'I');
-            }
-        }
+        const dealerSig = computeDealerSignature(history);
+        let pat = dealerSig.directionState;
+        let patClass = 'badge-stable';
         
-        let changes = 0;
-        for (let i = 1; i < dirs.length; i++) {
-            if (dirs[i] !== dirs[i-1]) changes++;
-        }
-        
-        // ZIG ZAG (Volátil): Al menos 4 direcciones registradas, y cambia constantemente (>= 3 cortes)
-        const isZigZagDir = dirs.length >= 4 && changes >= 3;
-        
-        let pat = 'ESTABLE', patClass = 'badge-stable';
-        if (isZigZagDir) { pat = 'ZIG ZAG ↔'; patClass = 'badge-zigzag'; }
-        else if (bigCount >= 3) { pat = 'BIG TREND'; patClass = 'badge-zone'; }
-        else if (smallCount >= 3) { pat = 'SMALL TREND'; patClass = 'badge-stable'; }
+        if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
+        else if (pat === 'CHAOS') patClass = 'badge-zone'; // Red color for chaos
         
         patEl.textContent = pat;
         patEl.className = `badge ${patClass}`;
+        
+        const sdEl = document.getElementById('travel-sd');
+        if (sdEl) {
+            sdEl.textContent = `SD: ${dealerSig.stdDev || '0.0'}`;
+            if (dealerSig.stdDev > 10) sdEl.style.borderColor = 'var(--red)';
+            else if (dealerSig.stdDev > 6) sdEl.style.borderColor = 'var(--gold)';
+            else sdEl.style.borderColor = 'var(--green)';
+        }
     }
 
     const lastN = history[history.length - 1];
