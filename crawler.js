@@ -1,11 +1,3 @@
-/**
- * crawler.js — Cloud-Stealth Scraper (Classic)
- * Dual-mode: Uses Puppeteer locally and Hyper-Stealth Axios in the cloud.
- */
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
@@ -23,26 +15,15 @@ const args = process.argv.slice(2).reduce((acc, arg, i, arr) => {
 const TABLE_ID   = args.table || 1;
 const TARGET_URL = args.url   || "https://www.casino.org/casinoscores/es/auto-roulette/";
 const API_URL    = args.api   || "http://127.0.0.1:3000/api/spin";
-const IS_CLOUD   = process.env.RENDER || process.env.RENDER_EXTERNAL_URL;
 
-async function startScraper() {
-    if (IS_CLOUD) {
-        return startDomScraper();
-    } else {
-        // En local usamos el interceptor de red
-        const puppeteerVanilla = require('puppeteer'); 
-        return startPuppeteer(puppeteerVanilla);
-    }
-}
-
-// ── DOM-BASED SCRAPER (V5 - Deep Search) ──────────────────────
+// ── DOM-BASED SCRAPER (V7 - Magic Detector) ──────────────────
 async function startDomScraper() {
-    console.log(`\n📺 [V5] Starting Deep-DOM Scraper for Table ${TABLE_ID}`);
+    console.log(`\n📺 [V7] Starting Magic-DOM Scraper for Table ${TABLE_ID}`);
     let lastNum = null;
 
     const browser = await puppeteer.launch({
         headless: true,
-        ignoreDefaultArgs: ['--enable-automation'], // Muy importante para evadir detección
+        ignoreDefaultArgs: ['--enable-automation'],
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox', 
@@ -55,70 +36,64 @@ async function startDomScraper() {
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
-    // User-Agent más "real" y común
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-
-    // Bloquear solo imágenes
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-        if (['image'].includes(req.resourceType())) req.abort();
-        else req.continue();
-    });
+    // Identidad de iPhone para saltar protecciones de escritorio
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
+    await page.setViewport({ width: 390, height: 844 });
 
     try {
-        console.log(`📡 [V6] Navigating: ${TARGET_URL}`);
+        console.log(`📡 [V7] Navigating: ${TARGET_URL}`);
         const response = await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
         
-        console.log(`📍 [V6] Final URL: ${page.url()}`);
-        console.log(`🏷️ [V6] Page Title: ${await page.title()}`);
-        console.log(`📊 [V6] Status Code: ${response?.status() || 'unknown'}`);
+        console.log(`📍 [V7] Final URL: ${page.url()}`);
+        console.log(`📊 [V7] Status: ${response?.status() || 'unknown'}`);
+        console.log(`🏷️ [V6] Title: ${await page.title()}`);
 
-        const findNumber = async () => {
+        const magicDetector = async () => {
             return await page.evaluate(() => {
-                // 1. Intentar por selectores conocidos
+                // Función auxiliar para limpiar números
+                const clean = (t) => {
+                    if (!t) return null;
+                    const n = parseInt(t.trim().replace(/[^0-9]/g, ''));
+                    return (isNaN(n) || n < 0 || n > 36) ? null : n;
+                };
+
+                // 1. Selector Hardcoded (si funciona)
                 const primary = document.querySelector('div.flex.flex-col.gap-px > div:first-child span');
-                if (primary && primary.innerText) {
-                    const n = parseInt(primary.innerText.replace(/[^0-9]/g, ''));
-                    if (!isNaN(n)) return n;
+                if (primary) {
+                    const n = clean(primary.innerText);
+                    if (n !== null) return n;
                 }
 
-                // 2. Búsqueda profunda: buscar "Historial" y el primer número cercano
-                const allSpans = Array.from(document.querySelectorAll('span, div'));
-                const historyIdx = allSpans.findIndex(s => s.innerText && s.innerText.includes('Historial'));
-                if (historyIdx !== -1) {
-                    // Buscar números en los siguientes 50 elementos
-                    for (let i = historyIdx; i < Math.min(historyIdx + 50, allSpans.length); i++) {
-                        const txt = allSpans[i].innerText.trim();
-                        if (txt.length > 0 && txt.length <= 2) {
-                            const n = parseInt(txt);
-                            if (!isNaN(n) && n >= 0 && n <= 36) return n;
-                        }
+                // 2. Magic Search: Buscar "Historial" y el número de abajo
+                const els = Array.from(document.querySelectorAll('*'));
+                const hIdx = els.findIndex(e => e.innerText && e.innerText.includes('Historial'));
+                if (hIdx !== -1) {
+                    for(let i=hIdx; i < hIdx + 100 && i < els.length; i++) {
+                        const n = clean(els[i].innerText);
+                        if (n !== null && els[i].innerText.length <= 2) return n;
                     }
                 }
 
-                // 3. Último recurso: cualquier span con clase flex-col gap-px
-                const fallback = document.querySelector('[class*="History"] span');
-                if (fallback) {
-                    const n = parseInt(fallback.innerText.replace(/[^0-9]/g, ''));
-                    if (!isNaN(n)) return n;
-                }
+                // 3. Cualquier span/div con número dentro de un flex
+                const guess = document.querySelector('div.flex span');
+                if (guess) return clean(guess.innerText);
+
                 return null;
             });
         };
 
-        // Esperar un poco a que cargue el JS dinámico
-        await new Promise(r => setTimeout(r, 10000));
+        // Esperar a que el JS pinte los números
+        await new Promise(r => setTimeout(r, 15000));
 
         setInterval(async () => {
             try {
-                const detection = await findNumber();
+                const detection = await magicDetector();
                 if (detection !== null && detection !== lastNum) {
-                    console.log(`✨ [DOM-T${TABLE_ID}] New: ${detection}`);
+                    console.log(`✨ [DOM-T${TABLE_ID}] Detectado: ${detection}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
                         number: parseInt(detection),
-                        source: 'dom_v5_deep'
+                        source: 'dom_v7_magic'
                     }, { timeout: 5000 }).catch(() => {});
                     lastNum = detection;
                 }
@@ -128,58 +103,12 @@ async function startDomScraper() {
         }, 4000);
 
     } catch (e) {
-        console.error(`❌ [DOM-T${TABLE_ID}] Startup failed: ${e.message}`);
-        await browser.close();
+        console.error(`❌ [DOM-T${TABLE_ID}] Bot Critical: ${e.message}`);
+        // Ver si nos bloquearon
+        const html = await page.content();
+        if (html.includes('Cloudflare') || html.includes('captcha')) console.error("🛑 BLOQUEO CLOUDFLARE DETECTADO");
         process.exit(1);
     }
 }
 
-// ── PUPPETEER STEALTH (For Local) ───────────────────────────
-async function startPuppeteer() {
-    console.log(`\n🕵️ Starting Puppeteer Stealth (Local) for Table ${TABLE_ID}`);
-    const CHROME_PATHS = ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'];
-    let exePath = CHROME_PATHS.find(p => fs.existsSync(p));
-
-    const browser = await puppeteer.launch({
-        headless: true,
-        executablePath: exePath || null,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-        if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) req.abort();
-        else req.continue();
-    });
-
-    let lastId = null;
-    page.on('response', async (res) => {
-        if (res.url().includes('svc-evolution-game-events/api')) {
-            try {
-                const body = await res.json();
-                let events = Array.isArray(body) ? body : (body?.content || []);
-                const resolved = events.filter(e => e.data && e.data.status === 'Resolved');
-                if (resolved.length && (resolved[0].data?.id || resolved[0].id) !== lastId) {
-                    const num = resolved[0].data?.result?.outcome?.number;
-                    lastId = resolved[0].data?.id || resolved[0].id;
-                    console.log(`✨ [LOCAL-T${TABLE_ID}] ${num}`);
-                    await axios.post(API_URL, {
-                        table_id: parseInt(TABLE_ID),
-                        number: parseInt(num),
-                        source: 'stealth_bot',
-                        event_id: lastId
-                    }).catch(() => {});
-                }
-            } catch (e) {}
-        }
-    });
-
-    try {
-        await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
-        console.log(`✅ Monitoring Table ${TABLE_ID}...`);
-    } catch (e) {
-        process.exit(1);
-    }
-}
-
-startScraper().catch(() => process.exit(1));
+startDomScraper();

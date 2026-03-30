@@ -9,11 +9,13 @@ module.exports = function startBots(port) {
 
     // Bot 1 arranca de inmediato
     console.log("   [BOOT] Launching BOT-1 (Auto)...");
-    concurrently([{ command: bot1Cmd, name: 'BOT-1', prefixColor: 'magenta' }], { prefix: 'name', restartTries: 5 });
+    const { result: r1 } = concurrently([{ command: bot1Cmd, name: 'BOT-1', prefixColor: 'magenta' }], { prefix: 'name', restartTries: 5 });
+    r1.catch(() => {}); // Prevenir UnhandledPromiseRejection
 
     // Bot 2 arranca tras 45 segundos para no saturar la RAM al inicio
     setTimeout(() => {
         console.log("   [BOOT] Launching BOT-2 (Immersive) after stagger delay...");
-        concurrently([{ command: bot2Cmd, name: 'BOT-2', prefixColor: 'cyan' }], { prefix: 'name', restartTries: 5 });
+        const { result: r2 } = concurrently([{ command: bot2Cmd, name: 'BOT-2', prefixColor: 'cyan' }], { prefix: 'name', restartTries: 5 });
+        r2.catch(() => {}); // Prevenir UnhandledPromiseRejection
     }, 45000);
 };
