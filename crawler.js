@@ -27,85 +27,76 @@ const API_URL    = getArg('--api', 'http://localhost:3000/api/spin');
 const IS_CLOUD   = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || !puppeteer;
 
 async function startScraper() {
-    if (!IS_CLOUD) {
-        return startPuppeteer();
+    if (IS_CLOUD) {
+        // En la nube, usamos "Lectura Directa" del DOM para evitar bloqueos 403 de la API
+        return startDomScraper();
     } else {
-        return startStealthAxios();
+        // En local, seguimos usando el interceptor de red por ser más rápido
+        return startPuppeteer();
     }
 }
 
-// ── HYPER-STEALTH AXIOS (For Render/Cloud) ────────────────────
-async function startStealthAxios() {
-    console.log(`\n☁️ Starting CLOUD-STEALTH Scraper (Classic) for Table ${TABLE_ID}`);
-    let lastKnownEventId = null;
+// ── DOM-BASED SCRAPER (For Render/Cloud) ──────────────────────
+async function startDomScraper() {
+    console.log(`\n📺 Starting DOM-READING Scraper (Classic) for Table ${TABLE_ID}`);
+    let lastNum = null;
 
-    const poll = async () => {
-        try {
-            const slug = TARGET_URL.includes('immersive-roulette') ? 'immersiveroulette' : 'autoroulette';
-            const casinoApi = `https://api-cs.casino.org/svc-evolution-game-events/api/${slug}/latest`;
+    if (!puppeteer) {
+        console.error("❌ ERROR: Puppeteer not available for DOM Scraping.");
+        process.exit(1);
+    }
 
-            const response = await axios.get(casinoApi, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
-                    'Accept': '*/*',
-                    'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, br, zstd',
-                    'Referer': 'https://www.casino.org/',
-                    'Origin': 'https://www.casino.org',
-                    'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'same-site',
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                },
-                timeout: 10000
-            });
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
 
-            const body = response.data;
-            let events = [];
-            if (Array.isArray(body)) events = body;
-            else if (body?.content) events = body.content;
-            else if (body?.data) events = [body.data];
-            else if (body?.id) events = [body]; // Single event case
+    const page = await browser.newPage();
+    // Bloquear recursos pesados para ahorrar RAM en Render
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
+        else req.continue();
+    });
 
-            const resolved = events.filter(e => e && (e.data?.status === 'Resolved' || e.status === 'Resolved' || e.result));
-            
-            let newEvents = [];
-            if (resolved.length > 0) {
-                if (!lastKnownEventId) {
-                    newEvents = [resolved[0]];
-                } else {
-                    const idx = resolved.findIndex(e => (e.data?.id || e.id) === lastKnownEventId);
-                    if (idx === -1) newEvents = [resolved[0]];
-                    else if (idx > 0) newEvents = resolved.slice(0, idx);
-                }
-            }
+    try {
+        console.log(`📡 Navigating to: ${TARGET_URL}`);
+        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 60000 });
+        
+        // El contenedor de los resultados en casino.org
+        const selector = 'div.flex.flex-col.gap-px > div:first-child span';
+        await page.waitForSelector(selector, { timeout: 30000 });
+        console.log("✅ DOM Loaded. Reading numbers...");
 
-            for (const ev of newEvents.reverse()) {
-                const evId = ev.data?.id || ev.id;
-                const num = ev.data?.result?.outcome?.number !== undefined ? ev.data.result.outcome.number : ev.result?.outcome?.number;
-                if (num !== undefined && num !== null && evId !== lastKnownEventId) {
-                    console.log(`✨ [CLOUD-T${TABLE_ID}] ${num}`);
+        setInterval(async () => {
+            try {
+                const detection = await page.evaluate((sel) => {
+                    const el = document.querySelector(sel);
+                    if (!el) return null;
+                    const val = parseInt(el.innerText);
+                    return isNaN(val) ? null : val;
+                }, selector);
+
+                if (detection !== null && detection !== lastNum) {
+                    console.log(`✨ [DOM-T${TABLE_ID}] Detectado: ${detection}`);
                     await axios.post(API_URL, {
                         table_id: parseInt(TABLE_ID),
-                        number: parseInt(num),
-                        source: 'cloud_stealth_v2',
-                        event_id: evId
+                        number: parseInt(detection),
+                        source: 'dom_scraper_v3',
+                        timestamp: new Date().toISOString()
                     }, { timeout: 5000 }).catch(() => {});
-                    lastKnownEventId = evId;
+                    lastNum = detection;
                 }
+            } catch (e) {
+                console.error(`⚠️ [DOM-T${TABLE_ID}] Read error: ${e.message}`);
             }
-        } catch (e) {
-            console.error(`⚠️ [CLOUD-T${TABLE_ID}] Error: ${e.message}`);
-        }
-        // Randomized delay: 10-18 seconds
-        const nextDelay = 10000 + Math.floor(Math.random() * 8000);
-        setTimeout(poll, nextDelay);
-    };
-    poll();
+        }, 8000 + Math.random() * 4000);
+
+    } catch (e) {
+        console.error(`❌ [DOM-T${TABLE_ID}] Failed to start: ${e.message}`);
+        await browser.close();
+        process.exit(1);
+    }
 }
 
 // ── PUPPETEER STEALTH (For Local) ───────────────────────────
