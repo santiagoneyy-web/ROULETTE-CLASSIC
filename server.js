@@ -500,8 +500,8 @@ app.get('/api/stats/:tableId', (req, res) => {
     });
 });
 
-// Catch-all: Siempre servir el frontend para cualquier ruta no reconocida
-app.get('/*', (req, res) => {
+// Catch-all: Siempre servir el frontend para cualquier ruta no reconocida (Middleware final)
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -510,7 +510,8 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n🎰 Roulette Predictor Server running at http://0.0.0.0:${PORT}`);
     console.log(`   API ready at:          http://0.0.0.0:${PORT}/api/\n`);
     
-    // 🔥 CRITICAL: Update table names if they exist but have old names (for Mongo)
+    // 🔥 MongoDB sync disabled by user request (using JSON only)
+    /*
     if (db.getUseMongo()) {
         try {
             const Table = require('./models/Table');
@@ -521,6 +522,7 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
             console.error('❌ [BOOT] Table sync error:', e.message);
         }
     }
+    */
 
     if (!process.env.DISABLE_BOTS) {
         require('./start-bots.js')(PORT);

@@ -38,7 +38,9 @@ function saveFallback() {
 }
 
 async function initDB() {
-    let mongoUri = process.env.MONGODB_URI;
+    // console.log('📡 [DB] Connecting to MongoDB Atlas...');
+    // process.env.MONGODB_URI is now ignored for JSON-only mode.
+    let mongoUri = null; 
     
     if (mongoUri) {
         try {
