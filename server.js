@@ -501,7 +501,7 @@ app.get('/api/stats/:tableId', (req, res) => {
 });
 
 // Catch-all: Siempre servir el frontend para cualquier ruta no reconocida
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
