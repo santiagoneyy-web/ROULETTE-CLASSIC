@@ -48,20 +48,32 @@ async function startDomScraper() {
 
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--no-zygote',
+            '--single-process' // Reduce RAM significantly
+        ]
     });
 
     const page = await browser.newPage();
     // Bloquear recursos pesados para ahorrar RAM en Render
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
-        else req.continue();
+        if (['image', 'font', 'media', 'stylesheet', 'other'].includes(req.resourceType())) {
+            req.abort();
+        } else {
+            req.continue();
+        }
     });
 
     try {
         console.log(`📡 Navigating to: ${TARGET_URL}`);
-        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 60000 });
+        // 'domcontentloaded' es más rápido y suficiente para leer el texto del DOM
+        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
         
         // El contenedor de los resultados en casino.org
         const selector = 'div.flex.flex-col.gap-px > div:first-child span';
