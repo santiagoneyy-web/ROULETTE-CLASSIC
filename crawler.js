@@ -29,8 +29,8 @@ function extractHistory() {
         return (!isNaN(n) && n >= 0 && n <= 36) ? n : null;
     };
 
-    // Estrategia 1: buscar el contenedor "Historial" via XPath y extraer su innerText plano
-    const labels = ['Historial', 'History', 'Últimos', 'Results', 'Last', 'Últimos números'];
+    // Buscamos contenedores bajo los encabezados conocidos de historial.
+    const labels = ['Historial', 'History', 'Últimos', 'Results', 'Last', 'Últimas Tiradas', 'Tiradas'];
     for (const label of labels) {
         try {
             const xr = document.evaluate(
@@ -40,28 +40,70 @@ function extractHistory() {
             const node = xr.singleNodeValue;
             if (!node) continue;
             
-            let container = node.parentElement;
-            for (let d = 0; d < 8; d++) {
-                if (!container) break;
-                // innerText no duplica nodos padre/hijo y filtra ocultos
-                const text = container.innerText || '';
-                const parts = text.split(/[\s\n]+/);
-                const found = [];
-                for (const p of parts) {
-                    const v = toNum(p);
-                    if (v !== null) found.push(v);
-                }
+            // Subimos hasta 5 niveles para encontrar el bloque perimetral
+            let block = node.parentElement;
+            for (let up = 0; up < 5; up++) {
+                if (!block) break;
                 
-                if (found.length >= 3) {
-                    return found.slice(0, 10);
+                // Dentro del bloque, buscamos cualquier contenedor (div, ul) que parezca una fila de bolitas.
+                const containers = block.querySelectorAll('div, ul');
+                for (const container of containers) {
+                    const children = container.children;
+                    if (children.length < 5 || children.length > 25) continue;
+                    
+                    const nums = [];
+                    let garbageCount = 0;
+                    
+                    for (const child of children) {
+                        const raw = (child.textContent || '').trim();
+                        if (raw === '') continue;
+                        
+                        if (raw.length <= 3) {
+                            const v = toNum(raw);
+                            if (v !== null) nums.push(v);
+                            else garbageCount++;
+                        } else {
+                            garbageCount++;
+                        }
+                    }
+                    
+                    // Criterio de fila de historial real: Alta densidad de números puros
+                    // (Ej: 10 hijos, 8 son bolas numéricas, 2 son espacios u otros).
+                    if (nums.length >= 5 && garbageCount <= 3) {
+                        return nums.slice(0, 10);
+                    }
                 }
-                container = container.parentElement;
+                block = block.parentElement;
             }
         } catch(e) {}
     }
 
-    // Si no encuentra el contenedor específico de la ruleta, devolvemos vacío 
-    // para no capturar números de banners o menús laterales (como el genérico 6, 31, 14).
+    // Si fallamos buscando por encabezado, hacemos una búsqueda global de la "fila de bolitas".
+    const allContainers = document.querySelectorAll('div, ul');
+    for (const container of allContainers) {
+        const children = container.children;
+        if (children.length < 8 || children.length > 25) continue;
+        
+        const nums = [];
+        let garbageCount = 0;
+        for (const child of children) {
+            const raw = (child.textContent || '').trim();
+            if (raw === '') continue;
+            if (raw.length <= 3) {
+                const v = toNum(raw);
+                if (v !== null) nums.push(v);
+                else garbageCount++;
+            } else {
+                garbageCount++;
+            }
+        }
+        
+        // Pide una racha más estricta si es una búsqueda sin título (al menos 8 bolitas).
+        if (nums.length >= 8 && garbageCount <= 2) {
+            return nums.slice(0, 10);
+        }
+    }
+
     return [];
 }
 
