@@ -393,7 +393,12 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     }
     */
 
+    // ── V25: BOT NUBE DESACTIVADO PERMANENTEMENTE ──
+    // El usuario ahora utiliza la Extensión Local de Chrome para enviar los datos con latencia cero.
+    // Apagar Puppeteer aquí libera ~450MB de RAM en Render y evita que el API server colapse por OOM.
+    /*
     if (!process.env.DISABLE_BOTS) {
         require('./start-bots.js')(PORT);
     }
+    */
 });
