@@ -142,23 +142,27 @@ async function startDomScraper() {
             } catch(e) {}
         }
 
-        // ── POLLING CADA 2 SEGUNDOS ─────────────────────────────
+        // ── POLLING EXTREMO CADA 800ms (PARALELIZADO) ─────────────
         setInterval(async () => {
-            for (const inst of instances) {
+            // Promise.all permite que ambas páginas se verifiquen AL MISMO TIEMPO
+            await Promise.all(instances.map(async (inst) => {
                 try {
                     const hist = await inst.page.evaluate(extractHistory);
-                    if (!hist || hist.length === 0) continue;
+                    if (!hist || hist.length === 0) return;
 
                     const newFirst = hist[0];
 
                     // ¿El número más reciente cambió?
                     if (newFirst !== inst.lastSent) {
                         console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${newFirst} (hist: [${hist.slice(0,5).join(',')}])`);
+                        
+                        // POST asíncrono súper rápido, no esperamos respuesta
                         axios.post(API_URL, {
                             table_id: inst.table.id,
                             number: newFirst,
-                            source: 'dom_v14'
-                        }, { timeout: 3000 }).catch(() => {});
+                            source: 'dom_v15'
+                        }, { timeout: 2000 }).catch(() => {});
+                        
                         inst.lastSent = newFirst;
                         inst.lastDetection = Date.now();
                         inst.prevHistory = hist;
@@ -173,11 +177,9 @@ async function startDomScraper() {
                         await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
                         await new Promise(r => setTimeout(r, 6000));
                     }
-                } catch(e) {
-                    // Silencioso
-                }
-            }
-        }, 2000);
+                } catch(e) { /* Silencioso */ }
+            }));
+        }, 800); // ← Vuelo rasante a 800ms
 
     } catch (e) {
         console.error(`❌ [V14] Fatal: ${e.message}`);

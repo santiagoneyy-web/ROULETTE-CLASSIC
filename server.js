@@ -115,270 +115,147 @@ app.get('/api/patterns/:tableId', async (req, res) => {
 });
 
 app.post('/api/spin', async (req, res) => {
-    // ── NODO 1: INGESTA ──
+    // ── NODO 1: INGESTA SÚPER RÁPIDA ──
     const { table_id, number, source, direction } = req.body;
     if (table_id == null || number == null) return res.status(400).json({ error: 'table_id and number required' });
     if (number < 0 || number > 36) return res.status(400).json({ error: 'number must be 0-36' });
 
-    // Decrement Ntfy cooldown
-    if (ntfyCooldowns[table_id] && ntfyCooldowns[table_id] > 0) {
-        ntfyCooldowns[table_id]--;
+    // ✅ ENVÍO INMEDIATO AL FRONTEND (Sin esperar a la IA ni a Mongo)
+    if (sseClients[table_id]) {
+        sseClients[table_id].forEach(client => {
+            client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
+        });
     }
+    // Devolvemos el 200 OK súper rápido al Crawler para que siga su polling
+    res.json({ status: 'received_fast', table_id, number });
 
-    try {
-        const isMongo = db.getUseMongo();
-        let currentHistory = [];
-        
-        // Fetch history to drive the agents
-        if (isMongo) {
-            currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
-            currentHistory.reverse();
-        } else {
-            // Fallback JSON relies on db.getHistory callback
-            currentHistory = await new Promise((resolve, reject) => {
-                db.getHistory(table_id, 100, (err, rows) => {
-                    if (err) reject(err); else resolve(rows);
-                });
-            });
-        }
-        
-        const numsOnly = currentHistory.map(s => s.number);
-        const lastNumber = numsOnly.length > 0 ? numsOnly[numsOnly.length - 1] : null;
-
-        // --- DUPLICATE GUARD ---
-        if (req.body.event_id) {
-            const isDuplicate = currentHistory.some(s => s.event_id === req.body.event_id);
-            if (isDuplicate) {
-                console.log(`[DUPLICATE IGNORED] Table ${table_id}, Event ${req.body.event_id}`);
-                return res.json({ id: 'ignored', table_id, number, note: 'Duplicate by event_id' });
+    // ── NODO 2: PROCESAMIENTO ASÍNCRONO (IA, FÍSICA Y BASE DE DATOS) ──
+    // Se ejecuta en background sin bloquear al usuario
+    (async () => {
+        try {
+            if (ntfyCooldowns[table_id] && ntfyCooldowns[table_id] > 0) {
+                ntfyCooldowns[table_id]--;
             }
-        } else if (number === lastNumber && source === 'public_scraper') {
-            console.log(`[DUPLICATE IGNORED] Table ${table_id}, Number ${number} (Source: ${source})`);
-            return res.json({ id: 'ignored', table_id, number, source, note: 'Duplicate ignored' });
-        }
 
-        const prevSpin = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
-        
-        // ── NODO 2: PROCESAMIENTO FÍSICO ──
-        const prevNumber = prevSpin ? prevSpin.number : null;
-        const physics = agent5.getPhysics(prevNumber, number);
-        const sector = agent5.getSector(number);
-
-        // ── NODO 4: EVALUACIÓN (Del tiro anterior contra el número actual) ──
-        if (isMongo && prevSpin && prevSpin.predictions) {
-            prevSpin.results = {
-                agent1_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent1_top),
-                agent2_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent2_top),
-                agent3_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent3_top),
-                agent4_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent4_top)
-            };
-            await prevSpin.save(); // Sync eval back to db
-        }
-
-        // Add the new number to the local array to generate predictions for the NEXT round
-        numsOnly.push(number);
-
-        // ── NODO PATTERNS: GUARDAR SECUENCIA (Pattern Memory) ──
-        if (isMongo && numsOnly.length >= 6) {
-            try {
-                // 6 numbers = 5 jumps (4 for sequence, 1 for outcome)
-                const last6 = numsOnly.slice(-6); 
-                const jumps = [];
-                for (let i = 1; i < last6.length; i++) {
-                    const p = agent5.getPhysics(last6[i-1], last6[i]);
-                    const mag = (p.distance === 'Big' || p.distance === 'ULTRA') ? 'B' : 'S';
-                    let dir = 'CW';
-                    if (p.direction === 'IZQUIERDA') dir = 'CCW';
-                    jumps.push({ mag, dir });
-                }
-                
-                const seq = jumps.slice(0, 4);
-                const outcome = jumps[4];
-                
-                const seqMag = seq.map(x => x.mag).join('');
-                const seqDir = seq.map(x => x.dir).join('');
-                
-                const newPattern = new Pattern({
-                    table_id: String(table_id),
-                    sequence_mag: seqMag,
-                    sequence_dir: seqDir,
-                    next_mag: outcome.mag,
-                    next_dir: outcome.dir
+            const isMongo = db.getUseMongo();
+            let currentHistory = [];
+            
+            if (isMongo) {
+                currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
+                currentHistory.reverse();
+            } else {
+                currentHistory = await new Promise((resolve, reject) => {
+                    db.getHistory(table_id, 100, (err, rows) => {
+                        if (err) reject(err); else resolve(rows);
+                    });
                 });
-                await newPattern.save();
-            } catch (err) {
-                console.error('[DB] Pattern save error:', err.message);
-            }
-        }
-
-        // ── NODO 3: IA & AGENTES (Predicciones para el FUTURO) ──
-        let newPredictions = {
-            agent1_top: null, agent2_top: null, agent3_top: null, agent4_top: null
-        };
-
-        if (numsOnly.length >= 3) {
-            // Run prediction algorithms
-            const stats = {};
-            // Simulate the analysis pipeline to build the stats
-            for (let i = 2; i < numsOnly.length; i++) {
-                predictor.analyzeSpin(numsOnly.slice(0, i + 1), stats);
             }
             
-            const nextRound = predictor.projectNextRound(numsOnly, stats);
-            const signature = predictor.computeDealerSignature(numsOnly);
-            const masterSignals = predictor.getIAMasterSignals(nextRound, signature, numsOnly);
+            const numsOnly = currentHistory.map(s => s.number);
+            const lastNumber = numsOnly.length > 0 ? numsOnly[numsOnly.length - 1] : null;
 
-    if (masterSignals && masterSignals.length > 0) {
-        const ag1 = masterSignals.find(s => s.name === 'Android n17');
-        const ag2 = masterSignals.find(s => s.name === 'Android n16');
-        const ag3 = masterSignals.find(s => s.name === 'Android 1717');
-        const ag4 = masterSignals.find(s => s.name === 'N18');
-        
-        if (ag1) newPredictions.agent1_top = ag1.number;
-        if (ag2 && ag2.tp !== undefined) newPredictions.agent2_top = ag2.tp;
-        if (ag3) newPredictions.agent3_top = ag3.number;
-        if (ag4) newPredictions.agent4_top = ag4.number;
-    }
-        }
+            if (req.body.event_id) {
+                const isDuplicate = currentHistory.some(s => s.event_id === req.body.event_id);
+                if (isDuplicate) return console.log(`[IGNORE DB] Event ${req.body.event_id}`);
+            } else if (number === lastNumber && source === 'public_scraper') {
+                return console.log(`[IGNORE DB] Duplicate ${number}`);
+            }
 
-        // ── NODO 3.5: ALARMAS AL CELULAR (NTFY) ──
-        if (numsOnly.length >= 6) {
-            try { 
-                const windowSize = 6;
-                const recentHist = currentHistory.slice(-(windowSize-1));
-                
-                const physList = [];
-                for(let i = 0; i < recentHist.length; i++){
-                    physList.push({ dir: recentHist[i].direction, dist: recentHist[i].distance });
-                }
-                physList.push({ dir: physics.direction, dist: physics.distance });
+            const prevSpin = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
+            const prevNumber = prevSpin ? prevSpin.number : null;
+            const physics = agent5.getPhysics(prevNumber, number);
+            const sector = agent5.getSector(number);
 
-                if (physList.length >= 6) {
-                    const lastW = physList.slice(-windowSize);
-                    const dirs = lastW.map(p => p.dir);
-                    const zones = lastW.map(p => p.dist);
+            // EVALUACIÓN DE AGENTES DEL TIRO ANTERIOR
+            if (isMongo && prevSpin && prevSpin.predictions) {
+                prevSpin.results = {
+                    agent1_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent1_top),
+                    agent2_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent2_top),
+                    agent3_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent3_top),
+                    agent4_result: agent5.evaluatePrediction(number, prevSpin.predictions.agent4_top)
+                };
+                await prevSpin.save();
+            }
 
-                    const getTrend = (arr, minVal) => {
-                        const counts = {};
-                        arr.forEach(val => { if (val) counts[val] = (counts[val] || 0) + 1; });
-                        for (const [key, c] of Object.entries(counts)) {
-                            if (c >= minVal) return key;
-                        }
-                        return null;
-                    };
+            numsOnly.push(number);
 
-                    // Verifica regla 1: 5 de 6
-                    let trendDir = getTrend(dirs, 5);
-                    let trendZone = getTrend(zones, 5);
-
-                    // Verifica regla 2: 4 seguidos exactos (los últimos 4)
-                    if (!trendDir) {
-                        const last4Dirs = dirs.slice(-4);
-                        if (last4Dirs.length === 4 && last4Dirs.every(d => d && d === last4Dirs[0])) {
-                            trendDir = last4Dirs[0];
-                        }
-                    }
-                    if (!trendZone) {
-                        const last4Zones = zones.slice(-4);
-                        if (last4Zones.length === 4 && last4Zones.every(z => z && z === last4Zones[0])) {
-                            trendZone = last4Zones[0];
-                        }
-                    }
-
-                    // ALARMA SI SE CUMPLE ALGUNA DE LAS DOS REGLAS DOMINANTES
-                    if (trendDir) {
-                        const cooldown = ntfyCooldowns[table_id] || 0;
-                        if (cooldown <= 0) { 
-                            ntfyCooldowns[table_id] = 4; // 4 spins cooldown
-
-                            const isSuper = trendDir && trendZone;
-                            let title = isSuper ? '⭐⭐ SÚPER ESTABLE' : '⭐ TENDENCIA ESTABLE';
-
-                            let msg = `MESA ${table_id}: `;
-                            msg += `[${trendDir === 'DERECHA' || trendDir === 'DER' ? 'DER' : 'IZQ'}]`;
-                            if (trendZone) msg += ` - [ZONA ${trendZone.toUpperCase()}]`;
-
-                            const tgToken = process.env.TELEGRAM_BOT_TOKEN;
-                            const tgChat = process.env.TELEGRAM_CHAT_ID;
-
-                            if (tgToken && tgChat) {
-                                const tgMsg = `🚨 *${title}*\n\n🎯 ${msg}`;
-                                axios.post(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
-                                    chat_id: tgChat,
-                                    text: tgMsg,
-                                    parse_mode: 'Markdown'
-                                }).catch(err => console.log('Telegram Err:', err.response ? err.response.data : err.message));
-                            } else {
-                                console.log('[WARNING] Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in env.');
-                            }
-                            
-                            console.log(`🔔 [TELEGRAM SENT] ${title} - ${msg}`);
-                        }
-                    }
-                }
-            } catch(e) { console.error('Ntfy check err:', e); }
-        }
-
-        // ── NODO 4: SINCRONIZACIÓN (Guardar la inyección enriquecida) ──
-        if (isMongo) {
-            let savedSpin = null;
-            let attempts = 0;
-            
-            while (!savedSpin && attempts < 5) {
+            // PATTERN MEMORY
+            if (isMongo && numsOnly.length >= 6) {
                 try {
-                    const maxSpin = await Spin.findOne().sort('-id').exec();
-                    const newId = maxSpin ? maxSpin.id + 1 : 1;
-
-                    const newSpin = new Spin({
-                        id: newId,
-                        table_id,
-                        number,
-                        source: source || 'bot',
-                        event_id: req.body.event_id || null, // ensure event_id is saved
-                        distance: physics.distance,
-                        direction: direction || physics.direction,
-                        sector,
-                        predictions: newPredictions
-                    });
+                    const last6 = numsOnly.slice(-6); 
+                    const jumps = [];
+                    for (let i = 1; i < last6.length; i++) {
+                        const p = agent5.getPhysics(last6[i-1], last6[i]);
+                        const mag = (p.distance === 'Big' || p.distance === 'ULTRA') ? 'B' : 'S';
+                        let dir = 'CW';
+                        if (p.direction === 'IZQUIERDA') dir = 'CCW';
+                        jumps.push({ mag, dir });
+                    }
+                    const seq = jumps.slice(0, 4);
+                    const outcome = jumps[4];
+                    const seqMag = seq.map(x => x.mag).join('');
+                    const seqDir = seq.map(x => x.dir).join('');
                     
-                    savedSpin = await newSpin.save();
-                } catch (err) {
-                    if (err.code === 11000 && err.keyPattern && err.keyPattern.id) {
-                        attempts++;
-                        console.log(`[RETRY] ID collision for table ${table_id}, retrying... (${attempts}/5)`);
-                    } else {
-                        throw err; // Re-throw if it is a different database error
+                    const newPattern = new Pattern({
+                        table_id: String(table_id),
+                        sequence_mag: seqMag,
+                        sequence_dir: seqDir,
+                        next_mag: outcome.mag,
+                        next_dir: outcome.dir
+                    });
+                    await newPattern.save();
+                } catch (err) { console.error('[DB] Pattern save err:', err.message); }
+            }
+
+            // PREDICCIONES FUTURAS (Cálculo pesado de IA)
+            let newPredictions = { agent1_top: null, agent2_top: null, agent3_top: null, agent4_top: null };
+            if (numsOnly.length >= 3) {
+                const stats = {};
+                for (let i = 2; i < numsOnly.length; i++) {
+                    predictor.analyzeSpin(numsOnly.slice(0, i + 1), stats);
+                }
+                const nextRound = predictor.projectNextRound(numsOnly, stats);
+                const signature = predictor.computeDealerSignature(numsOnly);
+                const masterSignals = predictor.getIAMasterSignals(nextRound, signature, numsOnly);
+
+                if (masterSignals && masterSignals.length > 0) {
+                    const ag1 = masterSignals.find(s => s.name === 'Android n17');
+                    const ag2 = masterSignals.find(s => s.name === 'Android n16');
+                    const ag3 = masterSignals.find(s => s.name === 'Android 1717');
+                    const ag4 = masterSignals.find(s => s.name === 'N18');
+                    if (ag1) newPredictions.agent1_top = ag1.number;
+                    if (ag2 && ag2.tp !== undefined) newPredictions.agent2_top = ag2.tp;
+                    if (ag3) newPredictions.agent3_top = ag3.number;
+                    if (ag4) newPredictions.agent4_top = ag4.number;
+                }
+            }
+
+            // EXPORTAR A DB PARA QUE CUANDO EL CLIENTE RECARGUE ESTÉ TODO LINCADO
+            if (isMongo) {
+                let savedSpin = null, attempts = 0;
+                while (!savedSpin && attempts < 5) {
+                    try {
+                        const maxSpin = await Spin.findOne().sort('-id').exec();
+                        const newId = maxSpin ? maxSpin.id + 1 : 1;
+                        const newSpin = new Spin({
+                            id: newId,
+                            table_id, number, source: source || 'bot',
+                            event_id: req.body.event_id || null,
+                            distance: physics.distance, direction: direction || physics.direction, sector,
+                            predictions: newPredictions
+                        });
+                        savedSpin = await newSpin.save();
+                    } catch (err) {
+                        if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
+                        else throw err;
                     }
                 }
+            } else {
+                db.addSpin(table_id, number, source || 'bot', { event_id: req.body.event_id }, () => {});
             }
 
-            if (!savedSpin) {
-                return res.status(500).json({ error: 'Failed to generate unique ID after 5 attempts', table_id, number });
-            }
-
-            if (sseClients[table_id]) {
-                sseClients[table_id].forEach(client => {
-                    client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
-                });
-            }
-            res.json(savedSpin);
-        } else {
-            // Fallback
-            db.addSpin(table_id, number, source || 'bot', { event_id: req.body.event_id }, (err, id) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (sseClients[table_id]) {
-                    sseClients[table_id].forEach(client => {
-                        client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
-                    });
-                }
-                res.json({ id, table_id, number, source, note: 'Saved to fallback' });
-            });
-        }
-
-    } catch (e) {
-        console.error('Pipeline Error:', e);
-        res.status(500).json({ error: e.message });
-    }
+        } catch(e) { console.error('[Background Sync Err]', e); }
+    })();
 });
 
 // Batch import (for OCR auto-capture)
