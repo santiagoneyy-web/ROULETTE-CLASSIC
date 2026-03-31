@@ -521,32 +521,31 @@ function submitNumber(val, silent = false, batch = false) {
 
         history.push(n);
 
-        // Compute new predictions
-        if (typeof computeDealerSignature === 'function' && history.length >= 3) {
-            try {
-                const sig  = computeDealerSignature(history);
-                const prox = projectNextRound(history, {});
-                const masterSignals = getIAMasterSignals(prox, sig, history);
-                if (masterSignals && masterSignals.length > 0) {
-                    lastSignal = masterSignals[0];
-                }
-                
-                // JUGADAS Sniper automatically reads the table
-                if (typeof predictZonePattern === 'function') {
-                    jugView = predictZonePattern(history, patternStatsCache);
-                }
+        // Compute new predictions (SOLO SI NO ES CARGA EN LOTE)
+        if (!batch) {
+            if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+                try {
+                    const sig  = computeDealerSignature(history);
+                    const prox = projectNextRound(history, {});
+                    const masterSignals = getIAMasterSignals(prox, sig, history);
+                    if (masterSignals && masterSignals.length > 0) {
+                        lastSignal = masterSignals[0];
+                    }
+                    
+                    // JUGADAS Sniper automatically reads the table
+                    if (typeof predictZonePattern === 'function') {
+                        jugView = predictZonePattern(history, patternStatsCache);
+                    }
 
-                if (!batch && history.length > 0) {
-                    fetchPatternMemory(history);
-                }
-            } catch(e) { console.error('Predict error:', e); }
+                    if (history.length > 0) {
+                        fetchPatternMemory(history);
+                    }
+                } catch(e) { console.error('Predict error:', e); }
+            }
+            renderShadowPanel();
+            renderWheelAndHistory();
+            renderTravelPanel();
         }
-    }
-
-    if (!batch) {
-        renderShadowPanel();
-        renderWheelAndHistory();
-        renderTravelPanel();
     }
 }
 
@@ -739,7 +738,29 @@ async function syncData() {
             cwHistory.length = 0;
             ccwHistory.length = 0;
             lastSignal = null;
+            
+            // 1. Inyectar datos en lote
             for (const s of spins) submitNumber(s.number, true, true);
+            
+            // 2. Correr la IA una sola vez sobre todo el history ya armado
+            if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+                try {
+                    const sig  = computeDealerSignature(history);
+                    const prox = projectNextRound(history, {});
+                    const masterSignals = getIAMasterSignals(prox, sig, history);
+                    if (masterSignals && masterSignals.length > 0) {
+                        lastSignal = masterSignals[0];
+                    }
+                    if (typeof predictZonePattern === 'function') {
+                        jugView = predictZonePattern(history, patternStatsCache);
+                    }
+                    if (history.length > 0) {
+                        fetchPatternMemory(history);
+                    }
+                } catch(e) { console.error('Predict error on sync:', e); }
+            }
+
+            // 3. Renderizar vista final una sola vez
             renderShadowPanel();
             renderTravelPanel();
             renderWheelAndHistory();

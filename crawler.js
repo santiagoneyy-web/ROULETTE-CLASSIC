@@ -144,23 +144,21 @@ async function startDomScraper() {
 
         // ── POLLING EXTREMO CADA 800ms (PARALELIZADO) ─────────────
         setInterval(async () => {
-            // Promise.all permite que ambas páginas se verifiquen AL MISMO TIEMPO
             await Promise.all(instances.map(async (inst) => {
+                if (inst.isReloading) return; // ← Bloqueo: si está recargando, saltamos esta vuelta
+
                 try {
                     const hist = await inst.page.evaluate(extractHistory);
                     if (!hist || hist.length === 0) return;
 
                     const newFirst = hist[0];
 
-                    // ¿El número más reciente cambió?
                     if (newFirst !== inst.lastSent) {
                         console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${newFirst} (hist: [${hist.slice(0,5).join(',')}])`);
-                        
-                        // POST asíncrono súper rápido, no esperamos respuesta
                         axios.post(API_URL, {
                             table_id: inst.table.id,
                             number: newFirst,
-                            source: 'dom_v15'
+                            source: 'dom_v16'
                         }, { timeout: 2000 }).catch(() => {});
                         
                         inst.lastSent = newFirst;
@@ -168,18 +166,33 @@ async function startDomScraper() {
                         inst.prevHistory = hist;
                     }
 
-                    // Stale check: si llevan 90s sin nuevo número, reload
+                    // Stale check
                     if (Date.now() - inst.lastDetection > STALE_MS) {
                         console.log(`🔄 [T${inst.table.id}] Stale → reloading...`);
+                        inst.isReloading = true; // Activar cerrojo
                         inst.lastDetection = Date.now();
                         inst.lastSent = null;
                         inst.prevHistory = [];
-                        await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
-                        await new Promise(r => setTimeout(r, 6000));
+                        
+                        try {
+                            await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+                            await new Promise(r => setTimeout(r, 6000));
+                        } catch(err) {
+                            console.error(`⚠️ [T${inst.table.id}] Reload failed: ${err.message}`);
+                        } finally {
+                            inst.isReloading = false; // Liberar cerrojo siempre
+                        }
                     }
-                } catch(e) { /* Silencioso */ }
+                } catch(e) { 
+                    // Si tira error context destroyed/detached, lo ignoramos sabiendo que es puente de carga
+                    if (e.message.includes('detached') || e.message.includes('context')) {
+                        // Silent
+                    } else {
+                        console.log(`⚠️ [T${inst.table.id}] Eval Error: ${e.message}`);
+                    }
+                }
             }));
-        }, 800); // ← Vuelo rasante a 800ms
+        }, 800);
 
     } catch (e) {
         console.error(`❌ [V14] Fatal: ${e.message}`);
