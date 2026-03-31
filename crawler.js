@@ -17,50 +17,50 @@ const TABLES = [
     { id: 2, url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
 ];
 
-// ── EXTRACTOR UNIVERSAL ─────────────────────────────────────────
-// Inyectado en el contexto del navegador via page.evaluate
-const EXTRACTOR = `
-(function extractRouletteNumber() {
-    const isValid = n => Number.isInteger(n) && n >= 0 && n <= 36;
-    const toNum = t => { const n = parseInt((t||'').trim()); return isValid(n) ? n : null; };
-    
-    // 1. Selectores CSS directos (más rápidos)
-    const CSS = [
+// ── EXTRACTOR (ejecutado dentro del browser context) ───────────
+function extractNum() {
+    const toNum = (t) => {
+        const n = parseInt((t || '').trim());
+        return (!isNaN(n) && n >= 0 && n <= 36) ? n : null;
+    };
+
+    // 1. CSS directo
+    const CSSTargets = [
         'div.flex.flex-col.gap-px > div:first-child span',
         'div.flex.flex-col > div:first-child > span',
         'div.flex.flex-col > div:first-child',
-        'li:first-child span',
+        'li:first-child > span',
         'li:first-child',
-        'div[data-testid] span',
-        'div[class*="result"]:first-child span',
-        'div[class*="ball"]:first-child span',
-        'div[class*="number"]:first-child',
-        'span[class*="number"]:first-child',
+        '[class*="history"] span:first-of-type',
+        '[class*="History"] span:first-of-type',
+        '[class*="result"] span:first-of-type',
+        '[class*="ball"]:first-child > span',
+        'span[class*="number"]:first-of-type',
     ];
-    for (const sel of CSS) {
-        const el = document.querySelector(sel);
-        if (el) {
-            const v = toNum(el.textContent);
-            if (v !== null) return v;
-        }
+    for (const sel of CSSTargets) {
+        try {
+            const el = document.querySelector(sel);
+            if (el) {
+                const v = toNum(el.textContent);
+                if (v !== null) return v;
+            }
+        } catch (e) {}
     }
-    
-    // 2. XPath: buscar contenedor "Historial/History" y escanear sus spans hijos
-    const LABELS = ['Historial', 'History', 'Últimos', 'Results', 'Scores'];
-    for (const label of LABELS) {
+
+    // 2. XPath: buscar etiqueta "Historial" y escanear spans hermanos
+    const labels = ['Historial', 'History', 'Últimos', 'Results'];
+    for (const label of labels) {
         try {
             const xr = document.evaluate(
                 '//*[contains(text(),"' + label + '")]',
                 document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
             );
-            const labelNode = xr.singleNodeValue;
-            if (!labelNode) continue;
-            // Subir hasta 8 niveles buscando un contenedor con spans numéricos
-            let container = labelNode.parentElement;
-            for (let depth = 0; depth < 8; depth++) {
+            const node = xr.singleNodeValue;
+            if (!node) continue;
+            let container = node.parentElement;
+            for (let d = 0; d < 8; d++) {
                 if (!container) break;
-                const spans = Array.from(container.querySelectorAll('span, div'));
-                for (const s of spans) {
+                for (const s of container.querySelectorAll('span, div')) {
                     const txt = (s.textContent || '').trim();
                     if (txt.length > 0 && txt.length <= 2) {
                         const v = toNum(txt);
@@ -69,52 +69,32 @@ const EXTRACTOR = `
                 }
                 container = container.parentElement;
             }
-        } catch(e) {}
+        } catch (e) {}
     }
-    
-    // 3. Brute-force: cualquier span pequeño con número de ruleta válido
-    const allSpans = document.querySelectorAll('span');
-    for (const s of allSpans) {
+
+    // 3. Brute-force: primer span con exactamente 1-2 chars numéricos
+    for (const s of document.querySelectorAll('span')) {
         const txt = (s.textContent || '').trim();
-        if (txt.length <= 2) {
+        if (txt.length > 0 && txt.length <= 2) {
             const v = toNum(txt);
             if (v !== null) return v;
         }
     }
-    
-    return null;
-})()
-`;
 
-// ── DIAGNÓSTICO INICIAL ─────────────────────────────────────────
-const DIAGNOSTIC = `
-(function diagnose() {
-    const lines = [];
-    // Primer span con texto ≤2 chars
-    const spans = Array.from(document.querySelectorAll('span')).filter(s => {
-        const t = (s.textContent||'').trim();
-        return t.length > 0 && t.length <= 3;
-    });
-    lines.push('First 8 short spans: ' + spans.slice(0, 8).map(s => JSON.stringify(s.textContent.trim())).join(', '));
-    
-    // Clases del body
-    const body = document.body;
-    lines.push('Body children count: ' + body.children.length);
-    
-    // Buscar todo lo que contenga dígitos
-    const divs = Array.from(document.querySelectorAll('div')).filter(d => {
-        const t = (d.textContent||'').trim();
-        return /^\\d{1,2}$/.test(t);
-    }).slice(0, 5);
-    lines.push('Numeric divs: ' + divs.map(d => '"' + d.textContent.trim() + '" (' + (d.className||'').slice(0,40) + ')').join(' | '));
-    
-    return lines.join(' | ');
-})()
-`;
+    return null;
+}
+
+function diagnose() {
+    const spans = Array.from(document.querySelectorAll('span'))
+        .filter(s => { const t = (s.textContent || '').trim(); return t.length > 0 && t.length <= 3; })
+        .slice(0, 10)
+        .map(s => '"' + s.textContent.trim() + '"');
+    return 'Short spans: [' + spans.join(', ') + ']';
+}
 
 // ── MAIN ────────────────────────────────────────────────────────
 async function startDomScraper() {
-    console.log(`\n📺 [V11] Single-browser scraper starting...`);
+    console.log(`\n📺 [V12] Starting single-browser scraper...`);
     let browser = null;
 
     try {
@@ -128,7 +108,7 @@ async function startDomScraper() {
                 '--disable-gpu',
                 '--no-zygote',
                 '--disable-blink-features=AutomationControlled',
-                '--window-size=800,600'
+                '--window-size=1280,800'
             ]
         });
 
@@ -150,37 +130,37 @@ async function startDomScraper() {
             await page.goto(table.url, { waitUntil: 'networkidle2', timeout: 90000 });
             console.log(`🏷️ [T${table.id}] Title: ${await page.title()}`);
 
-            instances.push({ page, table, lastNum: null, diagDone: false });
+            instances.push({ page, table, lastNum: null });
 
-            // Stagger entre tabs para evitar pico de RAM
             if (table.id < TABLES.length) {
                 await new Promise(r => setTimeout(r, 10000));
             }
         }
 
-        // Espera extra para renderizado React/Vue
+        // Esperar renderizado React/Vue
         await new Promise(r => setTimeout(r, 8000));
 
-        // Diagnóstico inicial de cada tabla
+        // Diagnóstico inicial por tabla
         for (const inst of instances) {
             try {
-                const diag = await inst.page.evaluate(new Function('return ' + DIAGNOSTIC + ';'));
-                console.log(`🔍 [T${inst.table.id}] Diag: ${diag}`);
-            } catch(e) {}
-            inst.diagDone = true;
+                const diag = await inst.page.evaluate(diagnose);
+                console.log(`🔍 [T${inst.table.id}] ${diag}`);
+            } catch (e) {
+                console.log(`⚠️ [T${inst.table.id}] Diag failed: ${e.message}`);
+            }
         }
 
-        // ── Polling RÁPIDO: cada 2 segundos ─────────────────────
+        // ── POLLING RÁPIDO: 2 segundos ──────────────────────────
         setInterval(async () => {
             for (const inst of instances) {
                 try {
-                    const num = await inst.page.evaluate(new Function('return ' + EXTRACTOR + ';'));
-                    if (num !== null && num !== inst.lastNum) {
+                    const num = await inst.page.evaluate(extractNum);
+                    if (typeof num === 'number' && num !== inst.lastNum) {
                         console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${num}`);
                         axios.post(API_URL, {
                             table_id: inst.table.id,
                             number: num,
-                            source: 'dom_v11'
+                            source: 'dom_v12'
                         }, { timeout: 3000 }).catch(() => {});
                         inst.lastNum = num;
                     }
@@ -188,10 +168,10 @@ async function startDomScraper() {
                     // Silencioso
                 }
             }
-        }, 2000); // ← 2 segundos para máxima velocidad
+        }, 2000);
 
     } catch (e) {
-        console.error(`❌ [V11] Fatal: ${e.message}`);
+        console.error(`❌ [V12] Fatal: ${e.message}`);
         if (browser) await browser.close().catch(() => {});
         console.log(`♻️ Restarting in 20s...`);
         setTimeout(() => startDomScraper(), 20000);
