@@ -97,8 +97,20 @@ async function startDomScraper() {
             const page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1280, height: 800 });
+            await page.setViewport({ width: 1280, height: 800 });
             page.setDefaultTimeout(60000);
-            // Sin request interception — WebSockets libres
+            
+            // ── EXTREME RAM SAVER: Block video/images/css but keep websockets ──
+            await page.setRequestInterception(true);
+            page.on('request', (req) => {
+                const type = req.resourceType();
+                // Bloquear streaming de video, imágenes, estilos y fuentes (Chrome pasará de ~400MB a ~120MB)
+                if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
 
             console.log(`📡 [T${table.id}] Navigating: ${table.url}`);
             try {
