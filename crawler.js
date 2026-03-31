@@ -60,15 +60,9 @@ function extractHistory() {
         } catch(e) {}
     }
 
-    // Estrategia 2: Fallback global extrayendo texto visible hoja
-    const allText = document.body.innerText || '';
-    const parts = allText.split(/[\s\n]+/);
-    const globalFound = [];
-    for (const p of parts) {
-        const v = toNum(p);
-        if (v !== null) globalFound.push(v);
-    }
-    return globalFound.slice(0, 10);
+    // Si no encuentra el contenedor específico de la ruleta, devolvemos vacío 
+    // para no capturar números de banners o menús laterales (como el genérico 6, 31, 14).
+    return [];
 }
 
 // ── MAIN ────────────────────────────────────────────────────────
@@ -97,15 +91,15 @@ async function startDomScraper() {
             const page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1280, height: 800 });
-            await page.setViewport({ width: 1280, height: 800 });
             page.setDefaultTimeout(60000);
             
-            // ── EXTREME RAM SAVER: Block video/images/css but keep websockets ──
+            // ── EXTREME RAM SAVER: Block video/images but keep css/websockets ──
             await page.setRequestInterception(true);
             page.on('request', (req) => {
                 const type = req.resourceType();
-                // Bloquear streaming de video, imágenes, estilos y fuentes (Chrome pasará de ~400MB a ~120MB)
-                if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+                // Bloquear streaming de video e imágenes (los mayores consumidores de RAM).
+                // Permitimos stylesheet y font porque React los necesita para montar el DOM del historial.
+                if (['image', 'media'].includes(type)) {
                     req.abort();
                 } else {
                     req.continue();
