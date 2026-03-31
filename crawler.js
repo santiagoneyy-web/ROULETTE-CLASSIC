@@ -45,8 +45,8 @@ function extractHistory() {
             for (let up = 0; up < 5; up++) {
                 if (!block) break;
                 
-                // Dentro del bloque, buscamos cualquier contenedor (div, ul) que parezca una fila de bolitas.
-                const containers = block.querySelectorAll('div, ul');
+                // Dentro del bloque, buscamos filas horizontales o listas que puedan contener las bolitas.
+                const containers = block.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul');
                 for (const container of containers) {
                     const children = container.children;
                     if (children.length < 5 || children.length > 25) continue;
@@ -78,8 +78,9 @@ function extractHistory() {
         } catch(e) {}
     }
 
-    // Si fallamos buscando por encabezado, hacemos una búsqueda global de la "fila de bolitas".
-    const allContainers = document.querySelectorAll('div, ul');
+    // Si fallamos buscando por encabezado, hacemos una búsqueda global ultra-eficiente de la "fila de bolitas".
+    // Usamos selectores comunes de filas desplazables/listas de historiales para no colapsar el CPU analizando 3000 divs.
+    const allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul');
     for (const container of allContainers) {
         const children = container.children;
         if (children.length < 8 || children.length > 25) continue;
@@ -98,7 +99,7 @@ function extractHistory() {
             }
         }
         
-        // Pide una racha más estricta si es una búsqueda sin título (al menos 8 bolitas).
+        // Pide una racha estricta (al menos 8 bolitas numéricas limpias seguidas)
         if (nums.length >= 8 && garbageCount <= 2) {
             return nums.slice(0, 10);
         }
