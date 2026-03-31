@@ -1,31 +1,26 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
-
 const axios = require('axios');
 
 // ── CONFIG ─────────────────────────────────────────────────────
 const clArgs = process.argv.slice(2).reduce((acc, arg, i, arr) => {
-    if (arg.startsWith('--')) acc[arg.slice(2)] = arr[i+1];
+    if (arg.startsWith('--')) acc[arg.slice(2)] = arr[i + 1];
     return acc;
 }, {});
 
-const TABLE_ID   = parseInt(clArgs.table) || 1;
-const TARGET_URL = clArgs.url   || "https://www.casino.org/casinoscores/es/auto-roulette/";
-const API_URL    = clArgs.api   || "http://127.0.0.1:3000/api/spin";
+const PORT = clArgs.port || process.env.PORT || 3000;
+const API_URL = clArgs.api || `http://127.0.0.1:${PORT}/api/spin`;
 
-// ── SCRAPER ─────────────────────────────────────────────────────
+const TABLES = [
+    { id: 1, url: 'https://www.casino.org/casinoscores/es/auto-roulette/' },
+    { id: 2, url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
+];
+
+// ── SCRAPER CON UN SOLO BROWSER (ahorra ~300MB de RAM) ─────────
 async function startDomScraper() {
-    console.log(`\n📺 [V10] Scraper starting for Table ${TABLE_ID}`);
-
-    // Stagger de arranque: Tabla 2 espera 30s
-    if (TABLE_ID > 1) {
-        await new Promise(r => setTimeout(r, (TABLE_ID - 1) * 30000));
-    }
-
+    console.log(`\n📺 [V10-MONO] Single-browser mode starting...`);
     let browser = null;
-    let lastNum = null;
-    let interval = null;
 
     try {
         browser = await puppeteer.launch({
@@ -34,76 +29,62 @@ async function startDomScraper() {
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',         // Usa /tmp en vez de /dev/shm
+                '--disable-dev-shm-usage',
                 '--disable-gpu',
                 '--no-zygote',
-                // ⚠️ --single-process ELIMINADO: causa frame detached y crashes
+                // --single-process ELIMINADO: causa crashes en Render
                 '--disable-blink-features=AutomationControlled',
-                '--window-size=1280,800'
+                '--window-size=800,600'
             ]
         });
 
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-        await page.setViewport({ width: 390, height: 844 });
-        page.setDefaultTimeout(60000);
+        // Abrir una página por tabla en el mismo browser
+        const instances = [];
+        for (const table of TABLES) {
+            const page = await browser.newPage();
+            await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
+            await page.setViewport({ width: 390, height: 844 });
+            page.setDefaultTimeout(60000);
 
-        // Solo bloquear imágenes y media; dejar CSS/JS para renderizado correcto
-        await page.setRequestInterception(true);
-        page.on('request', req => {
-            if (['image', 'media'].includes(req.resourceType())) req.abort();
-            else req.continue();
-        });
+            // Solo bloquear imágenes/media
+            await page.setRequestInterception(true);
+            page.on('request', req => {
+                if (['image', 'media'].includes(req.resourceType())) req.abort();
+                else req.continue();
+            });
 
-        // Capturar errores del browser para loguear
-        browser.on('disconnected', () => {
-            console.error(`⚠️ [V10-T${TABLE_ID}] Browser disconnected!`);
-        });
+            console.log(`📡 [T${table.id}] Navigating: ${table.url}`);
+            await page.goto(table.url, { waitUntil: 'networkidle2', timeout: 90000 });
+            console.log(`🏷️ [T${table.id}] Title: ${await page.title()}`);
 
-        console.log(`📡 [V10] Navigating: ${TARGET_URL}`);
-        await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 90000 });
-        console.log(`🏷️ [V10] Title: ${await page.title()}`);
+            instances.push({ page, table, lastNum: null });
 
-        // Esperar renderizado dinámico (React/Vue del casino)
-        await new Promise(r => setTimeout(r, 12000));
+            // Stagger: esperar entre cargas de páginas
+            if (table.id < TABLES.length) {
+                await new Promise(r => setTimeout(r, 15000));
+            }
+        }
 
-        // ── Diagnóstico de selectores (solo al arranque) ──────────
-        const diag = await page.evaluate(() => {
-            const tests = [
-                'div.flex.flex-col.gap-px > div:first-child span',
-                'div.flex.flex-col > div:first-child span',
-                'div[class*="history"] span',
-                'div[class*="History"] span',
-                'div[class*="result"] span',
-                'div[class*="ball"] span',
-                'span[class*="number"]',
-            ];
-            return tests.map(sel => {
-                const el = document.querySelector(sel);
-                const txt = el ? el.textContent.trim() : null;
-                return txt ? `✅ ${sel} => "${txt}"` : `❌ ${sel}`;
-            }).join('\n');
-        }).catch(() => '⚠️ Diagnóstico falló');
-        console.log(`🔍 [V10-T${TABLE_ID}] Selector scan:\n${diag}`);
+        // Esperar renderizado inicial de React/Vue
+        await new Promise(r => setTimeout(r, 10000));
 
-        // ── Detector ──────────────────────────────────────────────
-        const detect = async () => {
+        // Extractor rápido — usa el selector confirmado + XPath fallback
+        const extractNum = async (page) => {
             return page.evaluate(() => {
                 const toNum = (t) => {
                     const n = parseInt((t || '').trim());
-                    return (isNaN(n) || n < 0 || n > 36) ? null : n;
+                    return (!isNaN(n) && n >= 0 && n <= 36) ? n : null;
                 };
 
-                // Selectores directos (más rápidos)
-                const quick = [
-                    'div.flex.flex-col.gap-px > div:first-child span',
+                // Selectores directos
+                const selectors = [
                     'div.flex.flex-col > div:first-child span',
+                    'div.flex.flex-col.gap-px > div:first-child span',
                     'div[class*="history"] span',
                     'div[class*="History"] span',
                     'div[class*="result"] span',
-                    'span[class*="number"]',
                 ];
-                for (const sel of quick) {
+                for (const sel of selectors) {
                     const el = document.querySelector(sel);
                     if (el) {
                         const v = toNum(el.textContent);
@@ -111,9 +92,9 @@ async function startDomScraper() {
                     }
                 }
 
-                // XPath fallback - buscar "Historial" o "History"
+                // XPath: buscar "Historial" y escanear spans del contenedor padre
                 try {
-                    for (const label of ['Historial', 'History', 'Últimas']) {
+                    for (const label of ['Historial', 'History', 'Últimas', 'Results']) {
                         const xr = document.evaluate(
                             `//*[contains(text(),'${label}')]`,
                             document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
@@ -121,7 +102,7 @@ async function startDomScraper() {
                         const node = xr.singleNodeValue;
                         if (!node) continue;
                         let container = node.parentElement;
-                        for (let depth = 0; depth < 6; depth++) {
+                        for (let d = 0; d < 6; d++) {
                             if (!container) break;
                             for (const s of container.querySelectorAll('span')) {
                                 const v = toNum(s.textContent);
@@ -131,34 +112,35 @@ async function startDomScraper() {
                         }
                     }
                 } catch (e) {}
-
                 return null;
             });
         };
 
-        interval = setInterval(async () => {
-            try {
-                const num = await detect();
-                if (num !== null && num !== lastNum) {
-                    console.log(`✨ [DOM-T${TABLE_ID}] Detectado: ${num}`);
-                    await axios.post(API_URL, {
-                        table_id: TABLE_ID,
-                        number: num,
-                        source: 'dom_v10'
-                    }, { timeout: 5000 }).catch(e => console.error(`⚠️ API: ${e.message}`));
-                    lastNum = num;
+        // Polling para cada tabla
+        setInterval(async () => {
+            for (const inst of instances) {
+                try {
+                    const num = await extractNum(inst.page);
+                    if (num !== null && num !== inst.lastNum) {
+                        console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${num}`);
+                        await axios.post(API_URL, {
+                            table_id: inst.table.id,
+                            number: num,
+                            source: 'dom_v10_mono'
+                        }, { timeout: 5000 }).catch(e => console.error(`⚠️ API T${inst.table.id}: ${e.message}`));
+                        inst.lastNum = num;
+                    }
+                } catch (e) {
+                    // Silencioso
                 }
-            } catch (e) {
-                // Silencioso
             }
-        }, 5000);
+        }, 6000);
 
     } catch (e) {
-        console.error(`❌ [DOM-T${TABLE_ID}] Fatal: ${e.message}`);
-        if (interval) clearInterval(interval);
+        console.error(`❌ [MONO] Fatal: ${e.message}`);
         if (browser) await browser.close().catch(() => {});
-        console.log(`♻️ [V10-T${TABLE_ID}] Restarting in 20s...`);
-        setTimeout(() => startDomScraper(), 20000);
+        console.log(`♻️ Restarting in 25s...`);
+        setTimeout(() => startDomScraper(), 25000);
     }
 }
 
