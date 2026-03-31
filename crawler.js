@@ -69,20 +69,48 @@ async function startDomScraper() {
                     return (isNaN(n) || n < 0 || n > 36) ? null : n;
                 };
 
-                // Detector Mágico (V2)
-                const all = Array.from(document.querySelectorAll('span, div'));
-                const hist = all.find(e => e.innerText && e.innerText.includes('Historial'));
-                if (hist) {
-                    const idx = all.indexOf(hist);
-                    for(let i=idx; i < idx + 50 && i < all.length; i++) {
-                        const val = clean(all[i].innerText);
-                        if (val !== null && all[i].innerText.length <= 2) return val;
+                // 1. Intentar Selectores Rápidos
+                const selectors = [
+                    'div.flex.flex-col > div:first-child span',
+                    'div.flex.flex-col.gap-px > div:first-child span',
+                    '.history-number',
+                    'div[class*="History"] div:first-child span'
+                ];
+                for (let sel of selectors) {
+                    const el = document.querySelector(sel);
+                    if (el) {
+                        const val = clean(el.textContent);
+                        if (val !== null) return val;
                     }
                 }
+
+                // 2. Búsqueda Mágica con XPath (Ultra Rápida, no bloquea CPU)
+                try {
+                    const xpath = "//span[contains(text(), 'Historial')] | //div[contains(text(), 'Historial')] | //span[contains(text(), 'History')]";
+                    const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                    let histNode = result.singleNodeValue;
+                    
+                    if (histNode) {
+                        // Buscar el contenedor padre y sus spans
+                        let parent = histNode.parentElement;
+                        for (let k = 0; k < 5; k++) { // Subir 5 niveles como máximo buscando los números
+                            if (!parent) break;
+                            const spans = parent.querySelectorAll('span');
+                            for (let i = 0; i < spans.length; i++) {
+                                const txt = (spans[i].textContent || '').trim();
+                                if (txt.length > 0 && txt.length <= 2) {
+                                    const val = parseInt(txt);
+                                    if (!isNaN(val) && val >= 0 && val <= 36) {
+                                        return val; // Retorna el primer número válido encontrado
+                                    }
+                                }
+                            }
+                            parent = parent.parentElement;
+                        }
+                    }
+                } catch(e) {}
                 
-                // Fallback directo
-                const p = document.querySelector('div.flex.flex-col > div:first-child span');
-                return p ? clean(p.innerText) : null;
+                return null;
             });
         };
 
