@@ -22,16 +22,15 @@ const STALE_MS = 90000; // 90s sin detección → reload
 // ── EXTRACTOR: devuelve LISTA de números del historial ──────────
 // Comparamos el primer elemento de la lista para detectar nuevos giros.
 // Usamos la LISTA completa porque el primer span puede ser estático.
+// ── EXTRACTOR: devuelve LISTA de números del historial ──────────
 function extractHistory() {
     const toNum = (t) => {
         const n = parseInt((t || '').trim());
         return (!isNaN(n) && n >= 0 && n <= 36) ? n : null;
     };
 
-    const nums = [];
-
-    // Estrategia 1: buscar el contenedor "Historial" via XPath y listar spans
-    const labels = ['Historial', 'History', 'Últimos', 'Results', 'Last'];
+    // Estrategia 1: buscar el contenedor "Historial" via XPath y extraer su innerText plano
+    const labels = ['Historial', 'History', 'Últimos', 'Results', 'Last', 'Últimos números'];
     for (const label of labels) {
         try {
             const xr = document.evaluate(
@@ -40,20 +39,20 @@ function extractHistory() {
             );
             const node = xr.singleNodeValue;
             if (!node) continue;
+            
             let container = node.parentElement;
-            for (let d = 0; d < 10; d++) {
+            for (let d = 0; d < 8; d++) {
                 if (!container) break;
-                const children = container.querySelectorAll('span, div');
+                // innerText no duplica nodos padre/hijo y filtra ocultos
+                const text = container.innerText || '';
+                const parts = text.split(/[\s\n]+/);
                 const found = [];
-                for (const el of children) {
-                    const t = (el.textContent || '').trim();
-                    if (t.length > 0 && t.length <= 2) {
-                        const v = toNum(t);
-                        if (v !== null) found.push(v);
-                    }
+                for (const p of parts) {
+                    const v = toNum(p);
+                    if (v !== null) found.push(v);
                 }
+                
                 if (found.length >= 3) {
-                    // Encontramos el contenedor correcto (≥3 números válidos)
                     return found.slice(0, 10);
                 }
                 container = container.parentElement;
@@ -61,16 +60,15 @@ function extractHistory() {
         } catch(e) {}
     }
 
-    // Estrategia 2: recoger todos los spans cortos con números válidos
-    const allNums = [];
-    for (const s of document.querySelectorAll('span')) {
-        const t = (s.textContent || '').trim();
-        if (t.length > 0 && t.length <= 2) {
-            const v = toNum(t);
-            if (v !== null) allNums.push(v);
-        }
+    // Estrategia 2: Fallback global extrayendo texto visible hoja
+    const allText = document.body.innerText || '';
+    const parts = allText.split(/[\s\n]+/);
+    const globalFound = [];
+    for (const p of parts) {
+        const v = toNum(p);
+        if (v !== null) globalFound.push(v);
     }
-    return allNums.slice(0, 10);
+    return globalFound.slice(0, 10);
 }
 
 // ── MAIN ────────────────────────────────────────────────────────
