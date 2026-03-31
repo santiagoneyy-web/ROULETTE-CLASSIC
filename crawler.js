@@ -147,56 +147,63 @@ async function startDomScraper() {
             } catch(e) {}
         }
 
-        // ── POLLING EXTREMO CADA 800ms (PARALELIZADO) ─────────────
+        // ── POLLING EXTREMO CADA 800ms (PARALELIZADO Y SEGURO OOM) ─────────────
+        let isPolling = false;
         setInterval(async () => {
-            await Promise.all(instances.map(async (inst) => {
-                if (inst.isReloading) return; // ← Bloqueo: si está recargando, saltamos esta vuelta
+            if (isPolling) return; // ← Prevención OOM: Si la vuelta anterior no terminó, omitir
+            isPolling = true;
+            try {
+                await Promise.all(instances.map(async (inst) => {
+                    if (inst.isReloading) return; // ← Bloqueo: si está recargando, saltamos esta vuelta
 
-                try {
-                    const hist = await inst.page.evaluate(extractHistory);
-                    if (!hist || hist.length === 0) return;
+                    try {
+                        const hist = await inst.page.evaluate(extractHistory);
+                        if (!hist || hist.length === 0) return;
 
-                    const newFirst = hist[0];
+                        const newFirst = hist[0];
 
-                    if (newFirst !== inst.lastSent) {
-                        console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${newFirst} (hist: [${hist.slice(0,5).join(',')}])`);
-                        axios.post(API_URL, {
-                            table_id: inst.table.id,
-                            number: newFirst,
-                            source: 'dom_v16'
-                        }, { timeout: 2000 }).catch(() => {});
-                        
-                        inst.lastSent = newFirst;
-                        inst.lastDetection = Date.now();
-                        inst.prevHistory = hist;
-                    }
+                        if (newFirst !== inst.lastSent) {
+                            console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${newFirst} (hist: [${hist.slice(0,5).join(',')}])`);
+                            axios.post(API_URL, {
+                                table_id: inst.table.id,
+                                number: newFirst,
+                                source: 'dom_v16'
+                            }, { timeout: 2000 }).catch(() => {});
+                            
+                            inst.lastSent = newFirst;
+                            inst.lastDetection = Date.now();
+                            inst.prevHistory = hist;
+                        }
 
-                    // Stale check
-                    if (Date.now() - inst.lastDetection > STALE_MS) {
-                        console.log(`🔄 [T${inst.table.id}] Stale → reloading...`);
-                        inst.isReloading = true; // Activar cerrojo
-                        inst.lastDetection = Date.now();
-                        inst.lastSent = null;
-                        inst.prevHistory = [];
-                        
-                        try {
-                            await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
-                            await new Promise(r => setTimeout(r, 6000));
-                        } catch(err) {
-                            console.error(`⚠️ [T${inst.table.id}] Reload failed: ${err.message}`);
-                        } finally {
-                            inst.isReloading = false; // Liberar cerrojo siempre
+                        // Stale check
+                        if (Date.now() - inst.lastDetection > STALE_MS) {
+                            console.log(`🔄 [T${inst.table.id}] Stale → reloading...`);
+                            inst.isReloading = true; // Activar cerrojo
+                            inst.lastDetection = Date.now();
+                            inst.lastSent = null;
+                            inst.prevHistory = [];
+                            
+                            try {
+                                await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+                                await new Promise(r => setTimeout(r, 6000));
+                            } catch(err) {
+                                console.error(`⚠️ [T${inst.table.id}] Reload failed: ${err.message}`);
+                            } finally {
+                                inst.isReloading = false; // Liberar cerrojo siempre
+                            }
+                        }
+                    } catch(e) { 
+                        // Si tira error context destroyed/detached, lo ignoramos sabiendo que es puente de carga
+                        if (e.message.includes('detached') || e.message.includes('context')) {
+                            // Silent
+                        } else {
+                            console.log(`⚠️ [T${inst.table.id}] Eval Error: ${e.message}`);
                         }
                     }
-                } catch(e) { 
-                    // Si tira error context destroyed/detached, lo ignoramos sabiendo que es puente de carga
-                    if (e.message.includes('detached') || e.message.includes('context')) {
-                        // Silent
-                    } else {
-                        console.log(`⚠️ [T${inst.table.id}] Eval Error: ${e.message}`);
-                    }
-                }
-            }));
+                }));
+            } finally {
+                isPolling = false;
+            }
         }, 800);
 
     } catch (e) {
