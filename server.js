@@ -207,14 +207,10 @@ app.post('/api/spin', async (req, res) => {
                 } catch (err) { console.error('[DB] Pattern save err:', err.message); }
             }
 
-            // PREDICCIONES FUTURAS (Cálculo pesado de IA)
+            // PREDICCIONES FUTURAS (Optimizado: Cálculo Plano Inmediato)
             let newPredictions = { agent1_top: null, agent2_top: null, agent3_top: null, agent4_top: null };
             if (numsOnly.length >= 3) {
-                const stats = {};
-                for (let i = 2; i < numsOnly.length; i++) {
-                    predictor.analyzeSpin(numsOnly.slice(0, i + 1), stats);
-                }
-                const nextRound = predictor.projectNextRound(numsOnly, stats);
+                const nextRound = predictor.projectNextRound(numsOnly, {});
                 const signature = predictor.computeDealerSignature(numsOnly);
                 const masterSignals = predictor.getIAMasterSignals(nextRound, signature, numsOnly);
 
@@ -305,12 +301,8 @@ app.get('/api/predict/:tableId', async (req, res) => {
         const numsOnly = spins.map(s => s.number);
         if (numsOnly.length < 3) return res.json({ agent5_top: null, message: 'Not enough data' });
 
-        // Full prediction pipeline
-        const stats = {};
-        for (let i = 2; i < numsOnly.length; i++) {
-            predictor.analyzeSpin(numsOnly.slice(0, i + 1), stats);
-        }
-        const nextRound = predictor.projectNextRound(numsOnly, stats);
+        // Fast prediction pipeline (No 400-spin history loop)
+        const nextRound = predictor.projectNextRound(numsOnly, {});
         const signature = predictor.computeDealerSignature(numsOnly);
         const masterSignals = predictor.getIAMasterSignals(nextRound, signature, numsOnly);
         

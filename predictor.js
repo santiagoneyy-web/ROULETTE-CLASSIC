@@ -23,60 +23,25 @@ const TERMINALS_MAP = {
     36: [29]
 };
 
-const STRATEGIES = [
-    { strategy: '-',     betZone: [1, 2, 4, 5, 6, 10, 11, 13, 14, 15, 16, 23, 24, 25, 27, 30, 33, 36] },
-    { strategy: '+',     betZone: [0, 2, 3, 4, 7, 8, 10, 12, 13, 15, 17, 18, 21, 22, 25, 26, 28, 29, 31, 32, 35] },
-    { strategy: '-,-1',  betZone: [1, 5, 8, 10, 11, 13, 16, 23, 24, 27, 30, 33, 36] },
-    { strategy: '-,+1',  betZone: [1, 2, 4, 6, 13, 14, 15, 16, 24, 25, 33, 36] },
-    { strategy: '+,-1',  betZone: [0, 2, 3, 4, 7, 12, 15, 17, 18, 21, 25, 26, 28, 32, 35] },
-    { strategy: '+,+1',  betZone: [0, 3, 7, 8, 10, 12, 13, 18, 21, 22, 26, 28, 29, 31, 32, 35] }
-];
-
 function getDistance(a, b) {
     const iA = WHEEL_INDEX[a], iB = WHEEL_INDEX[b];
+    if (iA === undefined || iB === undefined) return 0;
     let d = iB - iA;
     if (d > 18) d -= 37;
     if (d < -18) d += 37;
     return d;
 }
 
+// (Estrategias antiguas eliminadas para optimización)
+
 function analyzeSpin(history, stats) {
-    if (history.length < 3) return [];
-    const last = history[history.length - 1];
-    const prev = history[history.length - 2];
-    const prev2 = history[history.length - 3];
-    
-    const results = [];
-    STRATEGIES.forEach(s => {
-        const key = s.strategy;
-        if (!stats[key]) stats[key] = { wins: 0, losses: 0, attempts: 0, outcomes: [] };
-        
-        const win = s.betZone.includes(last);
-        stats[key].attempts++;
-        if (win) stats[key].wins++; else stats[key].losses++;
-        stats[key].outcomes.push(win);
-        if (stats[key].outcomes.length > 20) stats[key].outcomes.shift();
-        
-        results.push({ strategy: key, win, wins: stats[key].wins, losses: stats[key].losses, attempts: stats[key].attempts, outcomes: stats[key].outcomes, betZone: s.betZone });
-    });
-    return results;
+    // Deprecated: Ya no se escanean 400 números
+    return [];
 }
 
 function projectNextRound(history, stats) {
-    if (history.length < 2) return [];
-    return STRATEGIES.map(s => {
-        const key = s.strategy;
-        const st = stats[key] || { wins: 0, losses: 0, attempts: 0, outcomes: [] };
-        const hitRate = st.attempts > 0 ? (st.wins / st.attempts) * 100 : 0;
-        
-        let streakWin = 0, streakLoss = 0;
-        for (let i = st.outcomes.length - 1; i >= 0; i--) {
-            if (st.outcomes[i]) { if (streakLoss > 0) break; streakWin++; }
-            else { if (streakWin > 0) break; streakLoss++; }
-        }
-        
-        return { strategy: key, hitRate, streakWin, streakLoss, tp: s.betZone[0], cor: s.betZone.slice(1, 5), betZone: s.betZone, rule: 'MOMENTUM', targetPattern: 'neutral' };
-    });
+    // Deprecated: Dummy function for compatibility
+    return [];
 }
 
 function computeDealerSignature(history) {
