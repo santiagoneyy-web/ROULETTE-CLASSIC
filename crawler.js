@@ -103,19 +103,26 @@ async function startDomScraper() {
             // Sin request interception — WebSockets libres
 
             console.log(`📡 [T${table.id}] Navigating: ${table.url}`);
-            await page.goto(table.url, { waitUntil: 'networkidle2', timeout: 90000 });
-            console.log(`🏷️ [T${table.id}] Title: ${await page.title()}`);
+            try {
+                await page.goto(table.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            } catch (err) {
+                console.log(`⚠️ [T${table.id}] Goto timeout/error, attempting to continue anyway... (${err.message})`);
+            }
+            try {
+                console.log(`🏷️ [T${table.id}] Title: ${await page.title()}`);
+            } catch(e) {}
 
             instances.push({
                 page,
                 table,
                 prevHistory: [],    // Lista completa anterior
                 lastSent: null,     // Último número enviado
-                lastDetection: Date.now()
+                lastDetection: Date.now(),
+                isReloading: false
             });
 
             if (table.id < TABLES.length) {
-                await new Promise(r => setTimeout(r, 12000));
+                await new Promise(r => setTimeout(r, 6000));
             }
         }
 
