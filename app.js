@@ -521,30 +521,28 @@ function submitNumber(val, silent = false, batch = false) {
 
         history.push(n);
 
-        // Compute new predictions (SOLO SI NO ES CARGA EN LOTE)
-        if (!batch) {
-            if (typeof computeDealerSignature === 'function' && history.length >= 3) {
-                try {
-                    const sig  = computeDealerSignature(history);
-                    const prox = projectNextRound(history, {});
-                    const masterSignals = getIAMasterSignals(prox, sig, history);
-                    if (masterSignals && masterSignals.length > 0) {
-                        lastSignal = masterSignals[0];
-                    }
-                    
-                    // JUGADAS Sniper automatically reads the table
-                    if (typeof predictZonePattern === 'function') {
-                        jugView = predictZonePattern(history, patternStatsCache);
-                    }
+        // Compute new predictions (Se calculan siempre para que la historia de W/L se llene, incluso en lote)
+        if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+            try {
+                const sig  = computeDealerSignature(history);
+                const prox = projectNextRound(history, {});
+                const masterSignals = getIAMasterSignals(prox, sig, history);
+                if (masterSignals && masterSignals.length > 0) {
+                    lastSignal = masterSignals[0];
+                }
+                
+                // JUGADAS Sniper automatically reads the table
+                if (typeof predictZonePattern === 'function') {
+                    jugView = predictZonePattern(history, patternStatsCache);
+                }
 
-                    if (history.length > 0) {
-                        fetchPatternMemory(history);
-                    }
-                } catch(e) { console.error('Predict error:', e); }
-            }
-            renderShadowPanel();
-            renderWheelAndHistory();
-            renderTravelPanel();
+                if (!batch) {
+                    if (history.length > 0) fetchPatternMemory(history);
+                    renderShadowPanel();
+                    renderWheelAndHistory();
+                    renderTravelPanel();
+                }
+            } catch(e) { console.error('Predict error:', e); }
         }
     }
 }
