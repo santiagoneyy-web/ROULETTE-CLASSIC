@@ -17,39 +17,21 @@ const TABLES = [
     { id: 2, url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
 ];
 
-// Tiempo máximo sin detectar antes de recargar la página
-const STALE_RELOAD_MS = 120000; // 2 minutos sin número nuevo → reload
+const STALE_MS = 90000; // 90s sin detección → reload
 
-// ── EXTRACTOR ──────────────────────────────────────────────────
-function extractNum() {
+// ── EXTRACTOR: devuelve LISTA de números del historial ──────────
+// Comparamos el primer elemento de la lista para detectar nuevos giros.
+// Usamos la LISTA completa porque el primer span puede ser estático.
+function extractHistory() {
     const toNum = (t) => {
         const n = parseInt((t || '').trim());
         return (!isNaN(n) && n >= 0 && n <= 36) ? n : null;
     };
 
-    // 1. CSS directos
-    const selectors = [
-        'div.flex.flex-col.gap-px > div:first-child span',
-        'div.flex.flex-col > div:first-child > span',
-        'div.flex.flex-col > div:first-child',
-        '[class*="history"] li:first-child',
-        '[class*="history"] > div:first-child span',
-        '[class*="History"] > div:first-child span',
-        '[class*="result"] > div:first-child span',
-        'li:first-child > span',
-    ];
-    for (const sel of selectors) {
-        try {
-            const el = document.querySelector(sel);
-            if (el) {
-                const v = toNum(el.textContent);
-                if (v !== null) return v;
-            }
-        } catch(e) {}
-    }
+    const nums = [];
 
-    // 2. XPath: buscar label "Historial"/"History" y escanear hacia arriba
-    const labels = ['Historial', 'History', 'Últimos', 'Results'];
+    // Estrategia 1: buscar el contenedor "Historial" via XPath y listar spans
+    const labels = ['Historial', 'History', 'Últimos', 'Results', 'Last'];
     for (const label of labels) {
         try {
             const xr = document.evaluate(
@@ -59,62 +41,41 @@ function extractNum() {
             const node = xr.singleNodeValue;
             if (!node) continue;
             let container = node.parentElement;
-            for (let d = 0; d < 8; d++) {
+            for (let d = 0; d < 10; d++) {
                 if (!container) break;
-                for (const s of container.querySelectorAll('span, div')) {
-                    const txt = (s.textContent || '').trim();
-                    if (txt.length > 0 && txt.length <= 2) {
-                        const v = toNum(txt);
-                        if (v !== null) return v;
+                const children = container.querySelectorAll('span, div');
+                const found = [];
+                for (const el of children) {
+                    const t = (el.textContent || '').trim();
+                    if (t.length > 0 && t.length <= 2) {
+                        const v = toNum(t);
+                        if (v !== null) found.push(v);
                     }
+                }
+                if (found.length >= 3) {
+                    // Encontramos el contenedor correcto (≥3 números válidos)
+                    return found.slice(0, 10);
                 }
                 container = container.parentElement;
             }
         } catch(e) {}
     }
 
-    // 3. Brute-force: primer span corto con número válido
+    // Estrategia 2: recoger todos los spans cortos con números válidos
+    const allNums = [];
     for (const s of document.querySelectorAll('span')) {
-        const txt = (s.textContent || '').trim();
-        if (txt.length > 0 && txt.length <= 2) {
-            const v = toNum(txt);
-            if (v !== null) return v;
+        const t = (s.textContent || '').trim();
+        if (t.length > 0 && t.length <= 2) {
+            const v = toNum(t);
+            if (v !== null) allNums.push(v);
         }
     }
-
-    return null;
-}
-
-// ── TABLA HANDLER ───────────────────────────────────────────────
-async function scrapeTable(inst) {
-    try {
-        const num = await inst.page.evaluate(extractNum);
-        if (typeof num === 'number' && num !== inst.lastNum) {
-            console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${num}`);
-            axios.post(API_URL, {
-                table_id: inst.table.id,
-                number: num,
-                source: 'dom_v13'
-            }, { timeout: 3000 }).catch(() => {});
-            inst.lastNum = num;
-            inst.lastDetection = Date.now();
-        }
-
-        // Si llevamos STALE_RELOAD_MS sin número nuevo, recargar página
-        if (Date.now() - inst.lastDetection > STALE_RELOAD_MS) {
-            console.log(`🔄 [T${inst.table.id}] Stale (2min) → reloading page...`);
-            inst.lastDetection = Date.now();
-            await inst.page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    } catch(e) {
-        // Silencioso — el loop sigue
-    }
+    return allNums.slice(0, 10);
 }
 
 // ── MAIN ────────────────────────────────────────────────────────
 async function startDomScraper() {
-    console.log(`\n📺 [V13] Starting scraper (no request blocking, live WebSockets)...`);
+    console.log(`\n📺 [V14] Starting with history-array detection...`);
     let browser = null;
 
     try {
@@ -139,9 +100,7 @@ async function startDomScraper() {
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1280, height: 800 });
             page.setDefaultTimeout(60000);
-
-            // ⚠️ SIN request interception — dejamos WebSockets pasar libremente
-            // Esto es crucial para que el casino pushee números en tiempo real
+            // Sin request interception — WebSockets libres
 
             console.log(`📡 [T${table.id}] Navigating: ${table.url}`);
             await page.goto(table.url, { waitUntil: 'networkidle2', timeout: 90000 });
@@ -150,7 +109,8 @@ async function startDomScraper() {
             instances.push({
                 page,
                 table,
-                lastNum: null,
+                prevHistory: [],    // Lista completa anterior
+                lastSent: null,     // Último número enviado
                 lastDetection: Date.now()
             });
 
@@ -159,31 +119,68 @@ async function startDomScraper() {
             }
         }
 
-        // Dar tiempo al JS dinámico
+        // Espera renderizado
         await new Promise(r => setTimeout(r, 8000));
 
         // Diagnóstico
         for (const inst of instances) {
             try {
-                const diag = await inst.page.evaluate(() => {
-                    const spans = Array.from(document.querySelectorAll('span'))
-                        .filter(s => { const t = (s.textContent||'').trim(); return t.length > 0 && t.length <= 3; })
-                        .slice(0, 10).map(s => '"' + s.textContent.trim() + '"');
-                    return 'Short spans: [' + spans.join(', ') + ']';
-                });
-                console.log(`🔍 [T${inst.table.id}] ${diag}`);
+                const hist = await inst.page.evaluate(extractHistory);
+                console.log(`🔍 [T${inst.table.id}] Initial history: [${hist.join(', ')}]`);
+                inst.prevHistory = hist;
+                // Enviar el primer número ya detectado
+                if (hist.length > 0 && hist[0] !== inst.lastSent) {
+                    console.log(`✨ [DOM-T${inst.table.id}] Inicial: ${hist[0]}`);
+                    await axios.post(API_URL, {
+                        table_id: inst.table.id,
+                        number: hist[0],
+                        source: 'dom_v14'
+                    }, { timeout: 3000 }).catch(() => {});
+                    inst.lastSent = hist[0];
+                    inst.lastDetection = Date.now();
+                }
             } catch(e) {}
         }
 
-        // ── POLLING 2 SEGUNDOS ──────────────────────────────────
+        // ── POLLING CADA 2 SEGUNDOS ─────────────────────────────
         setInterval(async () => {
             for (const inst of instances) {
-                await scrapeTable(inst);
+                try {
+                    const hist = await inst.page.evaluate(extractHistory);
+                    if (!hist || hist.length === 0) continue;
+
+                    const newFirst = hist[0];
+
+                    // ¿El número más reciente cambió?
+                    if (newFirst !== inst.lastSent) {
+                        console.log(`✨ [DOM-T${inst.table.id}] Detectado: ${newFirst} (hist: [${hist.slice(0,5).join(',')}])`);
+                        axios.post(API_URL, {
+                            table_id: inst.table.id,
+                            number: newFirst,
+                            source: 'dom_v14'
+                        }, { timeout: 3000 }).catch(() => {});
+                        inst.lastSent = newFirst;
+                        inst.lastDetection = Date.now();
+                        inst.prevHistory = hist;
+                    }
+
+                    // Stale check: si llevan 90s sin nuevo número, reload
+                    if (Date.now() - inst.lastDetection > STALE_MS) {
+                        console.log(`🔄 [T${inst.table.id}] Stale → reloading...`);
+                        inst.lastDetection = Date.now();
+                        inst.lastSent = null;
+                        inst.prevHistory = [];
+                        await inst.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+                        await new Promise(r => setTimeout(r, 6000));
+                    }
+                } catch(e) {
+                    // Silencioso
+                }
             }
         }, 2000);
 
     } catch (e) {
-        console.error(`❌ [V13] Fatal: ${e.message}`);
+        console.error(`❌ [V14] Fatal: ${e.message}`);
         if (browser) await browser.close().catch(() => {});
         console.log(`♻️ Restarting in 20s...`);
         setTimeout(() => startDomScraper(), 20000);
