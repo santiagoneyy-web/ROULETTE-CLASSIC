@@ -57,9 +57,31 @@ function computeDealerSignature(history) {
     // Calculate variability (Stability)
     const variance = recentTravels.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / recentTravels.length;
     const stdDev = Math.sqrt(variance);
+
+    // Calculate RUNS (direction blocks) over the last 20 throws to detect "SOLID" tables
+    let isSolid = false;
+    let runsCount = 0;
+    if (travels.length >= 20) {
+        const last20 = travels.slice(-20);
+        runsCount = 1;
+        for (let i = 1; i < last20.length; i++) {
+            const currentDir = last20[i] >= 0;
+            const prevDir = last20[i-1] >= 0;
+            if (currentDir !== prevDir) runsCount++;
+        }
+        // If it changes direction <= 10 times in 20 spins, the blocks average 2+ in size (WWLLWW...)
+        if (runsCount <= 10) isSolid = true;
+    }
     
-    // A stable dealer has a low standard deviation in their throw distance
-    const state = stdDev <= 6 ? 'STABLE' : (stdDev <= 10 ? 'ZIGZAG' : 'CHAOS');
+    // Determine strict state
+    let state = 'CHAOS';
+    if (isSolid) {
+        state = 'SÓLIDA';
+    } else if (stdDev <= 6) {
+        state = 'ESTABLE';
+    } else if (stdDev <= 10) {
+        state = 'ZIGZAG';
+    }
     
     // Recommendation based on the weighted trend
     const rec = avg > 0 ? 'BIG (CW)' : 'SMALL (CCW)';

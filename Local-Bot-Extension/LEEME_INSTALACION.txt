@@ -1,0 +1,24 @@
+=============================================================
+🤖 ROULETTE LOCAL BOT (TIPO EXTENSIÓN) - INSTRUCCIONES
+=============================================================
+
+Esta extensión reemplaza al Bot en la Nube de Render. 
+Al correr directamente en tu navegador (tu computadora), 
+aniquila el 100% de la latencia y te envía los números 
+en tiempo real (0 milisegundos) al sistema Predictor.
+
+CÓMO INSTALAR EN 3 CLICS (No necesitas saber programar):
+
+1. Abre tu navegador Google Chrome o Brave.
+2. Escribe en la barra de direcciones: chrome://extensions/ y presiona Enter.
+3. Arriba a la derecha, ENCIENDE el interruptor que dice "Modo desarrollador" (Developer mode).
+4. Arriba a la izquierda, haz clic en el botón "Cargar descomprimida" (Load unpacked).
+5. Selecciona ESTA MISMA CARPETA donde está este archivo (la carpeta llamada "Local-Bot-Extension").
+6. ¡Listo! Verás que la extensión se instaló de inmediato.
+
+CÓMO SE USA:
+1. Asegúrate de tener tu web del Predictor (roulette-classic-v3) abierta para ver los datos.
+2. Abre la mesa de Casino.org (Auto Roulette o Immersive Roulette) como siempre lo haces.
+3. No tienes que hacer nada más. El bot invisible en tu navegador inyectará el número a tu web en medio segundo cada vez que caiga la bolita.
+
+Puedes apretar F12 en la página del casino y abrir la pestaña "Console" para ver cómo el bot local dice "¡Cazado el X!" de forma instantánea.

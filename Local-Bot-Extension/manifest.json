@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Roulette Local Bot V1",
+  "version": "1.0",
+  "description": "Bot ultrarrápido que captura números de la ruleta localmente y los envía al servidor de predicción SIN latencia.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.casino.org/casinoscores/*",
+    "https://roulette-classic-v3.onrender.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.casino.org/casinoscores/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -17,13 +17,17 @@ let lastBigHitCCW  = false;
 // ─── ZONE STATE ──────────────────────────────────────────────
 const zoneBigHistory = [];   
 const zoneSmallHistory = [];
+const zone26History = [];
 let lastZoneBigHit   = false;
 let lastZoneSmallHit = false;
+let lastZone26Hit    = false;
 
+// ─── DOZENS STATE ──────────────────────────────────────────────
 // ─── DOZENS STATE ──────────────────────────────────────────────
 let dzCurrent = [];
 let dzPrevious = [];
 let dzSpinsSinceChange = 0;
+const dzHistoryList = []; // Para almacenar las últimas 8 situaciones
 
 // ─── JUGADAS STATE ───────────────────────────────────────────
 let jugView = { magnitude: 'SMALL', direction: 'CW', confidence: 0 };
@@ -127,8 +131,8 @@ function wipeData() {
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(() => {
             history.length=0; cwHistory.length=0; ccwHistory.length=0;
-            zoneBigHistory.length=0; zoneSmallHistory.length=0;
-            dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; lastSignal=null;
+            zoneBigHistory.length=0; zoneSmallHistory.length=0; zone26History.length=0;
+            dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('✅ Datos borrados.');
         }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
@@ -251,7 +255,13 @@ function renderShadowPanel() {
         document.getElementById('sup-b-c-balls').innerHTML = getFilteredNeighborsHTML(bigTarget, 9);
         document.getElementById('sup-b-l-balls').innerHTML = '';
         document.getElementById('sup-b-r-balls').innerHTML = '';
-        
+        // --- ZONE 26 STATS ---
+        const last15z26 = zone26History.slice(-15);
+        const winsZ26 = last15z26.filter(x => x === 'win').length;
+        const rateZ26 = last15z26.length > 0 ? ((winsZ26 / last15z26.length) * 100).toFixed(0) : '0';
+        document.getElementById('z26-rate').innerText = rateZ26 + '%';
+        document.getElementById('z26-string').innerHTML = last15z26.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+
         renderDozens();
     } } catch (err) { 
         document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:50px">${err.stack}</div>`;
@@ -304,6 +314,11 @@ function renderDozens() {
                 const shouldSwitch = (counts[outsider] > counts[dom1] + 1) || (counts[outsider] > counts[dom2] + 1);
 
                 if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
+                    // Guardar en historial si hubo estabilidad previa
+                    if (spins > 5 && cur.length > 0) {
+                        dzHistoryList.unshift({ dozens: [...cur], duration: spins });
+                        if (dzHistoryList.length > 8) dzHistoryList.length = 8;
+                    }
                     // Start TRANSITION
                     prev = [...cur];
                     cur = top2;
@@ -373,6 +388,51 @@ function renderDozens() {
 
         if (infoEl) {
             infoEl.innerText = `Ventana 18: Dom· ${fmtDoz(cur)}`;
+        }
+
+        // Detección de debilitamiento: Revisamos las últimas 18 tiradas.
+        let weakWarning = '';
+        if (spins > 8 && cur.length === 2 && history.length >= 18) {
+             const recentDozens = dozens.slice(-18).filter(d => d !== 0);
+             let iso1 = 0, iso2 = 0;
+             for (let i = 0; i < recentDozens.length; i++) {
+                 if (recentDozens[i] === cur[0]) {
+                     if (recentDozens[i-1] !== cur[0] && recentDozens[i+1] !== cur[0]) iso1++;
+                 }
+                 if (recentDozens[i] === cur[1]) {
+                     if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
+                 }
+             }
+             const weak1 = (iso1 >= 3);
+             const weak2 = (iso2 >= 3);
+             if (weak1 && weak2) weakWarning = '⚠️ AMBAS DOCENAS DEBILITADAS';
+             else if (weak1) weakWarning = `🟡 ${cur[0]}ª DOCENA SÓLO EN AISLAMIENTO`;
+             else if (weak2) weakWarning = `🟡 ${cur[1]}ª DOCENA SÓLO EN AISLAMIENTO`;
+        }
+        
+        const weakEl = document.getElementById('doc-weak-warning');
+        if (weakEl) {
+             if (weakWarning) {
+                 weakEl.innerText = weakWarning;
+                 weakEl.style.display = 'block';
+             } else {
+                 weakEl.style.display = 'none';
+             }
+        }
+        
+        // Render history list
+        const histEl = document.getElementById('dz-hist-list');
+        if (histEl) {
+             if (dzHistoryList.length === 0) {
+                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aún</div>';
+             } else {
+                 histEl.innerHTML = dzHistoryList.map(h => `
+                    <div class="dz-hist-item">
+                        <span>${h.dozens.join('ª & ')}ª</span>
+                        <span class="dur">duró ${h.duration}t</span>
+                    </div>
+                 `).join('');
+             }
         }
 
         // Refresh neighbor balls now that dzCurrent is updated
@@ -504,6 +564,11 @@ function submitNumber(val, silent = false, batch = false) {
                 zoneSmallHistory.push(lastZoneSmallHit ? 'win' : 'loss');
             }
         }
+
+        // Evaluate Zone 26 (Dist <= 9 to 26)
+        const d26 = Math.abs(calcDist(n, 26));
+        lastZone26Hit = (d26 <= 9);
+        zone26History.push(lastZone26Hit ? 'win' : 'loss');
 
         // Evaluate JUGADAS prediction — only when ACTIVE (not charging)
         if (history.length >= 1 && jugView.isCharging === false) {
@@ -679,7 +744,8 @@ function renderTravelPanel() {
         let pat = dealerSig.directionState;
         let patClass = 'badge-stable';
         
-        if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
+        if (pat === 'SÓLIDA') patClass = 'badge-solid';
+        else if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
         else if (pat === 'CHAOS') patClass = 'badge-zone'; // Red color for chaos
         
         patEl.textContent = pat;
