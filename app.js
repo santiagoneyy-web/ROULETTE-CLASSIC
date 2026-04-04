@@ -297,7 +297,20 @@ function renderDozens() {
             const counts = {1:0, 2:0, 3:0};
             window.forEach(d => counts[d]++);
             
-            const sorted = [1,2,3].sort((a,b) => counts[b] - counts[a]);
+            // STABLE SORT: Si hay empate en conteo, priorizar la docena que YA es dominante.
+            // Esto evita que salte a otra docena solo por un reordenamiento interno de Javascript.
+            const sorted = [1,2,3].sort((a,b) => {
+                if (counts[b] !== counts[a]) return counts[b] - counts[a];
+                const aIsDom = cur.includes(a);
+                const bIsDom = cur.includes(b);
+                if (aIsDom && !bIsDom) return -1;
+                if (!aIsDom && bIsDom) return 1;
+                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido más recientemente
+                const lastIdxA = window.lastIndexOf(a);
+                const lastIdxB = window.lastIndexOf(b);
+                return lastIdxB - lastIdxA;
+            });
+            
             let top2 = [sorted[0], sorted[1]].sort();
 
             if (cur.length === 0) {
@@ -305,12 +318,10 @@ function renderDozens() {
                 spins = 0;
             } else {
                 // STICKY LOGIC: Only switch if the "outsider" has a CLEAR lead (+2)
-                // over the current dominant members to avoid flipping on every small change.
                 const outsider = [1,2,3].find(d => !cur.includes(d));
                 const dom1 = cur[0]; 
                 const dom2 = cur[1];
                 
-                // Must be strictly stronger than at least one dominant by a margin of 1 (difference >= 2)
                 const shouldSwitch = (counts[outsider] > counts[dom1] + 1) || (counts[outsider] > counts[dom2] + 1);
 
                 if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
@@ -395,19 +406,24 @@ function renderDozens() {
         if (spins > 8 && cur.length === 2 && history.length >= 18) {
              const recentDozens = dozens.slice(-18).filter(d => d !== 0);
              let iso1 = 0, iso2 = 0;
+             let c1 = 0, c2 = 0;
              for (let i = 0; i < recentDozens.length; i++) {
                  if (recentDozens[i] === cur[0]) {
+                     c1++;
                      if (recentDozens[i-1] !== cur[0] && recentDozens[i+1] !== cur[0]) iso1++;
                  }
                  if (recentDozens[i] === cur[1]) {
+                     c2++;
                      if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
                  }
              }
-             const weak1 = (iso1 >= 3);
-             const weak2 = (iso2 >= 3);
+             // Débil si: aparece al menos 2 veces, y casi todas o todas sus apariciones están aisladas (separadas)
+             const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
+             const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
+             
              if (weak1 && weak2) weakWarning = '⚠️ AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `🟡 ${cur[0]}ª DOCENA SÓLO EN AISLAMIENTO`;
-             else if (weak2) weakWarning = `🟡 ${cur[1]}ª DOCENA SÓLO EN AISLAMIENTO`;
+             else if (weak1) weakWarning = `🟡 ${cur[0]}ª DOCENA DEBILITÁNDOSE (AISLADA)`;
+             else if (weak2) weakWarning = `🟡 ${cur[1]}ª DOCENA DEBILITÁNDOSE (AISLADA)`;
         }
         
         const weakEl = document.getElementById('doc-weak-warning');
