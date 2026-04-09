@@ -35,6 +35,11 @@ const jugHistory = [];
 let lastJugHit = false;
 let patternStatsCache = null;
 
+// ─── ANALYST STATE (V26) ─────────────────────────────────────
+const analystHistory = [];
+let analystView = { signal: 'ANALIZANDO...', targetDir: null, size: null, reason: '-', type: 'neutral' };
+let lastAnalystHit = false;
+
 // Pattern memory fetcher
 async function fetchPatternMemory(historyArr) {
     if (historyArr.length < 5) return;
@@ -600,6 +605,14 @@ function submitNumber(val, silent = false, batch = false) {
             lastJugHit = false; // Charging, no W/L recorded
         }
 
+// Evaluate ANALYST prediction (TRADING)
+        if (history.length >= 1 && analystView.targetDir) {
+            const jump = calcDist(history[history.length - 1], n);
+            const dirHit = (analystView.targetDir === 'CW' && jump >= 0) || (analystView.targetDir === 'CCW' && jump < 0);
+            lastAnalystHit = dirHit;
+            analystHistory.push(lastAnalystHit ? 'win' : 'loss');
+        }
+
         history.push(n);
 
         // Compute new predictions (Se calculan siempre para que la historia de W/L se llene, incluso en lote)
@@ -617,11 +630,19 @@ function submitNumber(val, silent = false, batch = false) {
                     jugView = predictZonePattern(history, patternStatsCache);
                 }
 
+                // Analyst Agent calculation
+                if (typeof analyzeTravelWave === 'function') {
+                    const travels = [];
+                    for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
+                    analystView = analyzeTravelWave(travels);
+                }
+
                 if (!batch) {
                     if (history.length > 0) fetchPatternMemory(history);
                     renderShadowPanel();
                     renderWheelAndHistory();
                     renderTravelPanel();
+                    renderAnalystUI();
                 }
             } catch(e) { console.error('Predict error:', e); }
         }
@@ -927,3 +948,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (info) info.innerText = '⚠️ API OFFLINE';
     }
 });
+// ─── ANALYST UI RENDERER ─────────────────────────────────────────
+function renderAnalystUI() {
+    const signalEl = document.getElementById('analyst-signal');
+    const dirEl    = document.getElementById('analyst-dir');
+    const sizeEl   = document.getElementById('analyst-size');
+    const reasonEl = document.getElementById('analyst-reason');
+    const rateEl   = document.getElementById('analyst-rate');
+    const perfEl   = document.getElementById('analyst-perf-string');
+
+    if (!signalEl) return;
+
+    // Signal & Color
+    signalEl.innerText = analystView.signal;
+    if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
+    else if (analystView.type === 'bearish') signalEl.style.color = 'var(--red)';
+    else signalEl.style.color = '#fff';
+
+    // Badges
+    if (analystView.targetDir) {
+        dirEl.innerText = analystView.targetDir;
+        dirEl.style.display = 'inline-block';
+    } else {
+        dirEl.style.display = 'none';
+    }
+
+    if (analystView.size) {
+        sizeEl.innerText = analystView.size;
+        sizeEl.style.display = 'inline-block';
+    } else {
+        sizeEl.style.display = 'none';
+    }
+
+    // Reason
+    reasonEl.innerText = analystView.reason;
+
+    // Stats
+    const last10 = analystHistory.slice(-10);
+    const wins = last10.filter(x => x === 'win').length;
+    const rate = last10.length > 0 ? ((wins / last10.length) * 100).toFixed(0) : 0;
+    
+    rateEl.innerText = `${rate}%`;
+    perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+}

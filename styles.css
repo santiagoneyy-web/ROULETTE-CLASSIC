@@ -371,6 +371,90 @@ html, body {
   box-shadow: 0 0 6px rgba(240,192,64,0.3);
 }
 
+/* ══════════ ANALYST AGENT (TRADING STYLE) ══════════ */
+.analyst-box {
+  background: #0d121f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 8px 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+.analyst-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.analyst-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--text2);
+  letter-spacing: 1px;
+}
+.analyst-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#analyst-rate {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--gold);
+}
+.analyst-wl {
+  display: flex;
+  gap: 2px;
+  font-size: 10px;
+}
+.analyst-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.analyst-signal {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(255,255,255,0.2);
+}
+.analyst-decision {
+  display: flex;
+  gap: 4px;
+}
+.dir-badge {
+  background: rgba(0, 229, 200, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(0, 229, 200, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 900;
+}
+.mag-badge {
+  background: rgba(240, 64, 96, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(240, 64, 96, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 900;
+}
+.analyst-reason {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.2;
+}
+
 /* ══════════ TRAVEL SECTION ══════════ */
 .travel-section {
   background: var(--card);
