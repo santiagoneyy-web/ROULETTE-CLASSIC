@@ -433,11 +433,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /**
- * MASTER CONFLUENCE AI — The brain that combines all factors.
- * @param {Array} history - Full number history
- * @param {Object} travelView - Output from analyzeTravelWave
- * @param {Object} zoneView - Output from predictZonePattern
- * @param {Object} sectorStats - Hot/Cold data for Zona 26/N9
+ * MASTER CONFLUENCE AI — V4 (Rhythm Dominance)
  */
 function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}) {
     if (history.length < 10) return { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reason: 'Deep history required.' };
@@ -445,57 +441,81 @@ function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(getDistance(history[i-1], history[i]));
     
-    // 1. RHYTHM DETECTOR (Sequential matching)
+    // 1. RHYTHM DETECTOR (Improved V4)
     const getPattern = (arr, len) => arr.slice(-len).map(v => v >= 0 ? 'R' : 'L').join('');
-    const last3 = getPattern(travels, 3); // Current rhythm
-    let rhythmPredict = null;
     
-    // Scan for repeating 3-step rhythms in last 50 travels
-    const searchArea = travels.slice(-50, -3);
-    for (let i = 0; i < searchArea.length - 4; i++) {
-        const past3 = getPattern(searchArea.slice(i, i + 3), 3);
-        if (past3 === last3) {
-            const next = travels[searchArea.length - 50 + i + 3] >= 0 ? 'CW' : 'CCW';
-            rhythmPredict = next;
-            break;
+    let rhythmPredict = null;
+    let rhythmLabel = null;
+
+    // A. Detect Local Block Periodicity (Mirroring/Oscillation)
+    // Check for 2-2-2 (RRLLRRLL)
+    const d8 = getPattern(travels, 8);
+    if (d8 === 'RRLLRRLL') { rhythmPredict = 'CCW'; rhythmLabel = '🔄 PATRÓN 2-2 CLARO'; }
+    else if (d8 === 'LLRRLLRR') { rhythmPredict = 'CW'; rhythmLabel = '🔄 PATRÓN 2-2 CLARO'; }
+    
+    // Check for 1-1-1 (RLRLRLRL)
+    const d6 = getPattern(travels, 6);
+    if (!rhythmPredict) {
+        if (d6 === 'RLRLRL') { rhythmPredict = 'CCW'; rhythmLabel = '🔄 ZIGZAG PERFECTO'; }
+        else if (d6 === 'LRLRLR') { rhythmPredict = 'CW'; rhythmLabel = '🔄 ZIGZAG PERFECTO'; }
+    }
+
+    // B. Detect "Room to Run" (Continuation of solid blocks)
+    const d4 = getPattern(travels, 4);
+    if (!rhythmPredict) {
+        if (d4 === 'RRRR') { rhythmPredict = 'CW'; rhythmLabel = '🔥 RACHA ALCISTA'; }
+        else if (d4 === 'LLLL') { rhythmPredict = 'CCW'; rhythmLabel = '🔥 RACHA BAJISTA'; }
+    }
+
+    // C. Historical Fallback (Original method)
+    if (!rhythmPredict) {
+        const last3 = getPattern(travels, 3);
+        const searchArea = travels.slice(-60, -3);
+        for (let i = 0; i < searchArea.length - 4; i++) {
+            const past3 = getPattern(searchArea.slice(i, i + 3), 3);
+            if (past3 === last3) {
+                rhythmPredict = (travels[searchArea.length - 60 + i + 3] >= 0 ? 'CW' : 'CCW');
+                rhythmLabel = '🔄 RITMO HISTÓRICO';
+                break;
+            }
         }
     }
 
-    // 2. SCORING ENGINE
+    // 2. SCORING ENGINE (V4 Weighting)
     let scoreCW  = 0;
     let scoreCCW = 0;
-    const reasons = [];
+    let reasons = [];
 
-    // Factor A: Travel Chart
+    // Factor A: Rhythm Pattern (HIGH PRIORITY V4: +3.5)
+    if (rhythmPredict === 'CW') { scoreCW += 3.5; reasons.push(rhythmLabel); }
+    if (rhythmPredict === 'CCW') { scoreCCW += 3.5; reasons.push(rhythmLabel); }
+
+    // Factor B: Travel Chart (+2.0)
     if (travelView.targetDir === 'CW') scoreCW += 2;
     if (travelView.targetDir === 'CCW') scoreCCW += 2;
     if (travelView.signal.includes('RUPTURA')) {
-        if (travelView.targetDir === 'CW') scoreCW += 1.5;
-        else if (travelView.targetDir === 'CCW') scoreCCW += 1.5;
+        if (travelView.targetDir === 'CW') scoreCW += 1;
+        else if (travelView.targetDir === 'CCW') scoreCCW += 1;
     }
 
-    // Factor B: Zone Sniper
+    // Factor C: Zone Sniper (+1.0)
     if (zoneView.direction === 'CW') scoreCW += 1;
     if (zoneView.direction === 'CCW') scoreCCW += 1;
 
-    // Factor C: Rhythm Match
-    if (rhythmPredict === 'CW') { scoreCW += 1.5; reasons.push('RITMO ESTABLE (CW)'); }
-    if (rhythmPredict === 'CCW') { scoreCCW += 1.5; reasons.push('RITMO ESTABLE (CCW)'); }
-
     // Factor D: Sector Bias (26/N9 side)
     const z26Rate = sectorStats.z26Rate || 50;
-    if (z26Rate > 60) { scoreCW += 1.5; reasons.push('ZONA 26 CALIENTE'); }
-    if (z26Rate < 35) { scoreCCW += 1.5; reasons.push('ZONA 26 FRÍA (POTENCIAL REBOTE)'); }
+    if (z26Rate > 65) { scoreCW += 1.5; reasons.push('ZONA 26 CALIENTE'); }
+    if (z26Rate < 35) { scoreCCW += 1.5; reasons.push('ZONA 26 FRÍA'); }
 
     // Result compilation
-    const total = scoreCW + scoreCCW;
     const diff = Math.abs(scoreCW - scoreCCW);
-    const confidence = Math.min(95, Math.round((diff / 6) * 100)); // Scaled to max possible score
+    const confidence = Math.min(98, Math.round((diff / 7.5) * 100)); // Adjusted denominator
     
     let finalTarget = null;
     let signal = 'WAITING FOR CONFLUENCE...';
     
-    if (confidence >= 75) {
+    // Aggressive Confidence in V4 (starts at 70%)
+    if (confidence >= 70) {
         finalTarget = scoreCW > scoreCCW ? 'CW' : 'CCW';
         signal = finalTarget === 'CW' ? '🎯 SNIPER MASTER: CW' : '🎯 SNIPER MASTER: CCW';
     }
@@ -504,7 +524,7 @@ function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}
         signal,
         target: finalTarget,
         confidence,
-        reasons: reasons.length ? reasons.join(' + ') : 'Standard Analysis',
+        reasons: reasons.length ? reasons.slice(0, 2).join(' + ') : 'Analizando flujos...',
         type: finalTarget === 'CW' ? 'bullish' : (finalTarget === 'CCW' ? 'bearish' : 'neutral')
     };
 }
