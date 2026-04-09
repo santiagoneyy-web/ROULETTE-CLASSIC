@@ -65,6 +65,94 @@ html, body {
 .analyst-signal.breakout { color: #ffeb3b; text-shadow: 0 0 10px rgba(255, 235, 59, 0.5); font-weight: 800; }
 .analyst-signal.compression { color: #ffa502; }
 
+/* ─── SNIPER MASTER AI ─── */
+.master-panel {
+    background: linear-gradient(135deg, #0d1520 0%, #152030 100%);
+    border: 2px solid rgba(255, 235, 59, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,235,59,0.05);
+    position: relative;
+    overflow: hidden;
+}
+.master-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, #ffeb3b, transparent);
+    opacity: 0.3;
+}
+.master-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.master-icon { font-size: 20px; text-shadow: 0 0 10px #ffeb3b; }
+.master-name { font-weight: 800; font-size: 14px; letter-spacing: 1px; color: #ffeb3b; }
+
+.master-conf-bar {
+    flex-grow: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.master-conf-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffeb3b, #ff9800);
+    transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 0 10px rgba(255,235,59,0.5);
+}
+.master-conf-text { font-size: 11px; font-weight: bold; min-width: 35px; text-align: right; }
+
+.master-body {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.03);
+}
+.master-main-signal {
+    font-size: 18px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+.master-details {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.master-target-badge {
+    background: #ffeb3b;
+    color: #000;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.master-reason-text {
+    font-size: 11px;
+    color: #aaa;
+    font-style: italic;
+}
+
+.master-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.master-stats { font-weight: bold; color: #777; }
+
 /* Mobile: stack columns */
 @media (max-width: 1100px) {
   .three-col-body {

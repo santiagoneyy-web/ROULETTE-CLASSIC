@@ -84,6 +84,27 @@
  
          <!-- ── COL 2: PREDICIONES ── -->
          <div class="col-predictions">
+            <!-- 0. MASTER AGENT (PREMIUM) -->
+            <section class="master-panel" id="master-panel">
+                <div class="master-header">
+                    <span class="master-icon">⚡</span>
+                    <span class="master-name">SNIPER MASTER AI</span>
+                    <div id="master-confidence-bar" class="master-conf-bar"><div id="master-conf-fill" class="master-conf-fill"></div></div>
+                    <span id="master-conf-text" class="master-conf-text">0%</span>
+                </div>
+                <div class="master-body">
+                    <div class="master-main-signal" id="master-signal">SYNCHRONIZING...</div>
+                    <div class="master-details">
+                        <span id="master-target" class="master-target-badge">--</span>
+                        <span id="master-reason" class="master-reason-text">Esperando confluencia de datos...</span>
+                    </div>
+                </div>
+                <div class="master-footer">
+                    <span class="master-stats">W/L: <span id="master-rate">0%</span></span>
+                    <div id="master-perf" class="performance-string"></div>
+                </div>
+            </section>
+
              <div class="strategy-tabs">
                  <button class="tab-btn active" id="tab-btn-dir">N1717</button>
                  <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>

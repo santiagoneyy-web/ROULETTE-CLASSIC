@@ -40,6 +40,11 @@ const analystHistory = [];
 let analystView = { signal: 'ANALIZANDO...', targetDir: null, size: null, reason: '-', type: 'neutral' };
 let lastAnalystHit = false;
 
+// ─── MASTER SNIPER STATE (CONFLUENCE) ─────────────────────────
+const masterHistory = [];
+let masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
+let lastMasterHit = false;
+
 // Pattern memory fetcher
 async function fetchPatternMemory(historyArr) {
     if (historyArr.length < 5) return;
@@ -613,6 +618,14 @@ function submitNumber(val, silent = false, batch = false) {
             analystHistory.push(lastAnalystHit ? 'win' : 'loss');
         }
 
+        // Evaluate MASTER SNIPER prediction
+        if (history.length >= 1 && masterView.target) {
+            const jump = calcDist(history[history.length - 1], n);
+            const dirHit = (masterView.target === 'CW' && jump >= 0) || (masterView.target === 'CCW' && jump < 0);
+            lastMasterHit = dirHit;
+            masterHistory.push(lastMasterHit ? 'win' : 'loss');
+        }
+
         history.push(n);
 
         // Compute new predictions (Se calculan siempre para que la historia de W/L se llene, incluso en lote)
@@ -637,12 +650,23 @@ function submitNumber(val, silent = false, batch = false) {
                     analystView = analyzeTravelWave(travels);
                 }
 
+                // Master Sniper AI calculation (CONFLUENCE)
+                if (typeof analyzeMasterConfluence === 'function') {
+                    // Extract sector stats for 26
+                    const last20 = zone26History.slice(-20);
+                    const z26Wins = last20.filter(x => x === 'win').length;
+                    const z26Rate = (z26Wins / (last20.length || 1)) * 100;
+                    
+                    masterView = analyzeMasterConfluence(history, analystView, jugView, { z26Rate });
+                }
+
                 if (!batch) {
                     if (history.length > 0) fetchPatternMemory(history);
                     renderShadowPanel();
                     renderWheelAndHistory();
                     renderTravelPanel();
                     renderAnalystUI();
+                    renderMasterUI();
                 }
             } catch(e) { console.error('Predict error:', e); }
         }
@@ -865,6 +889,7 @@ async function syncData() {
             renderShadowPanel();
             renderTravelPanel();
             renderWheelAndHistory();
+            renderMasterUI();
         }
     } catch(e) {}
 }
@@ -1003,4 +1028,42 @@ function renderAnalystUI() {
     
     rateEl.innerText = `${rate}%`;
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+}
+
+// ─── MASTER UI RENDERER ─────────────────────────────────────────
+function renderMasterUI() {
+    const signalEl = document.getElementById('master-signal');
+    const targetEl = document.getElementById('master-target');
+    const reasonEl = document.getElementById('master-reason');
+    const confText = document.getElementById('master-conf-text');
+    const confFill = document.getElementById('master-conf-fill');
+    const rateEl   = document.getElementById('master-rate');
+    const perfEl   = document.getElementById('master-perf');
+
+    if (!signalEl) return;
+
+    signalEl.innerText = masterView.signal;
+    targetEl.innerText = masterView.target ? (masterView.target === 'CW' ? 'DERECHA' : 'IZQUIERDA') : '--';
+    reasonEl.innerText = masterView.reasons || 'Analizando flujos...';
+    
+    // Confidence
+    confText.innerText = `${masterView.confidence}%`;
+    confFill.style.width = `${masterView.confidence}%`;
+
+    // Colors
+    if (masterView.confidence >= 80) {
+        signalEl.style.color = '#ffeb3b';
+        confFill.style.background = 'linear-gradient(90deg, #ffeb3b, #fff)';
+    } else {
+        signalEl.style.color = '#fff';
+        confFill.style.background = 'linear-gradient(90deg, #555, #888)';
+    }
+
+    // Stats
+    const last12 = masterHistory.slice(-12);
+    const wins = last12.filter(x => x === 'win').length;
+    const rate = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(0) : 0;
+    
+    rateEl.innerText = `${rate}%`;
+    perfEl.innerHTML = last12.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
