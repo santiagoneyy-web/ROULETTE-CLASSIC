@@ -57,6 +57,13 @@ html, body {
   gap: 12px;
 }
 
+.analyst-box[data-type="bullish"] { border-left: 4px solid var(--green); }
+.analyst-box[data-type="bearish"] { border-left: 4px solid var(--red); }
+
+.analyst-signal.fractal { color: #d1abff; text-shadow: 0 0 10px rgba(192, 144, 255, 0.5); }
+.analyst-signal.channel { color: #70a1ff; }
+.analyst-signal.compression { color: #ffa502; }
+
 /* Mobile: stack columns */
 @media (max-width: 1100px) {
   .three-col-body {

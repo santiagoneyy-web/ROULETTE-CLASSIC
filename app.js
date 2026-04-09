@@ -950,6 +950,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 // ─── ANALYST UI RENDERER ─────────────────────────────────────────
 function renderAnalystUI() {
+    const boxEl    = document.getElementById('analyst-panel');
     const signalEl = document.getElementById('analyst-signal');
     const dirEl    = document.getElementById('analyst-dir');
     const sizeEl   = document.getElementById('analyst-size');
@@ -959,16 +960,27 @@ function renderAnalystUI() {
 
     if (!signalEl) return;
 
-    // Signal & Color
+    // Reset classes
+    signalEl.className = 'analyst-signal';
+    boxEl.setAttribute('data-type', analystView.type || 'neutral');
+
+    // Signal & Special CSS Classes
     signalEl.innerText = analystView.signal;
+    if (analystView.signal.includes('FRACTAL')) signalEl.classList.add('fractal');
+    else if (analystView.signal.includes('CANAL')) signalEl.classList.add('channel');
+    else if (analystView.signal.includes('COMPRESIÓN')) signalEl.classList.add('compression');
+
     if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
     else if (analystView.type === 'bearish') signalEl.style.color = 'var(--red)';
-    else signalEl.style.color = '#fff';
+    else if (!signalEl.classList.contains('fractal')) signalEl.style.color = '#fff';
 
     // Badges
     if (analystView.targetDir) {
-        dirEl.innerText = analystView.targetDir;
+        dirEl.innerText = analystView.targetDir === 'CW' ? 'DER.' : 'IZQ.';
         dirEl.style.display = 'inline-block';
+        dirEl.style.background = analystView.targetDir === 'CW' ? 'rgba(48,224,144,0.15)' : 'rgba(192,144,255,0.15)';
+        dirEl.style.color = analystView.targetDir === 'CW' ? 'var(--green)' : '#d1abff';
+        dirEl.style.borderColor = analystView.targetDir === 'CW' ? 'rgba(48,224,144,0.4)' : 'rgba(192,144,255,0.4)';
     } else {
         dirEl.style.display = 'none';
     }

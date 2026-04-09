@@ -280,81 +280,117 @@ function calcDist(from, to) {
 // TRAVEL ANALYST AGENT — Technical Analysis (Trading Style)
 // ─────────────────────────────────────────────────────────────────────────────
 function analyzeTravelWave(travels) {
-    if (travels.length < 5) return { 
-        signal: 'ANALIZANDO DATA…', targetDir: null, size: null,
-        reason: 'Insuficientes datos', type: 'neutral', res: 0, sup: 0 
+    if (travels.length < 8) return { 
+        signal: 'BUSCANDO PATRÓN CLARO...', targetDir: null, size: null,
+        reason: 'Recolectando datos iniciales...', type: 'neutral', res: 0, sup: 0 
     };
 
     const abs = Math.abs;
-    const sample = travels.slice(-25);
+    const sample = travels.slice(-30);
+    const lastMoves = travels.slice(-10);
 
-    // 1. Soportes & Resistencias (promedio top 3 picos y top 3 valles)
+    // ─── 1. SOPORTES Y RESISTENCIAS ───
     const peaks   = sample.filter(v => v > 0).sort((a,b) => b - a).slice(0, 3);
-    const valleys = sample.filter(v => v < 0).sort((a,b) => a - b).slice(0, 3);
-    const res = peaks.length   > 0 ? peaks.reduce((a,b)=>a+b,0)   / peaks.length   : 13;
-    const sup = valleys.length > 0 ? valleys.reduce((a,b)=>a+b,0) / valleys.length : -13;
+    const valleys = sample.filter(v => v < 0).sort((a,b) => a - b).slice(0, 4);
+    const res = peaks.length   > 0 ? peaks.reduce((a,b)=>a+b,0)   / peaks.length   : 14;
+    const sup = valleys.length > 0 ? valleys.reduce((a,b)=>a+b,0) / valleys.length : -14;
 
-    // 2. Últimos 3 movimientos  
     const m3 = travels[travels.length - 3] ?? 0;
     const m2 = travels[travels.length - 2] ?? 0;
-    const m1 = travels[travels.length - 1];  // el más reciente
+    const m1 = travels[travels.length - 1]; 
 
-    let signal    = 'EN RANGO';
-    let targetDir = null;   // 'CW' | 'CCW'
-    let size      = null;   // 'BIG' | 'SMALL'
-    let reason    = 'Movimiento dentro del rango normal.';
+    // ─── 2. DETECTOR DE FRACTALES (MODO CONSERVADOR) ───
+    // Convertimos los últimos 4 movimientos en un vector de "ADN"
+    const getDNA = (arr) => arr.map(v => (abs(v) >= 10 ? 'B' : 'S') + (v >= 0 ? '+' : '-')).join('|');
+    const currentDNA = getDNA(travels.slice(-4));
+    let fractalTarget = null;
+    let fractalReason = '';
+
+    // Escaneamos el pasado buscando el mismo ADN (necesitamos histórico largo para esto)
+    if (travels.length > 20) {
+        for (let i = 0; i < travels.length - 8; i++) {
+            const pastDNA = getDNA(travels.slice(i, i + 4));
+            if (pastDNA === currentDNA) {
+                const nextMove = travels[i + 4];
+                fractalTarget = { dir: nextMove >= 0 ? 'CW' : 'CCW', size: abs(nextMove) >= 10 ? 'BIG' : 'SMALL' };
+                fractalReason = `Figura fractal detectada en tiro #${i+1}. Repetición geométrica probable.`;
+                break; // Encontramos la primera coincidencia clara
+            }
+        }
+    }
+
+    // ─── 3. DETECTOR DE CANAL / TENDENCIA (SLOPE) ───
+    // Calculamos el "centro" de los últimos 10 tiros para ver si sube o baja
+    const firstHalfAvg = lastMoves.slice(0, 5).reduce((a,b)=>a+b,0) / 5;
+    const secondHalfAvg = lastMoves.slice(5).reduce((a,b)=>a+b,0) / 5;
+    const slope = secondHalfAvg - firstHalfAvg;
+    const isTrendingUp = slope > 3.5; 
+    const isTrendingDown = slope < -3.5;
+
+    // ─── 4. COMPRESIÓN DE VOLATILIDAD ───
+    const recentSD = Math.sqrt(lastMoves.reduce((s, x) => s + x*x, 0) / 10);
+    const isCompressed = recentSD < 4.5 && travels.length > 15;
+
+    // ──────────────── SELECCIÓN DE SEÑAL (PRIORIDAD CONSERVADORA) ────────────────
+    let signal    = 'BUSCANDO PATRÓN CLARO...';
+    let targetDir = null; 
+    let size      = null; 
+    let reason    = 'Sin patrón de alta confianza detectado.';
     let type      = 'neutral';
 
-    const isCW  = v => v >= 0;
-    const isCCW = v => v < 0;
-
-    // A. Agotamiento alcista (3 CW seguidos, cada una más pequeña)
-    if (isCW(m3) && isCW(m2) && isCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
-        signal    = '📉 AGOTAMIENTO ALCISTA';
-        targetDir = 'CCW';
-        size      = abs(m1) >= 7 ? 'BIG' : 'SMALL';
-        reason    = `Impulso muere: +${m3}→+${m2}→+${m1}. Rebote a la izquierda.`;
-        type      = 'bearish';
+    // A. Prioridad 1: FRACTAL (Es la señal más específica y clara)
+    if (fractalTarget) {
+        signal    = '🔄 FRACTAL REPETITIVO';
+        targetDir = fractalTarget.dir;
+        size      = fractalTarget.size;
+        reason    = fractalReason;
+        type      = targetDir === 'CW' ? 'bullish' : 'bearish';
     }
-    // B. Agotamiento bajista (3 CCW seguidas, cada una más pequeña)
-    else if (isCCW(m3) && isCCW(m2) && isCCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
-        signal    = '📈 AGOTAMIENTO BAJISTA';
-        targetDir = 'CW';
-        size      = abs(m1) >= 7 ? 'BIG' : 'SMALL';
-        reason    = `Fuerza se agota: ${m3}→${m2}→${m1}. Rebote a la derecha.`;
-        type      = 'bullish';
-    }
-    // C. Choque contra Resistencia histórica
-    else if (m1 >= res - 1.5) {
+    // B. Prioridad 2: SOPORTE / RESISTENCIA (Rebotes en niveles críticos)
+    else if (m1 >= res - 1.2) {
         signal    = '🔴 RESISTENCIA TOCADA';
         targetDir = 'CCW';
         size      = 'BIG';
-        reason    = `Techo histórico en +${res.toFixed(1)}p. Retroceso esperado.`;
+        reason    = `Techo en +${res.toFixed(1)}p. Históricamente el dealer retrocede aquí.`;
         type      = 'bearish';
     }
-    // D. Choque contra Soporte histórico
-    else if (m1 <= sup + 1.5) {
+    else if (m1 <= sup + 1.2) {
         signal    = '🟢 SOPORTE TOCADO';
         targetDir = 'CW';
         size      = 'BIG';
-        reason    = `Suelo histórico en ${sup.toFixed(1)}p. Alza esperada.`;
+        reason    = `Suelo en ${sup.toFixed(1)}p. Históricamente el dealer rebota aquí.`;
         type      = 'bullish';
     }
-    // E. Explosión desde el cero (movimiento súbito de alta volatilidad)
-    else if (abs(m1) >= 14 && abs(m2) < 5) {
-        signal    = m1 > 0 ? '🚀 EXPLOSIÓN ALCISTA' : '💥 EXPLOSIÓN BAJISTA';
-        targetDir = m1 > 0 ? 'CCW' : 'CW';   // esperar corrección después de explosión
-        size      = 'BIG';
-        reason    = `Salto brusco de ${m1}p desde reposo (${m2}p). Corrección posible.`;
-        type      = m1 > 0 ? 'bearish' : 'bullish';
-    }
-    // F. Zigzag sostenido (alternancia perfecta 3 veces)
-    else if ((isCW(m3) && isCCW(m2) && isCW(m1)) || (isCCW(m3) && isCW(m2) && isCCW(m1))) {
-        signal    = '↔️ ZIGZAG SOSTENIDO';
-        targetDir = m1 > 0 ? 'CCW' : 'CW';   // el siguiente sigue el patrón alterno
+    // C. Prioridad 3: CANALES (Pendientes)
+    else if (isTrendingUp && m1 < 5) {
+        signal    = '📈 CANAL ALCISTA';
+        targetDir = 'CW';
         size      = 'SMALL';
-        reason    = `Alternancia rítmica detectada. Se esperan tiradas pequeñas.`;
+        reason    = 'Hondas en ascenso diagonal. El dealer mantiene inercia positiva.';
+        type      = 'bullish';
+    }
+    else if (isTrendingDown && m1 > -5) {
+        signal    = '📉 CANAL BAJISTA';
+        targetDir = 'CCW';
+        size      = 'SMALL';
+        reason    = 'Hondas en descenso diagonal. El dealer mantiene inercia negativa.';
+        type      = 'bearish';
+    }
+    // D. Prioridad 4: COMPRESIÓN (Triángulos)
+    else if (isCompressed) {
+        signal    = '⚠️ COMPRESIÓN (TRIÁNGULO)';
+        targetDir = null; // En compresión la dirección es incierta hasta la ruptura
+        size      = 'BIG';
+        reason    = 'Varianza mínima detectada. Energía acumulada lista para ruptura.';
         type      = 'neutral';
+    }
+    // E. Agotamiento simple
+    else if (isCW(m3) && isCW(m2) && isCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
+        signal    = '📉 AGOTAMIENTO';
+        targetDir = 'CCW';
+        size      = 'SMALL';
+        reason    = `Pérdida gradual de fuerza alcista.`;
+        type      = 'bearish';
     }
 
     return { signal, targetDir, size, reason, type, res: +res.toFixed(1), sup: +sup.toFixed(1) };
