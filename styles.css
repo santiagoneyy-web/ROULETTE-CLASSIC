@@ -62,6 +62,7 @@ html, body {
 
 .analyst-signal.fractal { color: #d1abff; text-shadow: 0 0 10px rgba(192, 144, 255, 0.5); }
 .analyst-signal.channel { color: #70a1ff; }
+.analyst-signal.breakout { color: #ffeb3b; text-shadow: 0 0 10px rgba(255, 235, 59, 0.5); font-weight: 800; }
 .analyst-signal.compression { color: #ffa502; }
 
 /* Mobile: stack columns */

@@ -331,14 +331,14 @@ function analyzeTravelWave(travels) {
     const recentSD = Math.sqrt(lastMoves.reduce((s, x) => s + x*x, 0) / 10);
     const isCompressed = recentSD < 4.5 && travels.length > 15;
 
-    // ──────────────── SELECCIÓN DE SEÑAL (PRIORIDAD CONSERVADORA) ────────────────
+    // ──────────────── SELECCIÓN DE SEÑAL (PRIORIDAD V3: TENDENCIA > RESISTENCIA) ────────────────
     let signal    = 'BUSCANDO PATRÓN CLARO...';
     let targetDir = null; 
     let size      = null; 
-    let reason    = 'Sin patrón de alta confianza detectado.';
+    let reason    = 'Analizando flujo de ondas...';
     let type      = 'neutral';
 
-    // A. Prioridad 1: FRACTAL (Es la señal más específica y clara)
+    // A. Prioridad 1: FRACTAL (Señal de memoria específica)
     if (fractalTarget) {
         signal    = '🔄 FRACTAL REPETITIVO';
         targetDir = fractalTarget.dir;
@@ -346,50 +346,66 @@ function analyzeTravelWave(travels) {
         reason    = fractalReason;
         type      = targetDir === 'CW' ? 'bullish' : 'bearish';
     }
-    // B. Prioridad 2: SOPORTE / RESISTENCIA (Rebotes en niveles críticos)
+    // B. Prioridad 2: RUPTURAS (BREAKOUTS)
+    // Si choca con resistencia PERO hay tendencia alcista fuerte -> Rompe resistencia
+    else if (m1 >= res - 1.5 && isTrendingUp) {
+        signal    = '🚀 RUPTURA ALCISTA';
+        targetDir = 'CW'; // Sigue la tendencia
+        size      = 'BIG';
+        reason    = `Inercia (+) superior a resistencia (+${res.toFixed(1)}p). Se espera ruptura.`;
+        type      = 'bullish';
+    }
+    // Si choca con soporte PERO hay tendencia bajista fuerte -> Rompe soporte
+    else if (m1 <= sup + 1.5 && isTrendingDown) {
+        signal    = '💥 RUPTURA BAJISTA';
+        targetDir = 'CCW'; // Sigue la tendencia
+        size      = 'BIG';
+        reason    = `Presión (-) superior a soporte (${sup.toFixed(1)}p). Se espera ruptura.`;
+        type      = 'bearish';
+    }
+    // C. Prioridad 3: CANALES (Continuación de Tendencia con hondas)
+    else if (isTrendingUp) {
+        signal    = '📈 CANAL ALCISTA';
+        targetDir = 'CW';
+        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        reason    = 'Hondas en ascenso constante. El dealer mantiene inercia de subida.';
+        type      = 'bullish';
+    }
+    else if (isTrendingDown) {
+        signal    = '📉 CANAL BAJISTA';
+        targetDir = 'CCW';
+        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        reason    = 'Hondas en descenso constante. El dealer mantiene inercia de caída.';
+        type      = 'bearish';
+    }
+    // D. Prioridad 4: REBOTES (Solo si NO hay tendencia fuerte)
     else if (m1 >= res - 1.2) {
         signal    = '🔴 RESISTENCIA TOCADA';
         targetDir = 'CCW';
         size      = 'BIG';
-        reason    = `Techo en +${res.toFixed(1)}p. Históricamente el dealer retrocede aquí.`;
+        reason    = `Techo en +${res.toFixed(1)}p sin tendencia definida. Posible rebote.`;
         type      = 'bearish';
     }
     else if (m1 <= sup + 1.2) {
         signal    = '🟢 SOPORTE TOCADO';
         targetDir = 'CW';
         size      = 'BIG';
-        reason    = `Suelo en ${sup.toFixed(1)}p. Históricamente el dealer rebota aquí.`;
+        reason    = `Suelo en ${sup.toFixed(1)}p sin tendencia definida. Posible rebote.`;
         type      = 'bullish';
     }
-    // C. Prioridad 3: CANALES (Pendientes)
-    else if (isTrendingUp && m1 < 5) {
-        signal    = '📈 CANAL ALCISTA';
-        targetDir = 'CW';
-        size      = 'SMALL';
-        reason    = 'Hondas en ascenso diagonal. El dealer mantiene inercia positiva.';
-        type      = 'bullish';
-    }
-    else if (isTrendingDown && m1 > -5) {
-        signal    = '📉 CANAL BAJISTA';
-        targetDir = 'CCW';
-        size      = 'SMALL';
-        reason    = 'Hondas en descenso diagonal. El dealer mantiene inercia negativa.';
-        type      = 'bearish';
-    }
-    // D. Prioridad 4: COMPRESIÓN (Triángulos)
+    // E. Compresión y Agotamiento
     else if (isCompressed) {
-        signal    = '⚠️ COMPRESIÓN (TRIÁNGULO)';
-        targetDir = null; // En compresión la dirección es incierta hasta la ruptura
+        signal    = '⚠️ COMPRESIÓN';
+        targetDir = null;
         size      = 'BIG';
-        reason    = 'Varianza mínima detectada. Energía acumulada lista para ruptura.';
+        reason    = 'Varianza mínima. Energía acumulada para un salto brusco.';
         type      = 'neutral';
     }
-    // E. Agotamiento simple
     else if (isCW(m3) && isCW(m2) && isCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
         signal    = '📉 AGOTAMIENTO';
         targetDir = 'CCW';
         size      = 'SMALL';
-        reason    = `Pérdida gradual de fuerza alcista.`;
+        reason    = `Impulso alcista perdiendo fuerza gradualmente.`;
         type      = 'bearish';
     }
 

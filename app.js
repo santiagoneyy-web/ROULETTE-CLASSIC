@@ -968,6 +968,7 @@ function renderAnalystUI() {
     signalEl.innerText = analystView.signal;
     if (analystView.signal.includes('FRACTAL')) signalEl.classList.add('fractal');
     else if (analystView.signal.includes('CANAL')) signalEl.classList.add('channel');
+    else if (analystView.signal.includes('RUPTURA')) signalEl.classList.add('breakout');
     else if (analystView.signal.includes('COMPRESIÓN')) signalEl.classList.add('compression');
 
     if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
