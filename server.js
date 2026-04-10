@@ -26,9 +26,15 @@ db.initDB();
 
 // ---- API: Tables ----
 app.get('/api/tables', (req, res) => {
-    db.getTables((err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+    db.getTables((err, tables) => {
+        if (err || !tables || tables.length === 0) {
+            // Hard fallback in case database.js logic fails
+            return res.json([
+                { id: 1, name: 'Auto Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/auto-roulette/' },
+                { id: 2, name: 'Inmersive Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
+            ]);
+        }
+        res.json(tables);
     });
 });
 

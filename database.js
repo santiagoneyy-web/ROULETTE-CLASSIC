@@ -22,7 +22,12 @@ let fallbackData = {
 function loadFallback() {
     if (fs.existsSync(DB_FILE)) {
         try {
-            fallbackData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+            const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+            // Merge logic: Preserve tables and expertRules if missing in file
+            if (data.tables && data.tables.length > 0) fallbackData.tables = data.tables;
+            if (data.spins) fallbackData.spins = data.spins;
+            if (data.expertRules) fallbackData.expertRules = data.expertRules;
+            
             console.log('[DB] Loaded JSON fallback data.');
         } catch (e) {
             console.error('[DB] JSON Load Error, using defaults.');

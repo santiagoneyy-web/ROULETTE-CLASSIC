@@ -940,20 +940,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         const r = await fetch('/api/tables');
+        let ts = [];
         if (r.ok) {
-            const ts = await r.json();
-            const tableSelect = document.getElementById('table-select');
-            if (tableSelect && ts.length > 0) {
-                // Clear existing options
-                tableSelect.innerHTML = '';
-                
-                // Populate options
-                ts.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = t.name;
-                    tableSelect.appendChild(opt);
-                });
+            ts = await r.json();
+        }
+
+        // --- Frontend Robustness V2 ---
+        // Si el servidor falla o devuelve [] (ej: BD vacía), inyectamos manualmente
+        // la configuración que el bot local de Santi espera (ID 1 y 2).
+        if (!ts || ts.length === 0) {
+            console.warn('⚠️ No se recibieron mesas de la API. Aplicando configuración maestra local.');
+            ts = [
+                { id: 1, name: 'Auto Roulette', provider: 'Evolution' },
+                { id: 2, name: 'Inmersive Roulette', provider: 'Evolution' }
+            ];
+        }
+
+        const tableSelect = document.getElementById('table-select');
+        if (tableSelect && ts.length > 0) {
+            // Clear existing options
+            tableSelect.innerHTML = '';
+            
+            // Populate options
+            ts.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                tableSelect.appendChild(opt);
+            });
 
                 tableSelect.addEventListener('change', async () => {
                     currentTableId = tableSelect.value;
