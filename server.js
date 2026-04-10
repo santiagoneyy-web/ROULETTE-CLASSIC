@@ -1,6 +1,6 @@
 // ============================================================
-// server.js — Express API server for Roulette Predictor
-// Run: node server.js
+// server.js — Roulette Predictor API (Neural V5)
+// Optimización: Build sin Chromium para Render (10/04/2026)
 // ============================================================
 const express = require('express');
 const cors    = require('cors');
