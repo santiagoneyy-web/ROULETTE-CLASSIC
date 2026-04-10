@@ -917,6 +917,12 @@ function connectSSE(tId) {
     eventSource.onmessage = (e) => {
         try {
             const data = JSON.parse(e.data);
+            if (data.type === 'ping') return;
+            if (data.type === 'batch_load') {
+                console.log("🔥 Lote recibido del bot. Resincronizando datos...");
+                syncData();
+                return;
+            }
             if (data.type === 'new_spin' && data.number !== undefined) {
                 // Instantly react to new live spins
                 submitNumber(data.number, false, false);

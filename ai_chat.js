@@ -38,11 +38,16 @@ const AIChat = {
         this.inputEl.value = '';
 
         try {
-            const tableId = currentTableId || 1;
+            const hStr = (typeof history !== 'undefined') ? history.slice(-15).join(', ') : '';
+            
             const response = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, tableId })
+                body: JSON.stringify({ 
+                    text: text, 
+                    tableId: typeof currentTableId !== 'undefined' ? currentTableId : 1,
+                    historyStr: hStr
+                })
             });
             const data = await response.json();
             this.addMessage(data.reply, 'ai');

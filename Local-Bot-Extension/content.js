@@ -121,14 +121,20 @@ function extractHistory() {
     }
 
     // 2. Global Fallback Rápido (Selector V24)
-    const allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul');
+    const allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul, div.flex.items-center.gap-1.overflow-x-auto');
     for (const container of allContainers) {
-        const children = container.children;
-        if (children.length < 8 || children.length > 25) continue;
+        // En Casino.org nuevo, los hijos a veces están anidados o son botones
+        // Si no son hijos directos con texto, buscamos spans
+        let items = container.children;
+        if (items.length > 0 && items[0].tagName.toLowerCase() !== 'span' && container.querySelectorAll('span').length > 5) {
+            items = container.querySelectorAll('span');
+        }
+
+        if (items.length < 6 || items.length > 35) continue;
         
         const nums = [];
         let garbageCount = 0;
-        for (const child of children) {
+        for (const child of items) {
             const raw = (child.textContent || '').trim();
             if (raw === '') continue;
             if (raw.length <= 3) {
@@ -140,7 +146,7 @@ function extractHistory() {
             }
         }
         
-        if (nums.length >= 8 && garbageCount <= 2) {
+        if (nums.length >= 6 && garbageCount <= 4) {
             return nums.slice(0, 10);
         }
     }
@@ -148,17 +154,37 @@ function extractHistory() {
     return [];
 }
 
+let isBooted = false;
+
 // ── Bucle de Lectura Asesino (Cada 300 ms) ──
 setInterval(() => {
     try {
         const hist = extractHistory();
         if (hist && hist.length > 0) {
+            
+            // 🔥 BACKFILL INICIAL DIRECTO AL ARRANCAR (Evita el F5 del usuario)
+            if (!isBooted) {
+                isBooted = true;
+                const clonedHist = [...hist].reverse(); // De más antiguo a más nuevo
+                fetch(API_URL + '/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        table_id: TABLE_ID,
+                        numbers: clonedHist,
+                        source: 'LocalExt_Batch'
+                    })
+                }).catch(e => console.error("Batch fail:", e));
+                lastSentNumber = hist[0];
+                return;
+            }
+
             const newFirst = hist[0];
             
             if (newFirst !== lastSentNumber) {
                 console.log(`[🚀 LO-BOT] ¡Cazado el ${newFirst}! (Historial Visto: ${hist.slice(0,4).join(',')})`);
                 
-                // Dispara el HTTP POST a Render (No hay CORS error porque la API tiene app.use(cors()))
+                // Dispara el HTTP POST a Render
                 fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -15,6 +15,48 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 
 const app  = express();
+
+// Batch import (for initial sync from Bot over missing history)
+app.post('/api/spin/batch', async (req, res) => {
+    const { table_id, numbers, source } = req.body;
+    if (!table_id || !Array.isArray(numbers) || numbers.length === 0) {
+        return res.status(400).json({ error: 'table_id and numbers array required' });
+    }
+    
+    // Proceso el array y lo guardo localmente en el DB (como sync mode)
+    try {
+        // Obtenemos historial db
+        await new Promise((resolve) => {
+            db.getHistory(table_id, 20, (err, rows) => {
+                const existing = rows ? rows.map(r => r.number) : [];
+                
+                // Procesar uno por uno, validando si es el mismo para ignorarlo
+                const doWork = async () => {
+                    for(let i=0; i < numbers.length; i++){
+                        const n = numbers[i];
+                        // Un truquito simple para evitar duplicados del batch en reinicios
+                        // asumiendo que el batch manda de viejo a nuevo
+                        await new Promise((cb) => db.addSpin(table_id, n, source || 'batch', {}, cb));
+                    }
+                    resolve();
+                };
+                doWork();
+            });
+        });
+
+        // Hacemos ping a la UI
+        if (sseClients[table_id]) {
+            sseClients[table_id].forEach(client => {
+                client.write(`data: ${JSON.stringify({ type: 'batch_load' })}\n\n`);
+            });
+        }
+        res.json({ success: true, inserted: numbers.length });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// START
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -69,6 +111,15 @@ app.get('/api/history/:tableId', (req, res) => {
 // ── SSE: broadcast to all clients listening per table ──────
 const sseClients = {}; // { tableId: [res, res, ...] }
 
+// SSE Heartbeat para evitar desconexiones de Render por inactividad (>60s)
+setInterval(() => {
+    Object.keys(sseClients).forEach(tableId => {
+        sseClients[tableId].forEach(client => {
+            try { client.write('data: {"type":"ping"}\n\n'); } catch (e) {}
+        });
+    });
+}, 25000);
+
 app.get('/api/events/:tableId', (req, res) => {
     const tableId = req.params.tableId;
     res.setHeader('Content-Type', 'text/event-stream');
@@ -119,26 +170,61 @@ app.get('/api/patterns/:tableId', async (req, res) => {
     }
 });
 
-// ─── AI COLLABORATION ENDPOINTS (V5) ──────────────────────────
+// ── Memoria local para el chat del usuario (Temporal por reinicio)
+const aiMemory = {};
+
+// ─── AI COLLABORATION ENDPOINTS (V5 GEMINI) ────────────────────────
 app.post('/api/ai/chat', async (req, res) => {
-    const { text, tableId } = req.body;
+    const { text, tableId, historyStr } = req.body;
     let reply = "No estoy seguro de cómo procesar eso aún, Santi.";
     
+    // Fallback: Si no hay llave, respondemos como antes
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return res.json({ reply: "⚠️ SANTI: Necesitas obtener tu 'GEMINI_API_KEY' de Google AI Studio y ponerla en tus variables de entorno en Render para que despierte mi cerebro completo. Mientras tanto, uso mis reglas básicas de supervivencia temporal." });
+    }
+
     try {
-        const lowerText = text.toLowerCase();
-        
-        if (lowerText.includes('confianza') || lowerText.includes('seguro')) {
-            reply = "Mi sistema de confluencia está analizando el flujo. Basándome en la inercia del dealer, creo que deberíamos esperar una señal superior al 80% para ser conservadores.";
-        } else if (lowerText.includes('patrón') || lowerText.includes('viste')) {
-            reply = "He detectado un patrón rítmico persistente. Mi base de datos me dice que estas secuencias son las más probables ahora.";
-        } else if (lowerText.includes('hola') || lowerText.includes('quién eres')) {
-            reply = "Soy el Brain Core V5. Estoy aquí para aprender de tus jugadas y ayudarte a filtrar el ruido del caos. Trabajemos en equipo.";
-        } else {
-            reply = "Interesante observación. Lo guardaré en mi bitácora neural para compararlo con el próximo resultado.";
+        if (!aiMemory[tableId]) aiMemory[tableId] = [];
+
+        // Instrucción del sistema dinámica
+        const sysPrompt = `(SISTEMA NO VISIBLE: Eres Brain Core V5, el IA personal de Santi. Datos vivos ruleta: [${historyStr}]. Responde como si analizaras eso. Sé directo, breve, estilo cyberpunk militar.) `;
+
+        // Clonamos la memoria para no ensuciar la real con el sysPrompt constante
+        const conversationContext = [...aiMemory[tableId]];
+        conversationContext.push({ role: "user", parts: [{ text: sysPrompt + text }] });
+
+        const requestBody = {
+            contents: conversationContext,
+            generationConfig: { maxOutputTokens: 200, temperature: 0.6 }
+        };
+
+        const gRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!gRes.ok) {
+            const errD = await gRes.text();
+            throw new Error(`Gemini API Error: ${errD}`);
         }
+        const gData = await gRes.json();
         
+        reply = gData.candidates[0].content.parts[0].text;
+        
+        // Guardar la verdadera conversación sin el sysPrompt largo para ahorrar tokens
+        aiMemory[tableId].push({ role: "user", parts: [{ text }] });
+        aiMemory[tableId].push({ role: "model", parts: [{ text: reply }] });
+
+        // Mantener memoria ligera (últimos 10 mensajes -> 5 pares)
+        if (aiMemory[tableId].length > 10) aiMemory[tableId] = aiMemory[tableId].slice(-10);
+
         res.json({ reply });
-    } catch(e) { res.json({ reply: "Lo siento, mi conexión neural está inestable." }); }
+    } catch(e) {
+        console.error("Gemini Error:", e);
+        res.json({ reply: "Lo siento, mi sinapsis con el cerebro de Google está fallando por un error de red temporal." });
+    }
 });
 
 app.post('/api/ai/teach', async (req, res) => {
