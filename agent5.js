@@ -45,30 +45,14 @@ function getPhysics(prev, current) {
     return { distance: distanceClass, direction };
 }
 
-const Pattern = require('./models/Pattern');
-const ExpertRule = require('./models/ExpertRule');
-
 // Agent 5: Similarity Search + DNA Absorption
 // Looks for historical instances where the exact same sequence occurred.
-async function predictAgent5(tableId, currentHistoryNumbers) {
+// Now DB-agnostic (receives expert rule and stats from server)
+async function predictAgent5(currentHistoryNumbers, expert = null, stats = []) {
     if (currentHistoryNumbers.length < 5) return { topNum: null, dnaMatch: false, reason: 'Syncing...' };
 
     try {
-        const last5 = currentHistoryNumbers.slice(-5);
-        const jumps = [];
-        for (let i = 1; i < last5.length; i++) {
-            const p = getPhysics(last5[i-1], last5[i]);
-            const mag = (p.distance === 'Big' || p.distance === 'ULTRA') ? 'B' : 'S';
-            const dir = p.direction === 'IZQUIERDA' ? 'CCW' : 'CW';
-            jumps.push({ mag, dir });
-        }
-        
-        const seqMag = jumps.map(x => x.mag).join('');
-        const seqDir = jumps.map(x => x.dir).join('');
-        const patternDna = `${seqMag}|${seqDir}`;
-
         // 1. Check EXPERT RULES first (Human knowledge)
-        const expert = await ExpertRule.findOne({ pattern_dna: patternDna });
         if (expert) {
             return {
                 topNum: null, 
@@ -79,13 +63,7 @@ async function predictAgent5(tableId, currentHistoryNumbers) {
         }
 
         // 2. Check GLOBAL PATTERNS (Statistical Learning)
-        const stats = await Pattern.aggregate([
-            { $match: { table_id: String(tableId), sequence_mag: seqMag, sequence_dir: seqDir } },
-            { $group: { _id: { mag: "$next_mag", dir: "$next_dir" }, count: { $sum: 1 } } },
-            { $sort: { count: -1 } }
-        ]);
-
-        if (stats.length > 0) {
+        if (stats && stats.length > 0) {
             const best = stats[0];
             return {
                 topNum: null,
@@ -99,7 +77,7 @@ async function predictAgent5(tableId, currentHistoryNumbers) {
 
     } catch (e) { console.error('[Agent5] Error:', e); }
 
-    return { topNum: null, dnaMatch: false, reason: 'Escaneando base de datos...' };
+    return { topNum: null, dnaMatch: false, reason: 'Buscando patrones en base de datos...' };
 }
 
 function evaluatePrediction(realNumber, predictedNumber) {

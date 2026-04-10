@@ -667,10 +667,10 @@ function submitNumber(val, silent = false, batch = false) {
                         masterView.target = jugView.agent5_top_new.direction;
                     }
 
-                    if (typeof AIChat !== 'undefined') {
+                    if (typeof AIChat !== 'undefined' && masterView.reasons) {
                         AIChat.onNewSpin(n, { 
                             masterConfidence: masterView.confidence,
-                            isRhythm: masterView.reasons.includes('RITMO'),
+                            isRhythm: String(masterView.reasons).includes('RITMO'),
                             rhythmName: masterView.reasons
                         });
                     }

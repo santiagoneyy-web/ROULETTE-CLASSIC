@@ -436,7 +436,7 @@ if (typeof module !== 'undefined' && module.exports) {
  * MASTER CONFLUENCE AI — V4 (Rhythm Dominance)
  */
 function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}) {
-    if (history.length < 10) return { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reason: 'Deep history required.' };
+    if (history.length < 10) return { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: 'Deep history required.' };
 
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(getDistance(history[i-1], history[i]));

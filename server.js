@@ -7,10 +7,8 @@ const cors    = require('cors');
 const path    = require('path');
 const db      = require('./database');
 const Spin    = require('./models/Spin'); // MongoDB Model
-const Pattern = require('./models/Pattern'); // MongoDB Pattern Memory Model
-const ExpertRule = require('./models/ExpertRule'); // New V5 Learning Model
-const agent5  = require('./agent5');      // Autonomous AI & Physics
 const predictor = require('./predictor'); // Agents 1-4
+const agent5  = require('./agent5');      // Autonomous AI & Physics
 const axios   = require('axios');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
@@ -121,14 +119,12 @@ app.post('/api/ai/chat', async (req, res) => {
     let reply = "No estoy seguro de cómo procesar eso aún, Santi.";
     
     try {
-        const isMongo = db.getUseMongo();
         const lowerText = text.toLowerCase();
         
-        // Simple logic for heuristic responses
         if (lowerText.includes('confianza') || lowerText.includes('seguro')) {
             reply = "Mi sistema de confluencia está analizando el flujo. Basándome en la inercia del dealer, creo que deberíamos esperar una señal superior al 80% para ser conservadores.";
         } else if (lowerText.includes('patrón') || lowerText.includes('viste')) {
-            reply = "He detectado un patrón rítmico persistente. Si consultas mi base de datos de aprendizaje, verás que esta secuencia ha fallado solo 2 veces en los últimos 50 registros colectivos.";
+            reply = "He detectado un patrón rítmico persistente. Mi base de datos me dice que estas secuencias son las más probables ahora.";
         } else if (lowerText.includes('hola') || lowerText.includes('quién eres')) {
             reply = "Soy el Brain Core V5. Estoy aquí para aprender de tus jugadas y ayudarte a filtrar el ruido del caos. Trabajemos en equipo.";
         } else {
@@ -142,14 +138,10 @@ app.post('/api/ai/chat', async (req, res) => {
 app.post('/api/ai/teach', async (req, res) => {
     const { patternDna, label, suggestedMove } = req.body;
     try {
-        const isMongo = db.getUseMongo();
-        if (isMongo) {
-            const rule = new ExpertRule({ pattern_dna: patternDna, label, suggested_move: suggestedMove });
-            await rule.save();
-            res.json({ success: true, message: 'Conceito aprendido y guardado en Atlas.' });
-        } else {
-            res.json({ success: true, message: 'Aprendido localmente (Memoria Temporal).' });
-        }
+        db.addExpertRule({ pattern_dna: patternDna, label, suggested_move: suggestedMove, learned_from: 'human' }, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: 'Conceito aprendido y guardado.' });
+        });
     } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -218,9 +210,10 @@ app.post('/api/spin', async (req, res) => {
 
             numsOnly.push(number);
 
-            // PATTERN MEMORY
+            // PATTERN MEMORY (Mongo focus, JSON-sync skipped for performance)
             if (isMongo && numsOnly.length >= 6) {
                 try {
+                    const Pattern = require('./models/Pattern');
                     const last6 = numsOnly.slice(-6); 
                     const jumps = [];
                     for (let i = 1; i < last6.length; i++) {
@@ -356,9 +349,22 @@ app.get('/api/predict/:tableId', async (req, res) => {
             if (ag3) predictions.agent3_top = ag3.number;
             if (ag4) predictions.agent4_top = ag4.number;
         }
-        if (isMongo) {
-            predictions.agent5_top = await agent5.predictAgent5(tableId, numsOnly);
+
+        // Agent 5 Neural Logic (V5 Learning)
+        const jumpsA5 = [];
+        for (let i = 1; i < numsOnly.slice(-5).length; i++) {
+            const p = agent5.getPhysics(numsOnly.slice(-5)[i-1], numsOnly.slice(-5)[i]);
+            jumpsA5.push({ mag: (p.distance==='Big'||p.distance==='ULTRA')?'B':'S', dir: p.direction==='IZQUIERDA'?'CCW':'CW' });
         }
+        const seqMA5 = jumpsA5.map(x=>x.mag).join('');
+        const seqDA5 = jumpsA5.map(x=>x.dir).join('');
+        const dnaA5 = `${seqMA5}|${seqDA5}`;
+
+        const expert = await new Promise(r => db.getExpertRule(dnaA5, (err, rule) => r(rule)));
+        const stats = await new Promise(r => db.getPatternStats(tableId, seqMA5, seqDA5, (err, s) => r(s)));
+        
+        predictions.agent5_top = await agent5.predictAgent5(numsOnly, expert, stats);
+        
         res.json(predictions);
     } catch (e) {
         console.error('Predict endpoint error:', e);
