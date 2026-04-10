@@ -939,71 +939,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTravelPanel();
 
     try {
-        const r = await fetch('/api/tables');
         let ts = [];
-        if (r.ok) {
-            ts = await r.json();
-        }
+        try {
+            const r = await fetch('/api/tables');
+            if (r.ok) ts = await r.json();
+        } catch(err) { console.warn("Fetch tables failed, using fallback."); }
 
-        // --- Frontend Robustness V2 ---
-        // Si el servidor falla o devuelve [] (ej: BD vacía), inyectamos manualmente
-        // la configuración que el bot local de Santi espera (ID 1 y 2).
         if (!ts || ts.length === 0) {
-            console.warn('⚠️ No se recibieron mesas de la API. Aplicando configuración maestra local.');
             ts = [
-                { id: 1, name: 'Auto Roulette', provider: 'Evolution' },
-                { id: 2, name: 'Inmersive Roulette', provider: 'Evolution' }
+                { id: 1, name: 'Auto Roulette' },
+                { id: 2, name: 'Inmersive Roulette' }
             ];
         }
 
         const tableSelect = document.getElementById('table-select');
-        if (tableSelect && ts.length > 0) {
-            // Clear existing options
+        if (tableSelect) {
             tableSelect.innerHTML = '';
-            
-            // Populate options
             ts.forEach(t => {
                 const opt = document.createElement('option');
-                opt.value = t.id;
+                opt.value = String(t.id);
                 opt.textContent = t.name;
                 tableSelect.appendChild(opt);
             });
 
-                tableSelect.addEventListener('change', async () => {
-                    currentTableId = tableSelect.value;
-                    const tImg = document.querySelector('.table-image-container img');
-                    if (tImg) tImg.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
+            tableSelect.onchange = async () => {
+                currentTableId = tableSelect.value;
+                const tImg = document.querySelector('.table-image-container img');
+                if (tImg) tImg.src = currentTableId == "1" ? 'table-1.jpg' : 'table-2.jpg';
 
-                    history.length = 0;
-                    cwHistory.length = 0;
-                    ccwHistory.length = 0;
-                    lastSignal = null;
-                    renderWheelAndHistory();
-                    
-                    const infoEl = document.getElementById('doc-info');
-                    if (infoEl) infoEl.innerText = 'Sincronizando...';
-                    
-                    await syncData();
-                    if (infoEl) infoEl.innerText = 'Listo'; // Clear syncing state
-                    connectSSE(currentTableId);
-                });
-
-                // Force initial selection
-                currentTableId = ts[0].id;
-                tableSelect.value = currentTableId;
-                const tImgInit = document.querySelector('.table-image-container img');
-                if (tImgInit) tImgInit.src = currentTableId == 1 ? 'table-1.jpg' : 'table-2.jpg';
+                history.length = 0;
+                cwHistory.length = 0;
+                ccwHistory.length = 0;
+                lastSignal = null;
+                renderWheelAndHistory();
+                
+                const infoEl = document.getElementById('doc-info');
+                if (infoEl) infoEl.innerText = 'Sincronizando...';
                 
                 await syncData();
+                if (infoEl) infoEl.innerText = 'Listo';
                 connectSSE(currentTableId);
-            } else {
-                console.warn('No tables returned from API');
-            }
+            };
+
+            // Force Load Initial
+            currentTableId = String(ts[0].id);
+            tableSelect.value = currentTableId;
+            const tImgInit = document.querySelector('.table-image-container img');
+            if (tImgInit) tImgInit.src = currentTableId == "1" ? 'table-1.jpg' : 'table-2.jpg';
+
+            await syncData();
+            connectSSE(currentTableId);
         }
-    } catch (e) { 
-        console.warn('API not reachable, offline mode.', e);
-        const info = document.getElementById('doc-info');
-        if (info) info.innerText = '⚠️ API OFFLINE';
+    } catch (e) {
+        console.error('Boot error:', e);
     }
 });
 // ─── ANALYST UI RENDERER ─────────────────────────────────────────
