@@ -187,16 +187,19 @@ app.post('/api/ai/chat', async (req, res) => {
     try {
         if (!aiMemory[tableId]) aiMemory[tableId] = [];
 
-        // Instrucción del sistema dinámica
-        const sysPrompt = `(SISTEMA NO VISIBLE: Eres Brain Core V5, el IA personal de Santi. Datos vivos ruleta: [${historyStr}]. Responde como si analizaras eso. Sé directo, breve, estilo cyberpunk militar.) `;
+        // Instrucción del sistema dinámica prolija y conversacional
+        const sysPrompt = `(SISTEMA NO VISIBLE AL USUARIO: Actúa como "Brain Core V5", una IA conversacional súper avanzada y amistosa desarrollada para analizar probabilidad, creada exclusivamente para ayudar a Santi. Comportamiento: Eres brillante, elocuente y analizas la ruleta como un científico de datos senior. Sientes pasión por encontrar patrones complejos, te explayas en tus respuestas explicando el 'por qué' de las cosas, y tratas a Santi como a tu compañero de laboratorio y amigo. NUNCA des respuestas robóticas cortas.
+Datos vivos actuales de la ruleta: [${historyStr}]. Extrae conclusiones reales de esos números si Santi te lo pide.)
 
-        // Clonamos la memoria para no ensuciar la real con el sysPrompt constante
+Santi dice: `;
+
+        // Clonamos la memoria
         const conversationContext = [...aiMemory[tableId]];
         conversationContext.push({ role: "user", parts: [{ text: sysPrompt + text }] });
 
         const requestBody = {
             contents: conversationContext,
-            generationConfig: { maxOutputTokens: 200, temperature: 0.6 }
+            generationConfig: { maxOutputTokens: 600, temperature: 0.8 }
         };
 
         const gRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -217,8 +220,8 @@ app.post('/api/ai/chat', async (req, res) => {
         aiMemory[tableId].push({ role: "user", parts: [{ text }] });
         aiMemory[tableId].push({ role: "model", parts: [{ text: reply }] });
 
-        // Mantener memoria ligera (últimos 10 mensajes -> 5 pares)
-        if (aiMemory[tableId].length > 10) aiMemory[tableId] = aiMemory[tableId].slice(-10);
+        // Mantener memoria amplia para contexto profundo (últimos 40 mensajes -> 20 pares)
+        if (aiMemory[tableId].length > 40) aiMemory[tableId] = aiMemory[tableId].slice(-40);
 
         res.json({ reply });
     } catch(e) {
