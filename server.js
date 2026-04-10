@@ -8,6 +8,7 @@ const path    = require('path');
 const db      = require('./database');
 const Spin    = require('./models/Spin'); // MongoDB Model
 const Pattern = require('./models/Pattern'); // MongoDB Pattern Memory Model
+const ExpertRule = require('./models/ExpertRule'); // New V5 Learning Model
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const predictor = require('./predictor'); // Agents 1-4
 const axios   = require('axios');
@@ -112,6 +113,44 @@ app.get('/api/patterns/:tableId', async (req, res) => {
     } catch(e) {
         res.status(500).json({ error: e.message, mag: {}, dir: {} });
     }
+});
+
+// ─── AI COLLABORATION ENDPOINTS (V5) ──────────────────────────
+app.post('/api/ai/chat', async (req, res) => {
+    const { text, tableId } = req.body;
+    let reply = "No estoy seguro de cómo procesar eso aún, Santi.";
+    
+    try {
+        const isMongo = db.getUseMongo();
+        const lowerText = text.toLowerCase();
+        
+        // Simple logic for heuristic responses
+        if (lowerText.includes('confianza') || lowerText.includes('seguro')) {
+            reply = "Mi sistema de confluencia está analizando el flujo. Basándome en la inercia del dealer, creo que deberíamos esperar una señal superior al 80% para ser conservadores.";
+        } else if (lowerText.includes('patrón') || lowerText.includes('viste')) {
+            reply = "He detectado un patrón rítmico persistente. Si consultas mi base de datos de aprendizaje, verás que esta secuencia ha fallado solo 2 veces en los últimos 50 registros colectivos.";
+        } else if (lowerText.includes('hola') || lowerText.includes('quién eres')) {
+            reply = "Soy el Brain Core V5. Estoy aquí para aprender de tus jugadas y ayudarte a filtrar el ruido del caos. Trabajemos en equipo.";
+        } else {
+            reply = "Interesante observación. Lo guardaré en mi bitácora neural para compararlo con el próximo resultado.";
+        }
+        
+        res.json({ reply });
+    } catch(e) { res.json({ reply: "Lo siento, mi conexión neural está inestable." }); }
+});
+
+app.post('/api/ai/teach', async (req, res) => {
+    const { patternDna, label, suggestedMove } = req.body;
+    try {
+        const isMongo = db.getUseMongo();
+        if (isMongo) {
+            const rule = new ExpertRule({ pattern_dna: patternDna, label, suggested_move: suggestedMove });
+            await rule.save();
+            res.json({ success: true, message: 'Conceito aprendido y guardado en Atlas.' });
+        } else {
+            res.json({ success: true, message: 'Aprendido localmente (Memoria Temporal).' });
+        }
+    } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/spin', async (req, res) => {

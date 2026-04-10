@@ -80,6 +80,24 @@
                  </div>
                  <div id="z26-string" class="performance-string" style="background:#111; padding: 5px; min-height: 20px; border-radius: 4px; overflow:hidden;"></div>
              </section>
+
+             <!-- NEURAL CHAT BOX (V5) -->
+             <section class="neural-chat-box" id="neural-chat">
+                 <div class="neural-header">
+                     <span class="neural-status-dot"></span>
+                     <span class="neural-title">BRAIN CORE V5</span>
+                 </div>
+                 <div id="neural-log" class="neural-log">
+                     <div class="neural-msg ai">Hola Santi. Analicemos juntos. ¿Qué patrón estás viendo tú?</div>
+                 </div>
+                 <div class="neural-input-row">
+                     <input type="text" id="neural-input" placeholder="Dile algo a la IA..." autocomplete="off">
+                     <button id="btn-send-neural">➤</button>
+                 </div>
+                 <div class="neural-actions">
+                     <button class="mini-tool-btn" id="btn-teach">IDENTIFICAR PATRÓN</button>
+                 </div>
+             </section>
          </div><!-- /col-visual -->
  
          <!-- ── COL 2: PREDICIONES ── -->
@@ -290,6 +308,7 @@
 </div>
 
 <script src="predictor.js?v=999"></script>
+<script src="ai_chat.js?v=5"></script>
 <script src="app.js?v=999"></script>
 </body>
 </html>

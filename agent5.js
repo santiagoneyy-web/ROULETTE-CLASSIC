@@ -45,11 +45,61 @@ function getPhysics(prev, current) {
     return { distance: distanceClass, direction };
 }
 
+const Pattern = require('./models/Pattern');
+const ExpertRule = require('./models/ExpertRule');
+
 // Agent 5: Similarity Search + DNA Absorption
 // Looks for historical instances where the exact same sequence occurred.
-// Also 'absorbs' DNA from other agents to check for alignment.
-async function predictAgent5(tableId, currentHistoryNumbers, otherAgentsDNA = []) {
-    return { topNum: null, dnaMatch: false };
+async function predictAgent5(tableId, currentHistoryNumbers) {
+    if (currentHistoryNumbers.length < 5) return { topNum: null, dnaMatch: false, reason: 'Syncing...' };
+
+    try {
+        const last5 = currentHistoryNumbers.slice(-5);
+        const jumps = [];
+        for (let i = 1; i < last5.length; i++) {
+            const p = getPhysics(last5[i-1], last5[i]);
+            const mag = (p.distance === 'Big' || p.distance === 'ULTRA') ? 'B' : 'S';
+            const dir = p.direction === 'IZQUIERDA' ? 'CCW' : 'CW';
+            jumps.push({ mag, dir });
+        }
+        
+        const seqMag = jumps.map(x => x.mag).join('');
+        const seqDir = jumps.map(x => x.dir).join('');
+        const patternDna = `${seqMag}|${seqDir}`;
+
+        // 1. Check EXPERT RULES first (Human knowledge)
+        const expert = await ExpertRule.findOne({ pattern_dna: patternDna });
+        if (expert) {
+            return {
+                topNum: null, 
+                direction: expert.suggested_move,
+                dnaMatch: true, 
+                reason: `CONOCIMIENTO EXPERTO: ${expert.label}`
+            };
+        }
+
+        // 2. Check GLOBAL PATTERNS (Statistical Learning)
+        const stats = await Pattern.aggregate([
+            { $match: { table_id: String(tableId), sequence_mag: seqMag, sequence_dir: seqDir } },
+            { $group: { _id: { mag: "$next_mag", dir: "$next_dir" }, count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        if (stats.length > 0) {
+            const best = stats[0];
+            return {
+                topNum: null,
+                magnitude: best._id.mag === 'B' ? 'BIG' : 'SMALL',
+                direction: best._id.dir === 'CW' ? 'CW' : 'CCW',
+                dnaMatch: true,
+                count: best.count,
+                reason: `SIMILITUD DETECTADA (${best.count} coincidencias en BD)`
+            };
+        }
+
+    } catch (e) { console.error('[Agent5] Error:', e); }
+
+    return { topNum: null, dnaMatch: false, reason: 'Escaneando base de datos...' };
 }
 
 function evaluatePrediction(realNumber, predictedNumber) {

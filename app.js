@@ -658,6 +658,22 @@ function submitNumber(val, silent = false, batch = false) {
                     const z26Rate = (z26Wins / (last20.length || 1)) * 100;
                     
                     masterView = analyzeMasterConfluence(history, analystView, jugView, { z26Rate });
+
+                    // V5 Neural Overlay: If Agent 5 has Expert knowledge, it overrides
+                    if (jugView.agent5_top_new && jugView.agent5_top_new.dnaMatch) {
+                        masterView.signal = `🧠 NEURAL: ${jugView.agent5_top_new.direction}`;
+                        masterView.reasons = jugView.agent5_top_new.reason;
+                        masterView.confidence = Math.max(masterView.confidence, 90);
+                        masterView.target = jugView.agent5_top_new.direction;
+                    }
+
+                    if (typeof AIChat !== 'undefined') {
+                        AIChat.onNewSpin(n, { 
+                            masterConfidence: masterView.confidence,
+                            isRhythm: masterView.reasons.includes('RITMO'),
+                            rhythmName: masterView.reasons
+                        });
+                    }
                 }
 
                 if (!batch) {
@@ -911,6 +927,9 @@ function connectSSE(tId) {
 
 // ─── INIT ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    // Neural Initialization V5
+    if (typeof AIChat !== 'undefined') AIChat.init();
+    
     setInterval(() => {
         const el = document.getElementById('live-clock');
         if (el) el.innerText = new Date().toLocaleTimeString();

@@ -15,7 +15,8 @@ let fallbackData = {
         { id: 1, name: 'Auto Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/auto-roulette/' },
         { id: 2, name: 'Inmersive Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
     ],
-    spins: []
+    spins: [],
+    expertRules: []
 };
 
 function loadFallback() {
