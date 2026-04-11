@@ -26,7 +26,7 @@ app.post('/api/spin/batch', async (req, res) => {
     // Proceso el array y lo guardo localmente en el DB (como sync mode)
     try {
         // Obtenemos historial db
-        await new Promise((resolve) => {
+        await new Promise((resolveDB) => {
             db.getHistory(table_id, 20, (err, rows) => {
                 const existing = rows ? rows.map(r => r.number) : [];
                 
@@ -41,7 +41,7 @@ app.post('/api/spin/batch', async (req, res) => {
                         }
                         if (isIdentical) {
                             console.log(`[BATCH] Solapamiento detectado. Ignorando lote duplicado.`);
-                            return; // Terminamos sin añadir basura 
+                            return resolveDB(); // Terminamos sin añadir basura 
                         }
                     }
 
@@ -51,7 +51,7 @@ app.post('/api/spin/batch', async (req, res) => {
                         const n = numbers[i];
                         await new Promise((cb) => db.addSpin(table_id, n, source || 'batch', {}, cb));
                     }
-                    resolve();
+                    resolveDB();
                 };
                 doWork();
             });

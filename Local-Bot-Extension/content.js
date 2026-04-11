@@ -120,13 +120,18 @@ function extractHistory() {
         } catch(e) {}
     }
 
-    // 2. Global Fallback Rápido (Selector V24)
-    const allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul, div.flex.items-center.gap-1.overflow-x-auto');
+    // 2. Global Fallback Rápido (Selector Estructural Seguro)
+    // Basado en el widget real del casino, para evitar los filtros de tiempo ("Hace 1 hora")
+    let allContainers = document.querySelectorAll('div.flex.items-center.gap-1.overflow-x-auto');
+    if (allContainers.length === 0) {
+        allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul');
+    }
+
     for (const container of allContainers) {
         
-        // 🚨 BLOQUEO DE BASURA: Si el texto del padre o contenedor tiene filtros de tiempo, es basura.
-        const fullText = (container.parentElement ? container.parentElement.textContent : container.textContent || '').toLowerCase();
-        if (fullText.includes('hace') || fullText.includes('hora') || fullText.includes('minuto') || fullText.includes('día')) continue;
+        // 🚨 BLOQUEO DE BASURA EXACTO
+        const containerText = (container.textContent || '').toLowerCase();
+        if (containerText.includes('hace') || containerText.includes('hora') || containerText.includes('minuto')) continue;
 
         // En Casino.org nuevo, los hijos a veces están anidados o son botones
         // Si no son hijos directos con texto, buscamos spans
