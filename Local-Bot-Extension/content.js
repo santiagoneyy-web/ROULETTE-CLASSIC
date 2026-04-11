@@ -123,6 +123,11 @@ function extractHistory() {
     // 2. Global Fallback Rápido (Selector V24)
     const allContainers = document.querySelectorAll('div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul, div.flex.items-center.gap-1.overflow-x-auto');
     for (const container of allContainers) {
+        
+        // 🚨 BLOQUEO DE BASURA: Si el texto del padre o contenedor tiene filtros de tiempo, es basura.
+        const fullText = (container.parentElement ? container.parentElement.textContent : container.textContent || '').toLowerCase();
+        if (fullText.includes('hace') || fullText.includes('hora') || fullText.includes('minuto') || fullText.includes('día')) continue;
+
         // En Casino.org nuevo, los hijos a veces están anidados o son botones
         // Si no son hijos directos con texto, buscamos spans
         let items = container.children;

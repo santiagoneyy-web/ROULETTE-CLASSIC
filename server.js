@@ -30,12 +30,25 @@ app.post('/api/spin/batch', async (req, res) => {
             db.getHistory(table_id, 20, (err, rows) => {
                 const existing = rows ? rows.map(r => r.number) : [];
                 
-                // Procesar uno por uno, validando si es el mismo para ignorarlo
+                // Procesar evitando el solapamiento o bucles en recargas de bot
                 const doWork = async () => {
+                    // Validar primero si el array entrante (numbers) es EXACTAMENTE igual al final del historial existente (existing)
+                    if (existing && existing.length >= numbers.length) {
+                        const tail = existing.slice(-numbers.length);
+                        let isIdentical = true;
+                        for(let k=0; k < numbers.length; k++) {
+                            if (tail[k] !== numbers[k]) isIdentical = false;
+                        }
+                        if (isIdentical) {
+                            console.log(`[BATCH] Solapamiento detectado. Ignorando lote duplicado.`);
+                            return; // Terminamos sin añadir basura 
+                        }
+                    }
+
+                    // Sino es idéntico, o es parcial, barremos y forzamos adición.
+                    // Para ser seguros en escenarios complejos, simplemente insertamos asumiendo que el lote es fresco.
                     for(let i=0; i < numbers.length; i++){
                         const n = numbers[i];
-                        // Un truquito simple para evitar duplicados del batch en reinicios
-                        // asumiendo que el batch manda de viejo a nuevo
                         await new Promise((cb) => db.addSpin(table_id, n, source || 'batch', {}, cb));
                     }
                     resolve();
