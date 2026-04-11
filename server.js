@@ -215,17 +215,15 @@ Santi dice: `;
             generationConfig: { maxOutputTokens: 600, temperature: 0.8 }
         };
 
-        const gRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
+        const gRes = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, requestBody, {
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            validateStatus: () => true // No lanzar excepción, manejar manual
         });
 
-        if (!gRes.ok) {
-            const errD = await gRes.text();
-            throw new Error(`Gemini API Error: ${errD}`);
+        if (gRes.status !== 200) {
+            throw new Error(`Gemini API Error: ${JSON.stringify(gRes.data)}`);
         }
-        const gData = await gRes.json();
+        const gData = gRes.data;
         
         reply = gData.candidates[0].content.parts[0].text;
         
