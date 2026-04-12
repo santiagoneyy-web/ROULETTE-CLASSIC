@@ -320,85 +320,89 @@ function analyzeTravelWave(travels) {
     }
 
     // ─── 3. DETECTOR DE CANAL / TENDENCIA (SLOPE) ───
-    // Calculamos el "centro" de los últimos 10 tiros para ver si sube o baja
+    // RECALIBRADO V5: Umbrales más altos para evitar falsas tendencias en ruleta.
+    // En ruleta la inercia es suave, no explosiva como en trading.
     const firstHalfAvg = lastMoves.slice(0, 5).reduce((a,b)=>a+b,0) / 5;
     const secondHalfAvg = lastMoves.slice(5).reduce((a,b)=>a+b,0) / 5;
     const slope = secondHalfAvg - firstHalfAvg;
-    const isTrendingUp = slope > 3.5; 
-    const isTrendingDown = slope < -3.5;
+    const isTrendingUp = slope > 5.5;   // era 3.5 → mucho más exigente
+    const isTrendingDown = slope < -5.5; // era -3.5 → mucho más exigente
+    // Tendencia suave (para canales leves que SÍ existen en ruleta)
+    const isSoftTrendUp = slope > 2.5 && !isTrendingUp;
+    const isSoftTrendDown = slope < -2.5 && !isTrendingDown;
 
     // ─── 4. COMPRESIÓN DE VOLATILIDAD ───
     const recentSD = Math.sqrt(lastMoves.reduce((s, x) => s + x*x, 0) / 10);
     const isCompressed = recentSD < 4.5 && travels.length > 15;
 
-    // ──────────────── SELECCIÓN DE SEÑAL (PRIORIDAD V3: TENDENCIA > RESISTENCIA) ────────────────
+    // ─── 5. INERCIA DIRECCIONAL (NUEVO V5) ───
+    // Contar cuántos de los últimos 5 fueron CW o CCW
+    const last5dirs = lastMoves.slice(-5).map(v => v >= 0 ? 'CW' : 'CCW');
+    const cwCount = last5dirs.filter(d => d === 'CW').length;
+    const ccwCount = last5dirs.filter(d => d === 'CCW').length;
+    const hasInertia = cwCount >= 4 || ccwCount >= 4;
+    const inertiaDir = cwCount >= 4 ? 'CW' : (ccwCount >= 4 ? 'CCW' : null);
+
+    // ──────────────── SELECCIÓN DE SEÑAL (PRIORIDAD V5: INERCIA > CANAL > FRACTAL > REBOTE) ────────────────
+    // FILOSOFÍA V5: En ruleta las rupturas son RARAS. La inercia suave del dealer es la señal dominante.
     let signal    = 'BUSCANDO PATRÓN CLARO...';
     let targetDir = null; 
     let size      = null; 
     let reason    = 'Analizando flujo de ondas...';
     let type      = 'neutral';
 
-    // A. Prioridad 1: FRACTAL (Señal de memoria específica)
-    if (fractalTarget) {
+    // A. Prioridad 1: INERCIA DIRECCIONAL (4+ de 5 tiros en la misma dirección)
+    if (hasInertia && inertiaDir) {
+        signal    = inertiaDir === 'CW' ? '➡️ INERCIA CW SÓLIDA' : '⬅️ INERCIA CCW SÓLIDA';
+        targetDir = inertiaDir;
+        size      = abs(m1) >= 10 ? 'BIG' : 'SMALL';
+        reason    = `${cwCount >= 4 ? cwCount : ccwCount}/5 tiros en dirección ${inertiaDir}. El dealer mantiene ritmo constante.`;
+        type      = inertiaDir === 'CW' ? 'bullish' : 'bearish';
+    }
+    // B. Prioridad 2: CANALES SUAVES (Continuación de tendencia leve — lo más común en ruleta)
+    else if (isSoftTrendUp || isTrendingUp) {
+        signal    = isTrendingUp ? '📈 CANAL ALCISTA FUERTE' : '📈 CANAL ALCISTA';
+        targetDir = 'CW';
+        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        reason    = 'Hondas en ascenso constante. El dealer mantiene inercia de subida.';
+        type      = 'bullish';
+    }
+    else if (isSoftTrendDown || isTrendingDown) {
+        signal    = isTrendingDown ? '📉 CANAL BAJISTA FUERTE' : '📉 CANAL BAJISTA';
+        targetDir = 'CCW';
+        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        reason    = 'Hondas en descenso constante. El dealer mantiene inercia de caída.';
+        type      = 'bearish';
+    }
+    // C. Prioridad 3: FRACTAL (Señal de memoria específica)
+    else if (fractalTarget) {
         signal    = '🔄 FRACTAL REPETITIVO';
         targetDir = fractalTarget.dir;
         size      = fractalTarget.size;
         reason    = fractalReason;
         type      = targetDir === 'CW' ? 'bullish' : 'bearish';
     }
-    // B. Prioridad 2: RUPTURAS (BREAKOUTS)
-    // Si choca con resistencia PERO hay tendencia alcista fuerte -> Rompe resistencia
-    else if (m1 >= res - 1.5 && isTrendingUp) {
-        signal    = '🚀 RUPTURA ALCISTA';
-        targetDir = 'CW'; // Sigue la tendencia
-        size      = 'BIG';
-        reason    = `Inercia (+) superior a resistencia (+${res.toFixed(1)}p). Se espera ruptura.`;
-        type      = 'bullish';
-    }
-    // Si choca con soporte PERO hay tendencia bajista fuerte -> Rompe soporte
-    else if (m1 <= sup + 1.5 && isTrendingDown) {
-        signal    = '💥 RUPTURA BAJISTA';
-        targetDir = 'CCW'; // Sigue la tendencia
-        size      = 'BIG';
-        reason    = `Presión (-) superior a soporte (${sup.toFixed(1)}p). Se espera ruptura.`;
-        type      = 'bearish';
-    }
-    // C. Prioridad 3: CANALES (Continuación de Tendencia con hondas)
-    else if (isTrendingUp) {
-        signal    = '📈 CANAL ALCISTA';
-        targetDir = 'CW';
-        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
-        reason    = 'Hondas en ascenso constante. El dealer mantiene inercia de subida.';
-        type      = 'bullish';
-    }
-    else if (isTrendingDown) {
-        signal    = '📉 CANAL BAJISTA';
-        targetDir = 'CCW';
-        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
-        reason    = 'Hondas en descenso constante. El dealer mantiene inercia de caída.';
-        type      = 'bearish';
-    }
-    // D. Prioridad 4: REBOTES (Solo si NO hay tendencia fuerte)
-    else if (m1 >= res - 1.2) {
+    // D. Prioridad 4: REBOTES (Solo con margen MUY amplio — conservador)
+    else if (m1 >= res + 1.0) {
         signal    = '🔴 RESISTENCIA TOCADA';
         targetDir = 'CCW';
-        size      = 'BIG';
-        reason    = `Techo en +${res.toFixed(1)}p sin tendencia definida. Posible rebote.`;
+        size      = 'SMALL'; // era BIG — en ruleta los rebotes son leves
+        reason    = `Techo en +${res.toFixed(1)}p superado. Posible corrección leve.`;
         type      = 'bearish';
     }
-    else if (m1 <= sup + 1.2) {
+    else if (m1 <= sup - 1.0) {
         signal    = '🟢 SOPORTE TOCADO';
         targetDir = 'CW';
-        size      = 'BIG';
-        reason    = `Suelo en ${sup.toFixed(1)}p sin tendencia definida. Posible rebote.`;
+        size      = 'SMALL'; // era BIG — en ruleta los rebotes son leves
+        reason    = `Suelo en ${sup.toFixed(1)}p superado. Posible corrección leve.`;
         type      = 'bullish';
     }
     // E. Compresión y Agotamiento
     else if (isCompressed) {
         signal    = '⚠️ COMPRESIÓN';
         targetDir = null;
-        size      = 'BIG';
-        reason    = 'Varianza mínima. Energía acumulada para un salto brusco.';
+        size      = null; // era BIG — en ruleta la compresión no garantiza un salto brutal
+        reason    = 'Varianza mínima. Observar próximos tiros para definir dirección.';
         type      = 'neutral';
     }
     else if (isCW(m3) && isCW(m2) && isCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
@@ -406,6 +410,22 @@ function analyzeTravelWave(travels) {
         targetDir = 'CCW';
         size      = 'SMALL';
         reason    = `Impulso alcista perdiendo fuerza gradualmente.`;
+        type      = 'bearish';
+    }
+    // F. Prioridad ÚLTIMA: RUPTURAS (Degradadas — rara vez ocurren en ruleta)
+    // Solo se activan si NADA más se detectó Y la tendencia es extrema
+    else if (m1 >= res - 0.5 && isTrendingUp) {
+        signal    = '🚀 RUPTURA ALCISTA (RARA)';
+        targetDir = 'CW';
+        size      = 'BIG';
+        reason    = `Inercia (+) extrema sobre resistencia (+${res.toFixed(1)}p). Ruptura inusual.`;
+        type      = 'bullish';
+    }
+    else if (m1 <= sup + 0.5 && isTrendingDown) {
+        signal    = '💥 RUPTURA BAJISTA (RARA)';
+        targetDir = 'CCW';
+        size      = 'BIG';
+        reason    = `Presión (-) extrema sobre soporte (${sup.toFixed(1)}p). Ruptura inusual.`;
         type      = 'bearish';
     }
 
@@ -493,9 +513,15 @@ function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}
     // Factor B: Travel Chart (+2.0)
     if (travelView.targetDir === 'CW') scoreCW += 2;
     if (travelView.targetDir === 'CCW') scoreCCW += 2;
+    // V5: Las rupturas son raras en ruleta — peso mínimo (+0.3 en vez de +1)
     if (travelView.signal.includes('RUPTURA')) {
-        if (travelView.targetDir === 'CW') scoreCW += 1;
-        else if (travelView.targetDir === 'CCW') scoreCCW += 1;
+        if (travelView.targetDir === 'CW') scoreCW += 0.3;
+        else if (travelView.targetDir === 'CCW') scoreCCW += 0.3;
+    }
+    // V5: La INERCIA del dealer pesa más (+1.5 extra)
+    if (travelView.signal.includes('INERCIA')) {
+        if (travelView.targetDir === 'CW') scoreCW += 1.5;
+        else if (travelView.targetDir === 'CCW') scoreCCW += 1.5;
     }
 
     // Factor C: Zone Sniper (+1.0)

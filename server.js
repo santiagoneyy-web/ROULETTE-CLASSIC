@@ -260,7 +260,7 @@ Santi dice ahora: `;
             generationConfig: { maxOutputTokens: 400, temperature: 0.55 }
         };
 
-        const gRes = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${apiKey}`, requestBody, {
+        const gRes = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, requestBody, {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true // No lanzar excepción, manejar manual
         });
