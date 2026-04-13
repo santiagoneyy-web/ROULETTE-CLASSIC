@@ -765,24 +765,32 @@ function renderScatterChart() {
         ctx.fillStyle = 'rgba(48, 224, 144, 0.7)'; ctx.fillText(`R: ${resistance.toFixed(2)}`, totalW - padR - 50, scaleY(resistance) - 4);
         ctx.fillStyle = 'rgba(240, 64, 96, 0.7)'; ctx.fillText(`S: ${support.toFixed(2)}`, totalW - padR - 50, scaleY(support) + 12);
         
-        // ─── Moving Average Line ───
-        ctx.strokeStyle = '#f5c842'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+        // ─── Moving Average Line (SUBTLE REFERENCE) ───
+        ctx.strokeStyle = 'rgba(245, 200, 66, 0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 2]);
         ctx.beginPath();
         for (let i = 0; i < ma.length; i++) {
             const x = scaleX(i), y = scaleY(ma[i]);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        ctx.stroke();
+        ctx.stroke(); ctx.setLineDash([]);
         
-        // ─── Scatter Points ───
+        // ─── SHARP PEAKS LINE (ZIG-ZAG) ───
+        // Esta línea conecta los puntos reales +1/-1 con ángulos cerrados como pidió Santi
+        ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        for (let i = 0; i < dirs.length; i++) {
+            const x = scaleX(i), y = scaleY(dirs[i]);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke(); ctx.globalAlpha = 1.0;
+        
+        // ─── Scatter Points (More visible) ───
         for (let i = 0; i < numPoints; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
-            ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.fillStyle = dirs[i] > 0 ? '#30e090' : '#f04060';
-            ctx.globalAlpha = 0.7;
             ctx.fill();
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = '#0d1520'; ctx.lineWidth = 0.5; ctx.stroke();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
         }
         
         // Last point highlight
@@ -892,21 +900,37 @@ function renderTravelChart() {
     ctx.fillStyle='rgba(48,224,144,0.04)';ctx.fillRect(padL,padT,chartW,chartH/2);
     ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
 
-    // Main line (green CW / red CCW / gold if out of range)
-    ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';
-    for(let i=1;i<numPoints;i++){
-        const x1=scaleX(i-1),y1=scaleY(data[i-1]),x2=scaleX(i),y2=scaleY(data[i]);
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-        const val=data[i];
-        if(val>upperRange||val<lowerRange) ctx.strokeStyle='#f5c842';
-        else ctx.strokeStyle=val>=0?'#30e090':'#f04060';
+    // Main line (SMOOTH WAVES V5)
+    // Usamos curvas de Bézier cúbicas con puntos de control suavizados
+    ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round';
+    
+    for(let i=0; i < numPoints - 1; i++){
+        const x1 = scaleX(i), y1 = scaleY(data[i]);
+        const x2 = scaleX(i+1), y2 = scaleY(data[i+1]);
+        
+        // Puntos de control para suavizado (Curva de Bézier)
+        const cpX = (x1 + x2) / 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
+        
+        // Color dinámico según la zona y pérdida de rango
+        const val = data[i+1];
+        if(val > upperRange || val < lowerRange) ctx.strokeStyle='#f5c842';
+        else ctx.strokeStyle = val >= 0 ? '#30e090' : '#f04060';
+        
+        // Sutil brillo en la línea
+        ctx.shadowBlur = 4; ctx.shadowColor = ctx.strokeStyle;
         ctx.stroke();
+        ctx.shadowBlur = 0;
     }
-    // Data points
+
+    // Data points (Dots on the wave)
     for(let i=0;i<numPoints;i++){
         const x=scaleX(i),y=scaleY(data[i]);
         ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
-        ctx.fillStyle=data[i]>=0?'#30e090':'#c090ff';
+        ctx.fillStyle='#fff'; // Puntos blancos sobre la onda para contraste
         ctx.fill();ctx.strokeStyle='#0d1520';ctx.lineWidth=1;ctx.stroke();
     }
     // Last point highlight
