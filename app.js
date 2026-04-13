@@ -525,19 +525,18 @@ function renderWheelAndHistory() {
 
 // ─── TAB LISTENERS ─────────────────────────────────────
 document.addEventListener('click', (e) => {
-    if (e.target && e.target.id === 'tab-btn-dir') {
-        document.getElementById('tab-btn-dir').classList.add('active');
-        document.getElementById('tab-btn-sup').classList.remove('active');
-        document.getElementById('panel-dir').style.display = 'flex';
-        document.getElementById('panel-sup').style.display = 'none';
+    const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter'];
+    const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-sup': 'panel-sup', 'tab-btn-scatter': 'panel-scatter' };
+    
+    if (e.target && tabMap[e.target.id]) {
+        allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
+        allPanels.forEach(p => { const el = document.getElementById(p); if(el) el.style.display = 'none'; });
+        e.target.classList.add('active');
+        const panel = document.getElementById(tabMap[e.target.id]);
+        if (panel) panel.style.display = 'flex';
         renderShadowPanel();
-    }
-    if (e.target && e.target.id === 'tab-btn-sup') {
-        document.getElementById('tab-btn-sup').classList.add('active');
-        document.getElementById('tab-btn-dir').classList.remove('active');
-        document.getElementById('panel-dir').style.display = 'none';
-        document.getElementById('panel-sup').style.display = 'flex';
-        renderShadowPanel();
+        if (e.target.id === 'tab-btn-scatter') renderScatterChart();
     }
 });
 
@@ -690,22 +689,154 @@ function submitNumber(val, silent = false, batch = false) {
 }
 
 // ─── RENDER: TRAVEL CHART (OFI-Style canvas) ──────────────
+// ─── SCATTER CHART: DIRECTION DISPERSION (CW=+1, CCW=-1) ──────────
+function renderScatterChart() {
+    try {
+        const canvas = document.getElementById('scatterChart');
+        if (!canvas || history.length < 4) return;
+        const ctx = canvas.getContext('2d');
+        
+        // Build direction data: CW=+1, CCW=-1
+        const dirs = [];
+        for (let i = 1; i < history.length; i++) {
+            const d = calcDist(history[i-1], history[i]);
+            dirs.push(d >= 0 ? 1 : -1);
+        }
+        if (dirs.length < 3) return;
+        
+        const numPoints = dirs.length;
+        const pxPerPoint = 12;
+        const totalW = Math.max(canvas.parentElement.offsetWidth || 400, numPoints * pxPerPoint + 60);
+        canvas.width = totalW;
+        const H = canvas.height;
+        ctx.clearRect(0, 0, totalW, H);
+        
+        const padL = 30, padR = 15, padT = 20, padB = 20;
+        const chartW = totalW - padL - padR;
+        const chartH = H - padT - padB;
+        const midY = padT + chartH / 2;
+        const scaleY = v => midY - v * (chartH / 2 - 10);
+        const scaleX = i => padL + (i / (numPoints - 1)) * chartW;
+        
+        // Background
+        ctx.fillStyle = 'rgba(48, 224, 144, 0.03)'; ctx.fillRect(padL, padT, chartW, chartH / 2);
+        ctx.fillStyle = 'rgba(240, 64, 96, 0.03)'; ctx.fillRect(padL, midY, chartW, chartH / 2);
+        
+        // Zero line
+        ctx.strokeStyle = '#2a3a5d'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padL, midY); ctx.lineTo(totalW - padR, midY); ctx.stroke();
+        
+        // Y axis labels
+        ctx.fillStyle = '#4a6080'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
+        ctx.fillText('+1 CW', padL - 3, scaleY(1) + 3);
+        ctx.fillText('-1 CCW', padL - 3, scaleY(-1) + 3);
+        ctx.fillText('0', padL - 3, midY + 3);
+        
+        // ─── Moving Average (window=5) ───
+        const maWindow = 5;
+        const ma = [];
+        for (let i = 0; i < dirs.length; i++) {
+            const start = Math.max(0, i - maWindow + 1);
+            const slice = dirs.slice(start, i + 1);
+            ma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+        }
+        
+        // ─── Support / Resistance Detection ───
+        // Support = average of the lowest MA valleys (CCW zones)
+        // Resistance = average of the highest MA peaks (CW zones)
+        const maPeaks = [], maValleys = [];
+        for (let i = 1; i < ma.length - 1; i++) {
+            if (ma[i] > ma[i-1] && ma[i] > ma[i+1]) maPeaks.push(ma[i]);
+            if (ma[i] < ma[i-1] && ma[i] < ma[i+1]) maValleys.push(ma[i]);
+        }
+        const resistance = maPeaks.length > 0 ? maPeaks.reduce((a,b) => a+b, 0) / maPeaks.length : 0.8;
+        const support = maValleys.length > 0 ? maValleys.reduce((a,b) => a+b, 0) / maValleys.length : -0.8;
+        
+        // Draw support/resistance lines
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(48, 224, 144, 0.5)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(padL, scaleY(resistance)); ctx.lineTo(totalW - padR, scaleY(resistance)); ctx.stroke();
+        ctx.strokeStyle = 'rgba(240, 64, 96, 0.5)';
+        ctx.beginPath(); ctx.moveTo(padL, scaleY(support)); ctx.lineTo(totalW - padR, scaleY(support)); ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Labels for support/resistance
+        ctx.font = '8px Inter'; ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(48, 224, 144, 0.7)'; ctx.fillText(`R: ${resistance.toFixed(2)}`, totalW - padR - 50, scaleY(resistance) - 4);
+        ctx.fillStyle = 'rgba(240, 64, 96, 0.7)'; ctx.fillText(`S: ${support.toFixed(2)}`, totalW - padR - 50, scaleY(support) + 12);
+        
+        // ─── Moving Average Line ───
+        ctx.strokeStyle = '#f5c842'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let i = 0; i < ma.length; i++) {
+            const x = scaleX(i), y = scaleY(ma[i]);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        
+        // ─── Scatter Points ───
+        for (let i = 0; i < numPoints; i++) {
+            const x = scaleX(i), y = scaleY(dirs[i]);
+            ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = dirs[i] > 0 ? '#30e090' : '#f04060';
+            ctx.globalAlpha = 0.7;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#0d1520'; ctx.lineWidth = 0.5; ctx.stroke();
+        }
+        
+        // Last point highlight
+        if (numPoints > 0) {
+            const lx = scaleX(numPoints - 1), ly = scaleY(dirs[numPoints - 1]);
+            ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+            ctx.shadowBlur = 10; ctx.shadowColor = dirs[numPoints - 1] > 0 ? '#30e090' : '#f04060';
+            ctx.stroke(); ctx.shadowBlur = 0;
+        }
+        
+        // ─── Trend Detection ───
+        const recent10 = dirs.slice(-10);
+        const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
+        let trendLabel = 'NEUTRAL';
+        let trendColor = '#6a8aa8';
+        if (cwRatio >= 0.7) { trendLabel = '⬆️ TENDENCIA CW'; trendColor = '#30e090'; }
+        else if (cwRatio <= 0.3) { trendLabel = '⬇️ TENDENCIA CCW'; trendColor = '#f04060'; }
+        else if (cwRatio >= 0.55) { trendLabel = '↗️ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
+        else if (cwRatio <= 0.45) { trendLabel = '↙️ SESGO CCW LEVE'; trendColor = '#e07a90'; }
+        
+        const trendEl = document.getElementById('scatter-trend-label');
+        if (trendEl) { trendEl.innerText = trendLabel; trendEl.style.color = trendColor; }
+        
+        const biasEl = document.getElementById('scatter-bias');
+        if (biasEl) { biasEl.innerText = `${Math.round(cwRatio * 100)}% CW`; }
+        
+        // Scroll to rightmost point
+        canvas.parentElement.scrollLeft = canvas.parentElement.scrollWidth;
+        
+    } catch(err) { console.error('Scatter chart error:', err); }
+}
+
 function renderTravelChart() {
     try {
     const canvas = document.getElementById('travelChart');
     if (!canvas || history.length < 3) return;
     const ctx = canvas.getContext('2d');
-    const W = canvas.offsetWidth || canvas.parentElement.offsetWidth || 400;
-    canvas.width = W;
-    const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-
+    
     // Build travel array
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
     if (travels.length < 2) return;
-    const maxPoints = 30;
-    const data = travels.slice(-maxPoints);
+    
+    // V5 SCROLLABLE: Show ALL data, expand canvas width as needed
+    const pxPerPoint = 14;
+    const minW = canvas.parentElement.offsetWidth || 400;
+    const totalW = Math.max(minW, travels.length * pxPerPoint + 60);
+    canvas.width = totalW;
+    canvas.style.width = totalW + 'px';
+    const W = totalW;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    const data = travels; // ALL travels, not sliced
     const numPoints = data.length;
 
     // Averages
@@ -798,7 +929,14 @@ function renderTravelChart() {
         ctx.fillStyle='#7a9bb8';ctx.textAlign='left';
         ctx.fillText(label,lx2+10,13);
         lx2+=ctx.measureText(label).width+22;
-    }); } catch(err) { console.error(err); }
+    }); 
+    
+    // Auto-scroll to the rightmost point (latest spins)
+    if (canvas.parentElement) {
+        canvas.parentElement.scrollLeft = canvas.parentElement.scrollWidth;
+    }
+
+    } catch(err) { console.error(err); }
 }
 
 // ─── TRAVEL TABLE ──────────────────────────────────────────
