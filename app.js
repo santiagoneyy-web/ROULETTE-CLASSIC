@@ -243,7 +243,9 @@ function renderShadowPanel() {
         else          phaseLabel = (dVal >= currentAvgCCW) ? "OVER" : "UNDER";
 
         // --- UNDER BLOCK (Dynamic Logic) ---
-        const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + Math.round(currentAvgCW) - 4 + 37) % 37];
+        const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 5 + 37) % 37];
+        const underLabel = (dVal < 0) ? (5 >= -currentAvgCCW ? "OVER" : "UNDER") : (5 >= currentAvgCW ? "OVER" : "UNDER"); 
+        // Nota: Para simplificar, el label n4 se mantiene como UNDER/OVER segun la posicion
         document.getElementById('sup-s-c-val').innerText = underTarget;
         document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? '✔ HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
@@ -256,7 +258,7 @@ function renderShadowPanel() {
         document.getElementById('sup-s-perf').innerHTML = last12s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         // --- OVER BLOCK (Dynamic Logic) ---
-        const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + Math.round(currentAvgCW) + 5 + 37) % 37];
+        const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
         document.getElementById('sup-b-c-val').innerText = overTarget;
         document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? '✔ HIT' : '';
         document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
@@ -578,26 +580,27 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE OVER prediction — N9 of (idx + avg + offset)
+        // Evaluate ZONE OVER prediction — N9 of (idx + 14)
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
-            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
+            const idxZ = WHEEL_INDEX[prevForZone];
             if (idxZ !== -1) {
-                const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idxZ + currentAvgCW + 5 + 37) % 37];
-                const dOver = Math.abs(calcDist(n, overTarget));
-                lastZoneOverHit = (dOver <= 9);
+                const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_ORDER[(idxZ + 14 + 37) % 37];
+                const dOver = Math.abs(calcDist(prevForZone, n));
+                const distToT = Math.abs(calcDist(n, overTarget));
+                lastZoneOverHit = (distToT <= 9);
                 zoneOverHistory.push(lastZoneOverHit ? 'win' : 'loss');
             }
         }
 
-        // Evaluate ZONE UNDER prediction — N9 of (idx + avg - offset)
+        // Evaluate ZONE UNDER prediction — N9 of (idx + 5)
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
-            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
+            const idxZ = WHEEL_INDEX[prevForZone];
             if (idxZ !== -1) {
-                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idxZ + currentAvgCW - 4 + 37) % 37];
-                const dUnder = Math.abs(calcDist(n, underTarget));
-                lastZoneUnderHit = (dUnder <= 9);
+                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_ORDER[(idxZ + 5 + 37) % 37];
+                const distToT = Math.abs(calcDist(n, underTarget));
+                lastZoneUnderHit = (distToT <= 9);
                 zoneUnderHistory.push(lastZoneUnderHit ? 'win' : 'loss');
             }
         }
@@ -1037,10 +1040,7 @@ function renderTravelPanel() {
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
         let phaseHtml = '';
         if (dist !== 0) {
-            let label = "UNDER";
-            if (dist > 0) label = (dist >= currentAvgCW) ? "OVER" : "UNDER";
-            else         label = (dist <= currentAvgCCW) ? "OVER" : "UNDER";
-            
+            label = (absDist >= 10) ? "BIG" : "SMALL";
             const pClass = label.toLowerCase();
             phaseHtml = `<span class="phase-pill pill-${pClass}">${label}</span>`;
         }

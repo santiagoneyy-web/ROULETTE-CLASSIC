@@ -118,17 +118,16 @@ function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 10, ccw: -10
     const lastNum = history[history.length - 1];
     const idx = WHEEL_INDEX[lastNum];
     
-    // CW Dynamic Targets (Positive)
-    const avgCW = Math.abs(currentAvgs.cw || 10);
+    // CW Fixed Targets (Positive)
     const targetCW      = WHEEL_ORDER[(idx + Math.round(avgCW) + 37) % 37];
-    const targetUnderCW = WHEEL_ORDER[(idx + Math.max(1, Math.round(avgCW - 4)) + 37) % 37];
-    const targetOverCW  = WHEEL_ORDER[(idx + Math.min(18, Math.round(avgCW + 5)) + 37) % 37];
+    const targetUnderCW = WHEEL_ORDER[(idx + 5 + 37) % 37];  // Medida establecida: 5p
+    const targetOverCW  = WHEEL_ORDER[(idx + 14 + 37) % 37]; // Medida establecida: 14p
     
-    // CCW Dynamic Targets (Negative)
+    // CCW Fixed Targets (Negative)
     const avgCCW = -Math.abs(currentAvgs.ccw || -10);
     const targetCCW      = WHEEL_ORDER[(idx + Math.round(avgCCW) + 37) % 37];
-    const targetOverCCW  = WHEEL_ORDER[(idx + Math.min(-1, Math.round(avgCCW + 4)) + 37) % 37]; // Above line (closer to 0)
-    const targetUnderCCW = WHEEL_ORDER[(idx + Math.max(-18, Math.round(avgCCW - 5)) + 37) % 37]; // Below line (further from 0)
+    const targetOverCCW  = WHEEL_ORDER[(idx - 5 + 37) % 37];  // Medida establecida: -5p
+    const targetUnderCCW = WHEEL_ORDER[(idx - 14 + 37) % 37]; // Medida establecida: -14p
 
     const signals = [];
 
