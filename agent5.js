@@ -39,8 +39,8 @@ function getPhysics(prev, current) {
     const absDist = Math.abs(dist);
     
     let distanceClass = 'ULTRA';
-    if (absDist >= 1 && absDist <= 9) distanceClass = 'Small';
-    else if (absDist >= 10 && absDist <= 19) distanceClass = 'Big';
+    if (absDist >= 1 && absDist <= 9) distanceClass = 'Under';
+    else if (absDist >= 10 && absDist <= 19) distanceClass = 'Over';
     
     return { distance: distanceClass, direction };
 }
@@ -67,7 +67,7 @@ async function predictAgent5(currentHistoryNumbers, expert = null, stats = []) {
             const best = stats[0];
             return {
                 topNum: null,
-                magnitude: best._id.mag === 'B' ? 'BIG' : 'SMALL',
+                magnitude: best._id.mag === 'B' ? 'OVER' : 'UNDER',
                 direction: best._id.dir === 'CW' ? 'CW' : 'CCW',
                 dnaMatch: true,
                 count: best.count,

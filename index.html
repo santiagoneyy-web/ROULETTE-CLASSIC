@@ -141,7 +141,7 @@
                     <div class="agent-strategy-label" id="dir-cw-strat">DISTANCE 9 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
-                            <span class="p-label">SMALL</span><span class="p-val" id="dir-cw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-l-hit"></span>
+                            <span class="p-label">UNDER</span><span class="p-val" id="dir-cw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-l-hit"></span>
                             <div class="filtered-neighbors" id="dir-cw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
@@ -149,7 +149,7 @@
                             <div class="filtered-neighbors" id="dir-cw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
-                            <span class="p-label">BIG</span><span class="p-val" id="dir-cw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-r-hit"></span>
+                            <span class="p-label">OVER</span><span class="p-val" id="dir-cw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-r-hit"></span>
                             <div class="filtered-neighbors" id="dir-cw-r-balls"></div>
                         </div>
                     </div>
@@ -170,7 +170,7 @@
                     <div class="agent-strategy-label" id="dir-ccw-strat">DISTANCE 9 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
-                            <span class="p-label">SMALL</span><span class="p-val" id="dir-ccw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-l-hit"></span>
+                            <span class="p-label">UNDER</span><span class="p-val" id="dir-ccw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-l-hit"></span>
                             <div class="filtered-neighbors" id="dir-ccw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
@@ -178,7 +178,7 @@
                             <div class="filtered-neighbors" id="dir-ccw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
-                            <span class="p-label">BIG</span><span class="p-val" id="dir-ccw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-r-hit"></span>
+                            <span class="p-label">OVER</span><span class="p-val" id="dir-ccw-r-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-r-hit"></span>
                             <div class="filtered-neighbors" id="dir-ccw-r-balls"></div>
                         </div>
                     </div>
@@ -197,7 +197,7 @@
                     <div class="agent-card-header">
                         <span class="agent-icon">📐</span>
                         <span class="agent-card-name">ZONE SUPPORT</span>
-                        <span class="side-badge">SMALL 🔻</span>
+                        <span class="side-badge">UNDER 🔻</span>
                     </div>
                     <div class="agent-strategy-label" id="sup-s-strat">DIST +19 · N9</div>
                     <div class="prediction-grid-3">
@@ -226,7 +226,7 @@
                     <div class="agent-card-header" style="background: rgba(0,0,0,0.4);">
                         <span class="agent-icon" style="opacity: 0.5;">📐</span>
                         <span class="agent-card-name" style="opacity: 0.8;">ZONE SUPPORT</span>
-                        <span class="side-badge">BIG 🔺</span>
+                        <span class="side-badge">OVER 🔺</span>
                     </div>
                     <div class="agent-strategy-label" id="sup-b-strat">DIST +19 · N9</div>
                     <div class="prediction-grid-3">
@@ -263,9 +263,9 @@
                         <canvas id="scatterChart" height="200" style="min-width: 100%;"></canvas>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:9px; color:#6a8aa8;">
-                        <span>⬆️ CW (+1) = DERECHA</span>
+                        <span>⬆️ CW (+) = OVER (Above line) / UNDER (Below line)</span>
                         <span id="scatter-trend-label" style="color: var(--gold); font-weight:bold;">--</span>
-                        <span>⬇️ CCW (-1) = IZQUIERDA</span>
+                        <span>⬇️ CCW (-) = UNDER (Below line) / OVER (Above line)</span>
                     </div>
                 </div>
             </section>

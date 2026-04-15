@@ -599,6 +599,7 @@ html, body {
 .badge-zigzag { background: rgba(240,192,64,0.15); color: var(--gold); border: 1px solid rgba(240,192,64,0.3); }
 
 /* ── TRAVEL TABLE ── */
+.filtered-neighbors { display: none !important; }
 .travel-table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
 .travel-table {
   width: 100%;
@@ -646,8 +647,8 @@ html, body {
   border-radius: 8px;
   border: 1px solid transparent;
 }
-.pill-small { color: var(--green); border-color: rgba(48,224,144,0.3); background: rgba(48,224,144,0.05); }
-.pill-big   { color: var(--red);   border-color: rgba(240,64,96,0.3);  background: rgba(240,64,96,0.05); }
+.pill-under { color: var(--green); border-color: rgba(48,224,144,0.3); background: rgba(48,224,144,0.05); }
+.pill-over  { color: var(--red);   border-color: rgba(240,64,96,0.3);  background: rgba(240,64,96,0.05); }
 
 .dir-der { color: var(--accent); font-weight: 700; }
 .dir-izq { color: #c090ff; font-weight: 700; }

@@ -84,7 +84,7 @@ function computeDealerSignature(history) {
     }
     
     // Recommendation based on the weighted trend
-    const rec = avg > 0 ? 'BIG (CW)' : 'SMALL (CCW)';
+    const rec = avg > 0 ? 'OVER (CW)' : 'UNDER (CCW)';
     
     return { 
         directionState: state, 
@@ -113,34 +113,37 @@ function getWheelNeighbors(num, radius) {
     return neighbors;
 }
 
-function getIAMasterSignals(prox, sig, history) {
+function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 10, ccw: -10 }) {
     if (!sig || history.length === 0) return [];
     const lastNum = history[history.length - 1];
-    // CW Targets (+ to the right)
     const idx = WHEEL_INDEX[lastNum];
-    const targetCW = WHEEL_ORDER[(idx + 9) % 37];
-    const targetOverCW = WHEEL_ORDER[(idx + 5) % 37];
-    const targetBigCW = WHEEL_ORDER[(idx + 14) % 37];
     
-    // CCW Targets (- to the left)
-    const targetCCW = WHEEL_ORDER[(idx - 9 + 37) % 37];
-    const targetOverCCW = WHEEL_ORDER[(idx - 5 + 37) % 37];
-    const targetBigCCW = WHEEL_ORDER[(idx - 14 + 37) % 37];
+    // CW Dynamic Targets (Positive)
+    const avgCW = Math.abs(currentAvgs.cw || 10);
+    const targetCW      = WHEEL_ORDER[(idx + Math.round(avgCW) + 37) % 37];
+    const targetUnderCW = WHEEL_ORDER[(idx + Math.max(1, Math.round(avgCW - 4)) + 37) % 37];
+    const targetOverCW  = WHEEL_ORDER[(idx + Math.min(18, Math.round(avgCW + 5)) + 37) % 37];
+    
+    // CCW Dynamic Targets (Negative)
+    const avgCCW = -Math.abs(currentAvgs.ccw || -10);
+    const targetCCW      = WHEEL_ORDER[(idx + Math.round(avgCCW) + 37) % 37];
+    const targetOverCCW  = WHEEL_ORDER[(idx + Math.min(-1, Math.round(avgCCW + 4)) + 37) % 37]; // Above line (closer to 0)
+    const targetUnderCCW = WHEEL_ORDER[(idx + Math.max(-18, Math.round(avgCCW - 5)) + 37) % 37]; // Below line (further from 0)
 
     const signals = [];
 
-    // Return the dual n1717 signal
+    // Return the dual V5 signal
     signals.push({
         name: 'Android 1717',
         targetCW: targetCW,
         targetCCW: targetCCW,
+        targetUnderCW: targetUnderCW,
         targetOverCW: targetOverCW,
-        targetBigCW: targetBigCW,
+        targetUnderCCW: targetUnderCCW,
         targetOverCCW: targetOverCCW,
-        targetBigCCW: targetBigCCW,
-        betZoneCW: getWheelNeighbors(targetCW, 4), // n4
-        betZoneCCW: getWheelNeighbors(targetCCW, 4), // n4
-        rule: "DISTANCE 9",
+        betZoneCW: getWheelNeighbors(targetCW, 4), 
+        betZoneCCW: getWheelNeighbors(targetCCW, 4),
+        rule: `DYNAMIC (${Math.round(avgCW)}p)`,
         mode: 'DUAL'
     });
 
@@ -248,7 +251,7 @@ function predictZonePattern(history, patternStats = null) {
     const finalMagProb = blendPBig >= 0.5 ? blendPBig : 1 - blendPBig;
     const finalDirProb = blendPCW >= 0.5 ? blendPCW : 1 - blendPCW;
 
-    const predMag = blendPBig >= 0.5 ? 'BIG' : 'SMALL';
+    const predMag = blendPBig >= 0.5 ? 'OVER' : 'UNDER';
     const predDir = blendPCW >= 0.5 ? 'CW' : 'CCW';
 
     const magProb = Math.round(finalMagProb * 100);
@@ -312,7 +315,7 @@ function analyzeTravelWave(travels) {
             const pastDNA = getDNA(travels.slice(i, i + 4));
             if (pastDNA === currentDNA) {
                 const nextMove = travels[i + 4];
-                fractalTarget = { dir: nextMove >= 0 ? 'CW' : 'CCW', size: abs(nextMove) >= 10 ? 'BIG' : 'SMALL' };
+                fractalTarget = { dir: nextMove >= 0 ? 'CW' : 'CCW', size: abs(nextMove) >= 10 ? 'OVER' : 'UNDER' };
                 fractalReason = `Figura fractal detectada en tiro #${i+1}. Repetición geométrica probable.`;
                 break; // Encontramos la primera coincidencia clara
             }
@@ -355,7 +358,7 @@ function analyzeTravelWave(travels) {
     if (hasInertia && inertiaDir) {
         signal    = inertiaDir === 'CW' ? '➡️ INERCIA CW SÓLIDA' : '⬅️ INERCIA CCW SÓLIDA';
         targetDir = inertiaDir;
-        size      = abs(m1) >= 10 ? 'BIG' : 'SMALL';
+        size      = abs(m1) >= 10 ? 'OVER' : 'UNDER';
         reason    = `${cwCount >= 4 ? cwCount : ccwCount}/5 tiros en dirección ${inertiaDir}. El dealer mantiene ritmo constante.`;
         type      = inertiaDir === 'CW' ? 'bullish' : 'bearish';
     }
@@ -363,14 +366,14 @@ function analyzeTravelWave(travels) {
     else if (isSoftTrendUp || isTrendingUp) {
         signal    = isTrendingUp ? '📈 CANAL ALCISTA FUERTE' : '📈 CANAL ALCISTA';
         targetDir = 'CW';
-        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        size      = abs(m1) < 5 ? 'OVER' : 'UNDER';
         reason    = 'Hondas en ascenso constante. El dealer mantiene inercia de subida.';
         type      = 'bullish';
     }
     else if (isSoftTrendDown || isTrendingDown) {
         signal    = isTrendingDown ? '📉 CANAL BAJISTA FUERTE' : '📉 CANAL BAJISTA';
         targetDir = 'CCW';
-        size      = abs(m1) < 5 ? 'BIG' : 'SMALL';
+        size      = abs(m1) < 5 ? 'OVER' : 'UNDER';
         reason    = 'Hondas en descenso constante. El dealer mantiene inercia de caída.';
         type      = 'bearish';
     }
@@ -386,14 +389,14 @@ function analyzeTravelWave(travels) {
     else if (m1 >= res + 1.0) {
         signal    = '🔴 RESISTENCIA TOCADA';
         targetDir = 'CCW';
-        size      = 'SMALL'; // era BIG — en ruleta los rebotes son leves
+        size      = 'UNDER'; // era OVER — en ruleta los rebotes son leves
         reason    = `Techo en +${res.toFixed(1)}p superado. Posible corrección leve.`;
         type      = 'bearish';
     }
     else if (m1 <= sup - 1.0) {
         signal    = '🟢 SOPORTE TOCADO';
         targetDir = 'CW';
-        size      = 'SMALL'; // era BIG — en ruleta los rebotes son leves
+        size      = 'UNDER'; // era OVER — en ruleta los rebotes son leves
         reason    = `Suelo en ${sup.toFixed(1)}p superado. Posible corrección leve.`;
         type      = 'bullish';
     }
@@ -408,7 +411,7 @@ function analyzeTravelWave(travels) {
     else if (isCW(m3) && isCW(m2) && isCW(m1) && abs(m3) > abs(m2) && abs(m2) > abs(m1)) {
         signal    = '📉 AGOTAMIENTO';
         targetDir = 'CCW';
-        size      = 'SMALL';
+        size      = 'UNDER';
         reason    = `Impulso alcista perdiendo fuerza gradualmente.`;
         type      = 'bearish';
     }
@@ -417,14 +420,14 @@ function analyzeTravelWave(travels) {
     else if (m1 >= res - 0.5 && isTrendingUp) {
         signal    = '🚀 RUPTURA ALCISTA (RARA)';
         targetDir = 'CW';
-        size      = 'BIG';
+        size      = 'OVER';
         reason    = `Inercia (+) extrema sobre resistencia (+${res.toFixed(1)}p). Ruptura inusual.`;
         type      = 'bullish';
     }
     else if (m1 <= sup + 0.5 && isTrendingDown) {
         signal    = '💥 RUPTURA BAJISTA (RARA)';
         targetDir = 'CCW';
-        size      = 'BIG';
+        size      = 'OVER';
         reason    = `Presión (-) extrema sobre soporte (${sup.toFixed(1)}p). Ruptura inusual.`;
         type      = 'bearish';
     }
