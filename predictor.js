@@ -119,6 +119,7 @@ function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 10, ccw: -10
     const idx = WHEEL_INDEX[lastNum];
     
     // CW Fixed Targets (Positive)
+    const avgCW = Math.abs(currentAvgs.cw || 10);
     const targetCW      = WHEEL_ORDER[(idx + Math.round(avgCW) + 37) % 37];
     const targetUnderCW = WHEEL_ORDER[(idx + 5 + 37) % 37];  // Medida establecida: 5p
     const targetOverCW  = WHEEL_ORDER[(idx + 14 + 37) % 37]; // Medida establecida: 14p
