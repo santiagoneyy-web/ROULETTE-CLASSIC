@@ -583,9 +583,9 @@ function submitNumber(val, silent = false, batch = false) {
         // Evaluate ZONE OVER prediction — N9 of (idx + 14)
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
-            const idxZ = WHEEL_INDEX[prevForZone];
+            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
             if (idxZ !== -1) {
-                const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_ORDER[(idxZ + 14 + 37) % 37];
+                const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idxZ + 14 + 37) % 37];
                 const dOver = Math.abs(calcDist(prevForZone, n));
                 const distToT = Math.abs(calcDist(n, overTarget));
                 lastZoneOverHit = (distToT <= 9);
@@ -596,9 +596,9 @@ function submitNumber(val, silent = false, batch = false) {
         // Evaluate ZONE UNDER prediction — N9 of (idx + 5)
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
-            const idxZ = WHEEL_INDEX[prevForZone];
+            const idxZ = WHEEL_NUMS.indexOf(prevForZone);
             if (idxZ !== -1) {
-                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_ORDER[(idxZ + 5 + 37) % 37];
+                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idxZ + 5 + 37) % 37];
                 const distToT = Math.abs(calcDist(n, underTarget));
                 lastZoneUnderHit = (distToT <= 9);
                 zoneUnderHistory.push(lastZoneUnderHit ? 'win' : 'loss');
