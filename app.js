@@ -1040,7 +1040,7 @@ function renderTravelPanel() {
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
         let phaseHtml = '';
         if (dist !== 0) {
-            label = (absDist >= 10) ? "BIG" : "SMALL";
+            const label = (absDist >= 10) ? "BIG" : "SMALL";
             const pClass = label.toLowerCase();
             phaseHtml = `<span class="phase-pill pill-${pClass}">${label}</span>`;
         }
