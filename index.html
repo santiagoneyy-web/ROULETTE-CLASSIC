@@ -81,47 +81,12 @@
                  <div id="z26-string" class="performance-string" style="background:#111; padding: 5px; min-height: 20px; border-radius: 4px; overflow:hidden;"></div>
              </section>
 
-             <!-- NEURAL CHAT BOX (V5) -->
-             <section class="neural-chat-box" id="neural-chat">
-                 <div class="neural-header">
-                     <span class="neural-status-dot"></span>
-                     <span class="neural-title">BRAIN CORE V5</span>
-                 </div>
-                 <div id="neural-log" class="neural-log">
-                     <div class="neural-msg ai">Hola Santi. Analicemos juntos. ¿Qué patrón estás viendo tú?</div>
-                 </div>
-                 <div class="neural-input-row">
-                     <input type="text" id="neural-input" placeholder="Dile algo a la IA..." autocomplete="off">
-                     <button id="btn-send-neural">➤</button>
-                 </div>
-                 <div class="neural-actions">
-                     <button class="mini-tool-btn" id="btn-teach">IDENTIFICAR PATRÓN</button>
-                 </div>
-             </section>
+
          </div><!-- /col-visual -->
  
          <!-- ── COL 2: PREDICIONES ── -->
          <div class="col-predictions">
-            <!-- 0. MASTER AGENT (PREMIUM) -->
-            <section class="master-panel" id="master-panel">
-                <div class="master-header">
-                    <span class="master-icon">⚡</span>
-                    <span class="master-name">SNIPER MASTER AI</span>
-                    <div id="master-confidence-bar" class="master-conf-bar"><div id="master-conf-fill" class="master-conf-fill"></div></div>
-                    <span id="master-conf-text" class="master-conf-text">0%</span>
-                </div>
-                <div class="master-body">
-                    <div class="master-main-signal" id="master-signal">SYNCHRONIZING...</div>
-                    <div class="master-details">
-                        <span id="master-target" class="master-target-badge">--</span>
-                        <span id="master-reason" class="master-reason-text">Esperando confluencia de datos...</span>
-                    </div>
-                </div>
-                <div class="master-footer">
-                    <span class="master-stats">W/L: <span id="master-rate">0%</span></span>
-                    <div id="master-perf" class="performance-string"></div>
-                </div>
-            </section>
+
 
              <div class="strategy-tabs">
                  <button class="tab-btn active" id="tab-btn-dir">N1717</button>
@@ -282,30 +247,15 @@
                         <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
                     </div>
                 </div>
-                <!-- ANALYST AGENT PANEL (V26 Technical Analysis) -->
-                <div id="analyst-panel" class="analyst-box">
-                    <div class="analyst-header">
-                        <span class="analyst-tag">🤖 ANALYST AI</span>
-                        <div class="analyst-score">
-                            <span id="analyst-rate">0%</span>
-                            <div class="analyst-wl" id="analyst-perf-string"></div>
-                        </div>
-                    </div>
-                    <div class="analyst-main">
-                        <div class="analyst-signal" id="analyst-signal">ANALIZANDO...</div>
-                        <div class="analyst-decision">
-                            <span id="analyst-dir" class="dir-badge">--</span>
-                            <span id="analyst-size" class="mag-badge">--</span>
-                        </div>
-                    </div>
-                    <div class="analyst-reason" id="analyst-reason">-</div>
-                </div>
+
 
                 <!-- Travel Chart Canvas (SCROLLABLE V5) -->
                 <div class="chart-wrap" style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
                     <canvas id="travelChart" height="130" style="min-width: 100%;"></canvas>
                 </div>
-                <div class="travel-table-wrap">
+                
+                <button id="toggle-travel-table" style="background:transparent; border:none; border-top:1px solid var(--border); color:var(--muted); font-family:var(--mono); width:100%; text-align:center; padding: 6px; cursor: pointer; font-size: 10px; font-weight:700; transition: color 0.3s; letter-spacing:0.5px;">▼ ABRIR HISTORIAL DE RUTAS ▼</button>
+                <div class="travel-table-wrap" id="travel-table-wrap" style="display: none;">
                     <table class="travel-table">
                         <thead>
                             <tr>

@@ -1303,3 +1303,20 @@ function renderMasterUI() {
     rateEl.innerText = `${rate}%`;
     perfEl.innerHTML = last12.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
+
+// ─── TOGGLE TRAVEL TABLE ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const btnCollapse = document.getElementById('toggle-travel-table');
+    if (btnCollapse) {
+        btnCollapse.addEventListener('click', (e) => {
+            const wrap = document.getElementById('travel-table-wrap');
+            if (wrap.style.display === 'none') {
+                wrap.style.display = 'block';
+                e.target.innerText = '▲ CERRAR HISTORIAL ▲';
+            } else {
+                wrap.style.display = 'none';
+                e.target.innerText = '▼ ABRIR HISTORIAL DE RUTAS ▼';
+            }
+        });
+    }
+});
