@@ -87,21 +87,14 @@
                  <button class="tab-btn" id="tab-btn-scatter">📊 DIR CHART</button>
              </div>
 
-         </div><!-- /col-visual -->
- 
-         <!-- ── COL 2: PREDICIONES ── -->
-         <div class="col-predictions">
-
             <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
                 <!-- CW BLOCK -->
                 <div class="dual-block">
-                    <div class="agent-card-header">
-                        <span class="agent-icon">🤖</span>
-                        <span class="agent-card-name">ANDROID 1717</span>
-                        <span class="side-badge">CW ↺</span>
+                    <div class="agent-strategy-label" id="dir-cw-strat" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>DISTANCE 9 · N9</span>
+                        <span class="side-badge" style="padding:1px 6px;">CW ↺</span>
                     </div>
-                    <div class="agent-strategy-label" id="dir-cw-strat">DISTANCE 9 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span><span class="p-val" id="dir-cw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-cw-l-hit"></span>
@@ -125,12 +118,10 @@
 
                 <!-- CCW BLOCK -->
                 <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
-                    <div class="agent-card-header" style="background: rgba(0,0,0,0.4);">
-                        <span class="agent-icon" style="opacity: 0.5;">🤖</span>
-                        <span class="agent-card-name" style="opacity: 0.8;">ANDROID 1717</span>
-                        <span class="side-badge">CCW ↻</span>
+                    <div class="agent-strategy-label" id="dir-ccw-strat" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>DISTANCE 9 · N9</span>
+                        <span class="side-badge" style="padding:1px 6px;">CCW ↻</span>
                     </div>
-                    <div class="agent-strategy-label" id="dir-ccw-strat">DISTANCE 9 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span><span class="p-val" id="dir-ccw-l-val">--</span><span class="p-sub">n4</span><span class="hit-text" id="dir-ccw-l-hit"></span>
@@ -157,12 +148,10 @@
             <section class="shadow-panel" id="panel-sup" style="display: none;">
                 <!-- SMALL BLOCK -->
                 <div class="dual-block">
-                    <div class="agent-card-header">
-                        <span class="agent-icon">📐</span>
-                        <span class="agent-card-name">ZONE SUPPORT</span>
-                        <span class="side-badge">UNDER 🔻</span>
+                    <div class="agent-strategy-label" id="sup-s-strat" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>DIST +19 · N9</span>
+                        <span class="side-badge" style="padding:1px 6px;">UNDER 🔻</span>
                     </div>
-                    <div class="agent-strategy-label" id="sup-s-strat">DIST +19 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label" id="sup-s-l-lbl"></span><span class="p-val" id="sup-s-l-val">--</span><span class="p-sub" id="sup-s-l-sub"></span><span class="hit-text" id="sup-s-l-hit"></span>
@@ -186,12 +175,10 @@
 
                 <!-- BIG BLOCK -->
                 <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
-                    <div class="agent-card-header" style="background: rgba(0,0,0,0.4);">
-                        <span class="agent-icon" style="opacity: 0.5;">📐</span>
-                        <span class="agent-card-name" style="opacity: 0.8;">ZONE SUPPORT</span>
-                        <span class="side-badge">OVER 🔺</span>
+                    <div class="agent-strategy-label" id="sup-b-strat" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>DIST +19 · N9</span>
+                        <span class="side-badge" style="padding:1px 6px;">OVER 🔺</span>
                     </div>
-                    <div class="agent-strategy-label" id="sup-b-strat">DIST +19 · N9</div>
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label" id="sup-b-l-lbl"></span><span class="p-val" id="sup-b-l-val">--</span><span class="p-sub" id="sup-b-l-sub"></span><span class="hit-text" id="sup-b-l-hit"></span>
@@ -216,23 +203,21 @@
 
             <!-- 3. SCATTER CHART (Direction Dispersion) -->
             <section class="shadow-panel" id="panel-scatter" style="display: none;">
-                <div class="agent-card-header">
+                <div class="agent-card-header" style="padding: 4px 10px;">
                     <span class="agent-icon">📊</span>
-                    <span class="agent-card-name">DIRECCIÓN — DISPERSIÓN</span>
-                    <span class="side-badge" id="scatter-bias">--</span>
+                    <span class="agent-card-name">DIR CHART</span>
+                    <span class="side-badge" id="scatter-bias" style="padding:1px 6px;">--</span>
                 </div>
-                <div style="padding: 8px;">
+                <div class="agent-strategy-label" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="scatter-trend-label" style="color: var(--gold); font-weight:bold;">TENDENCIA MMMM</span>
+                </div>
+                <div style="padding: 4px 8px;">
                     <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
                         <canvas id="scatterChart" height="200" style="min-width: 100%;"></canvas>
                     </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:9px; color:#6a8aa8;">
-                        <span>⬆️ CW (+) = OVER (Above line) / UNDER (Below line)</span>
-                        <span id="scatter-trend-label" style="color: var(--gold); font-weight:bold;">--</span>
-                        <span>⬇️ CCW (-) = UNDER (Below line) / OVER (Above line)</span>
-                    </div>
                 </div>
             </section>
-         </div><!-- /col-predictions -->
+         </div><!-- /col-visual -->
  
          <!-- ── COL 3: TRAVEL DATA ── -->
          <div class="col-travel">

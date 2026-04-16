@@ -44,7 +44,7 @@ html, body {
 
 .three-col-body {
   display: grid;
-  grid-template-columns: 260px 1fr 460px; /* Center is now flexible but restricted by larger third column */
+  grid-template-columns: 310px 1fr; /* 2 columns: Visual/Predictions on the left, Travel on the right */
   gap: 12px;
   padding: 12px;
   align-items: start;
