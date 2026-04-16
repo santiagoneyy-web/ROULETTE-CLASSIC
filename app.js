@@ -702,38 +702,51 @@ function submitNumber(val, silent = false, batch = false) {
 }
 
 // ─── RENDER: TRAVEL CHART (OFI-Style canvas) ──────────────
-// ─── SCATTER CHART: DIRECTION DISPERSION (CW=+1, CCW=-1) ──────────
+// ─── SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) ──────────
 function renderScatterChart() {
     try {
         const canvas = document.getElementById('scatterChart');
         if (!canvas || history.length < 4) return;
         const ctx = canvas.getContext('2d');
         
-        // Build direction data: CW=+1, CCW=-1
+        // Build cumulative direction data: CW=+1, CCW=-1
+        const binaryDirs = [];
         const dirs = [];
+        let cum = 0;
         for (let i = 1; i < history.length; i++) {
             const d = calcDist(history[i-1], history[i]);
-            dirs.push(d >= 0 ? 1 : -1);
+            const dir = d >= 0 ? 1 : -1;
+            binaryDirs.push(dir);
+            cum += dir;
+            dirs.push(cum);
         }
         if (dirs.length < 3) return;
         
         const numPoints = dirs.length;
-        const pxPerPoint = 12;
+        const pxPerPoint = 13;
         const totalW = Math.max(canvas.parentElement.offsetWidth || 400, numPoints * pxPerPoint + 60);
         canvas.width = totalW;
+        canvas.style.width = totalW + 'px';
         const H = canvas.height;
         ctx.clearRect(0, 0, totalW, H);
         
-        const padL = 30, padR = 15, padT = 20, padB = 20;
+        const padL = 35, padR = 40, padT = 20, padB = 20;
         const chartW = totalW - padL - padR;
         const chartH = H - padT - padB;
-        const midY = padT + chartH / 2;
-        const scaleY = v => midY - v * (chartH / 2 - 10);
+        
+        // Dynamic symmetric Y scale for infinite bounds
+        const maxAbs = Math.max(Math.abs(Math.max(...dirs)), Math.abs(Math.min(...dirs)), 3);
+        const maxY = maxAbs + 1;
+        const minY = -maxAbs - 1;
+        const rangeY = maxY - minY;
+        
+        const scaleY = v => padT + chartH * ((maxY - v) / rangeY);
         const scaleX = i => padL + (i / (numPoints - 1)) * chartW;
+        const midY = scaleY(0);
         
         // Background
-        ctx.fillStyle = 'rgba(48, 224, 144, 0.03)'; ctx.fillRect(padL, padT, chartW, chartH / 2);
-        ctx.fillStyle = 'rgba(240, 64, 96, 0.03)'; ctx.fillRect(padL, midY, chartW, chartH / 2);
+        ctx.fillStyle = 'rgba(48, 224, 144, 0.03)'; ctx.fillRect(padL, padT, chartW, midY - padT);
+        ctx.fillStyle = 'rgba(240, 64, 96, 0.03)'; ctx.fillRect(padL, midY, chartW, H - padB - midY);
         
         // Zero line
         ctx.strokeStyle = '#2a3a5d'; ctx.lineWidth = 1;
@@ -741,9 +754,9 @@ function renderScatterChart() {
         
         // Y axis labels
         ctx.fillStyle = '#4a6080'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
-        ctx.fillText('+1 CW', padL - 3, scaleY(1) + 3);
-        ctx.fillText('-1 CCW', padL - 3, scaleY(-1) + 3);
-        ctx.fillText('0', padL - 3, midY + 3);
+        ctx.fillText(`+${maxAbs}`, padL - 5, padT + 6);
+        ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
+        ctx.fillText('0', padL - 5, midY + 3);
         
         // ─── Moving Average (window=5) ───
         const maWindow = 5;
@@ -755,31 +768,32 @@ function renderScatterChart() {
         }
         
         // ─── Support / Resistance Detection ───
-        // Support = average of the lowest MA valleys (CCW zones)
-        // Resistance = average of the highest MA peaks (CW zones)
         const maPeaks = [], maValleys = [];
         for (let i = 1; i < ma.length - 1; i++) {
             if (ma[i] > ma[i-1] && ma[i] > ma[i+1]) maPeaks.push(ma[i]);
             if (ma[i] < ma[i-1] && ma[i] < ma[i+1]) maValleys.push(ma[i]);
         }
-        const resistance = maPeaks.length > 0 ? maPeaks.reduce((a,b) => a+b, 0) / maPeaks.length : 0.8;
-        const support = maValleys.length > 0 ? maValleys.reduce((a,b) => a+b, 0) / maValleys.length : -0.8;
+        const resistance = maPeaks.length > 0 ? maPeaks[maPeaks.length - 1] : Math.max(0, ...dirs);
+        const support = maValleys.length > 0 ? maValleys[maValleys.length - 1] : Math.min(0, ...dirs);
         
-        // Draw support/resistance lines
-        ctx.setLineDash([6, 4]);
-        ctx.strokeStyle = 'rgba(48, 224, 144, 0.5)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(padL, scaleY(resistance)); ctx.lineTo(totalW - padR, scaleY(resistance)); ctx.stroke();
-        ctx.strokeStyle = 'rgba(240, 64, 96, 0.5)';
-        ctx.beginPath(); ctx.moveTo(padL, scaleY(support)); ctx.lineTo(totalW - padR, scaleY(support)); ctx.stroke();
+        // Draw latest support/resistance lines
+        ctx.setLineDash([4, 4]);
+        if (resistance > 0) {
+            ctx.strokeStyle = 'rgba(48, 224, 144, 0.5)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(padL, scaleY(resistance)); ctx.lineTo(totalW - padR + 5, scaleY(resistance)); ctx.stroke();
+            ctx.fillStyle = 'rgba(48, 224, 144, 0.7)'; ctx.textAlign = 'left';
+            ctx.fillText(`R:${resistance.toFixed(1)}`, totalW - padR + 8, scaleY(resistance) + 3);
+        }
+        if (support < 0) {
+            ctx.strokeStyle = 'rgba(240, 64, 96, 0.5)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(padL, scaleY(support)); ctx.lineTo(totalW - padR + 5, scaleY(support)); ctx.stroke();
+            ctx.fillStyle = 'rgba(240, 64, 96, 0.7)'; ctx.textAlign = 'left';
+            ctx.fillText(`S:${support.toFixed(1)}`, totalW - padR + 8, scaleY(support) + 3);
+        }
         ctx.setLineDash([]);
         
-        // Labels for support/resistance
-        ctx.font = '8px Inter'; ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(48, 224, 144, 0.7)'; ctx.fillText(`R: ${resistance.toFixed(2)}`, totalW - padR - 50, scaleY(resistance) - 4);
-        ctx.fillStyle = 'rgba(240, 64, 96, 0.7)'; ctx.fillText(`S: ${support.toFixed(2)}`, totalW - padR - 50, scaleY(support) + 12);
-        
         // ─── Moving Average Line (SUBTLE REFERENCE) ───
-        ctx.strokeStyle = 'rgba(245, 200, 66, 0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = 'rgba(245, 200, 66, 0.25)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
         ctx.beginPath();
         for (let i = 0; i < ma.length; i++) {
             const x = scaleX(i), y = scaleY(ma[i]);
@@ -788,22 +802,26 @@ function renderScatterChart() {
         ctx.stroke(); ctx.setLineDash([]);
         
         // ─── SHARP PEAKS LINE (ZIG-ZAG) ───
-        // Esta línea conecta los puntos reales +1/-1 con ángulos cerrados como pidió Santi
-        ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.6;
         ctx.beginPath();
         for (let i = 0; i < dirs.length; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            // Line color gradient simulation based on direction of segment
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
         }
         ctx.stroke(); ctx.globalAlpha = 1.0;
         
-        // ─── Scatter Points (More visible) ───
+        // ─── Scatter Points ───
         for (let i = 0; i < numPoints; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
-            ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = dirs[i] > 0 ? '#30e090' : '#f04060';
+            ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = binaryDirs[i] > 0 ? '#30e090' : '#f04060';
             ctx.fill();
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; ctx.stroke();
         }
         
         // Last point highlight
@@ -811,12 +829,16 @@ function renderScatterChart() {
             const lx = scaleX(numPoints - 1), ly = scaleY(dirs[numPoints - 1]);
             ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2);
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-            ctx.shadowBlur = 10; ctx.shadowColor = dirs[numPoints - 1] > 0 ? '#30e090' : '#f04060';
+            ctx.shadowBlur = 12; ctx.shadowColor = binaryDirs[numPoints - 1] > 0 ? '#30e090' : '#f04060';
             ctx.stroke(); ctx.shadowBlur = 0;
+            
+            // Value annotation on last point
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Inter'; ctx.textAlign = 'left';
+            ctx.fillText(dirs[numPoints - 1] > 0 ? `+${dirs[numPoints - 1]}` : dirs[numPoints - 1], lx + 10, ly + 3);
         }
         
         // ─── Trend Detection ───
-        const recent10 = dirs.slice(-10);
+        const recent10 = binaryDirs.slice(-10);
         const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
         let trendLabel = 'NEUTRAL';
         let trendColor = '#6a8aa8';
