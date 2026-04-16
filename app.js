@@ -23,8 +23,8 @@ let lastZoneUnderHit = false;
 let lastZone26Hit    = false;
 
 // Dynamic Reference Lines
-let currentAvgCW = 10;
-let currentAvgCCW = -10;
+let currentAvgCW = 9;
+let currentAvgCCW = -9;
 
 // ─── DOZENS STATE ──────────────────────────────────────────────
 // ─── DOZENS STATE ──────────────────────────────────────────────
@@ -64,7 +64,7 @@ async function fetchPatternMemory(historyArr) {
     
     for (let i = 1; i < last5.length; i++) {
         const d = calcDist(last5[i-1], last5[i]);
-        seqMag += Math.abs(d) >= 10 ? 'B' : 'S';
+        seqMag += Math.abs(d) >= 9 ? 'B' : 'S';
         seqDir += d >= 0 ? 'CW' : 'CCW';
     }
     
@@ -243,9 +243,7 @@ function renderShadowPanel() {
         else          phaseLabel = (dVal >= currentAvgCCW) ? "OVER" : "UNDER";
 
         // --- UNDER BLOCK (Dynamic Logic) ---
-        const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 5 + 37) % 37];
-        const underLabel = (dVal < 0) ? (5 >= -currentAvgCCW ? "OVER" : "UNDER") : (5 >= currentAvgCW ? "OVER" : "UNDER"); 
-        // Nota: Para simplificar, el label n4 se mantiene como UNDER/OVER segun la posicion
+        const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 4 + 37) % 37];
         document.getElementById('sup-s-c-val').innerText = underTarget;
         document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? '✔ HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
@@ -560,47 +558,46 @@ function submitNumber(val, silent = false, batch = false) {
     if (!isNaN(n) && n >= 0 && n <= 36) {
         // Evaluate previous predictions before pushing to history
         if (lastSignal && history.length > 0) {
-            // Main CW prediction — evaluated at N9 radius
+            // Main CW prediction — evaluated at N9 (win radius 9, under/over radius 4)
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
-                cwHistory.push(distCW <= 9 ? 'win' : 'loss'); // N9 radius
+                cwHistory.push(distCW <= 9 ? 'win' : 'loss');
                 
-                // Dynamically evaluate hits against under/over targets at N4
+                // Dynamically evaluate hits against under/over targets at radius 4
                 lastUnderHitCW = Math.abs(calcDist(n, lastSignal.targetUnderCW)) <= 4;
                 lastOverHitCW  = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
             }
-            // Main CCW prediction — evaluated at N9 radius
+            // Main CCW prediction — evaluated at N9 (9-ball neighborhood = radius 4)
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
-                ccwHistory.push(distCCW <= 9 ? 'win' : 'loss'); // N9 radius
+                ccwHistory.push(distCCW <= 9 ? 'win' : 'loss');
                 
-                // Dynamically evaluate hits against under/over targets at N4
+                // Dynamically evaluate hits against under/over targets at radius 4
                 lastUnderHitCCW = Math.abs(calcDist(n, lastSignal.targetUnderCCW)) <= 4;
                 lastOverHitCCW  = Math.abs(calcDist(n, lastSignal.targetOverCCW)) <= 4;
             }
         }
         
-        // Evaluate ZONE OVER prediction — N9 of (idx + 14)
+        // Evaluate ZONE OVER prediction — Offset 14
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
             if (idxZ !== -1) {
                 const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idxZ + 14 + 37) % 37];
-                const dOver = Math.abs(calcDist(prevForZone, n));
                 const distToT = Math.abs(calcDist(n, overTarget));
-                lastZoneOverHit = (distToT <= 9);
+                lastZoneOverHit = (distToT <= 4);
                 zoneOverHistory.push(lastZoneOverHit ? 'win' : 'loss');
             }
         }
 
-        // Evaluate ZONE UNDER prediction — N9 of (idx + 5)
+        // Evaluate ZONE UNDER prediction — Offset 4
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
             if (idxZ !== -1) {
-                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idxZ + 5 + 37) % 37];
+                const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idxZ + 4 + 37) % 37];
                 const distToT = Math.abs(calcDist(n, underTarget));
-                lastZoneUnderHit = (distToT <= 9);
+                lastZoneUnderHit = (distToT <= 4);
                 zoneUnderHistory.push(lastZoneUnderHit ? 'win' : 'loss');
             }
         }
@@ -615,7 +612,7 @@ function submitNumber(val, silent = false, batch = false) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
             
-            const hitMag = jugView.magnitude === 'UNDER' ? (mag <= 9 && mag >= 1) : (mag >= 10 && mag <= 18);
+            const hitMag = jugView.magnitude === 'UNDER' ? (mag <= 8 && mag >= 1) : (mag >= 9 && mag <= 18);
             const hitDir = jugView.direction === 'CW' ? (jump >= 0) : (jump < 0);
             
             lastJugHit = hitMag && hitDir;
@@ -689,16 +686,17 @@ function submitNumber(val, silent = false, batch = false) {
                         });
                     }
                 }
-
-                if (!batch) {
-                    if (history.length > 0) fetchPatternMemory(history);
-                    renderShadowPanel();
-                    renderWheelAndHistory();
-                    renderTravelPanel();
-                    renderAnalystUI();
-                    renderMasterUI();
-                }
             } catch(e) { console.error('Predict error:', e); }
+        }
+
+        // --- RENDER UPDATES (Always if not batch) ---
+        if (!batch) {
+            renderShadowPanel();
+            renderWheelAndHistory();
+            renderTravelPanel();
+            renderAnalystUI();
+            renderMasterUI();
+            if (history.length > 0) fetchPatternMemory(history);
         }
     }
 }
@@ -1040,9 +1038,9 @@ function renderTravelPanel() {
         const dirClass = dist >= 0 ? 'dir-der' : 'dir-izq';
         let phaseHtml = '';
         if (dist !== 0) {
-            const label = (absDist >= 10) ? "BIG" : "SMALL";
+            const label = (absDist >= 9) ? "BIG" : "SMALL";
             const pClass = label.toLowerCase();
-            phaseHtml = `<span class="phase-pill pill-${pClass}">${label}</span>`;
+            phaseHtml = `<span class="phase-pill pill-${pClass}" style="background-color:${label==='BIG'?'var(--red)':'var(--green)'}; color:white;">${label}</span>`;
         }
         const isLast = (i === 0);
         return `<tr${isLast ? ' class="last-row"' : ''}>

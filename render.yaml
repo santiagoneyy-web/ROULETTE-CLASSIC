@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: roulette-classic
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: GEMINI_API_KEY
+        fromSecret: gemini_api_key
+    autoDeploy: true
+    healthCheckPath: "/"

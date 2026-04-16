@@ -92,9 +92,9 @@ function computeDealerSignature(history) {
         avgTravel: Math.round(avg * 10) / 10, 
         stdDev: Math.round(stdDev * 10) / 10,
         travelHistory: recentTravels,
-        casilla5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 5) % 37],
+        casilla4: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 4) % 37],
         casilla14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 14) % 37],
-        casillaNeg5: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 5 + 37) % 37],
+        casillaNeg4: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 4 + 37) % 37],
         casillaNeg14: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] - 14 + 37) % 37],
         casilla1: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 1) % 37],
         casilla19: WHEEL_ORDER[(WHEEL_INDEX[history[history.length-1]] + 19) % 37],
@@ -113,22 +113,22 @@ function getWheelNeighbors(num, radius) {
     return neighbors;
 }
 
-function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 10, ccw: -10 }) {
+function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 9, ccw: -9 }) {
     if (!sig || history.length === 0) return [];
     const lastNum = history[history.length - 1];
     const idx = WHEEL_INDEX[lastNum];
     
     // CW Fixed Targets (Positive)
-    const avgCW = Math.abs(currentAvgs.cw || 10);
-    const targetCW      = WHEEL_ORDER[(idx + Math.round(avgCW) + 37) % 37];
-    const targetUnderCW = WHEEL_ORDER[(idx + 5 + 37) % 37];  // Medida establecida: 5p
-    const targetOverCW  = WHEEL_ORDER[(idx + 14 + 37) % 37]; // Medida establecida: 14p
+    const avgCW = Math.abs(currentAvgs.cw || 9);
+    const targetCW      = WHEEL_ORDER[(idx + 9 + 37) % 37];     // Principal a 9 casillas
+    const targetUnderCW = WHEEL_ORDER[(idx + 4 + 37) % 37];     // Small a 4 casillas
+    const targetOverCW  = WHEEL_ORDER[(idx + 14 + 37) % 37];    // Big a 14 casillas
     
     // CCW Fixed Targets (Negative)
-    const avgCCW = -Math.abs(currentAvgs.ccw || -10);
-    const targetCCW      = WHEEL_ORDER[(idx + Math.round(avgCCW) + 37) % 37];
-    const targetOverCCW  = WHEEL_ORDER[(idx - 5 + 37) % 37];  // Medida establecida: -5p
-    const targetUnderCCW = WHEEL_ORDER[(idx - 14 + 37) % 37]; // Medida establecida: -14p
+    const avgCCW = -Math.abs(currentAvgs.ccw || -9);
+    const targetCCW      = WHEEL_ORDER[(idx - 9 + 37) % 37];    // Principal a 9 casillas
+    const targetOverCCW  = WHEEL_ORDER[(idx - 4 + 37) % 37];     // Small a -4 casillas
+    const targetUnderCCW = WHEEL_ORDER[(idx - 14 + 37) % 37];    // Big a -14 casillas
 
     const signals = [];
 
@@ -161,7 +161,7 @@ function predictZonePattern(history, patternStats = null) {
     const recent = distances.slice(-12);
     if (recent.length < 3) return { magnitude: 'SMALL', direction: 'CW', confidence: 0, isCharging: true };
 
-    const mags = recent.map(d => Math.abs(d) >= 10 ? 'B' : 'S');
+    const mags = recent.map(d => Math.abs(d) >= 9 ? 'B' : 'S');
     const dirs = recent.map(d => d >= 0 ? 'CW' : 'CCW');
 
     // ════════════════════════════════════════════════
@@ -304,7 +304,7 @@ function analyzeTravelWave(travels) {
 
     // ─── 2. DETECTOR DE FRACTALES (MODO CONSERVADOR) ───
     // Convertimos los últimos 4 movimientos en un vector de "ADN"
-    const getDNA = (arr) => arr.map(v => (abs(v) >= 10 ? 'B' : 'S') + (v >= 0 ? '+' : '-')).join('|');
+    const getDNA = (arr) => arr.map(v => (Math.abs(v) >= 9 ? 'B' : 'S') + (v >= 0 ? '+' : '-')).join('|');
     const currentDNA = getDNA(travels.slice(-4));
     let fractalTarget = null;
     let fractalReason = '';
@@ -358,7 +358,7 @@ function analyzeTravelWave(travels) {
     if (hasInertia && inertiaDir) {
         signal    = inertiaDir === 'CW' ? '➡️ INERCIA CW SÓLIDA' : '⬅️ INERCIA CCW SÓLIDA';
         targetDir = inertiaDir;
-        size      = abs(m1) >= 10 ? 'OVER' : 'UNDER';
+        size      = Math.abs(m1) >= 9 ? 'OVER' : 'UNDER';
         reason    = `${cwCount >= 4 ? cwCount : ccwCount}/5 tiros en dirección ${inertiaDir}. El dealer mantiene ritmo constante.`;
         type      = inertiaDir === 'CW' ? 'bullish' : 'bearish';
     }
