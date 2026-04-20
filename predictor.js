@@ -113,22 +113,23 @@ function getWheelNeighbors(num, radius) {
     return neighbors;
 }
 
-function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 9, ccw: -9 }) {
+function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 9, ccw: -9, offset: 0 }) {
     if (!sig || history.length === 0) return [];
     const lastNum = history[history.length - 1];
     const idx = WHEEL_INDEX[lastNum];
     
-    // CW Fixed Targets (Positive)
-    const avgCW = Math.abs(currentAvgs.cw || 9);
-    const targetCW      = WHEEL_ORDER[(idx + 9 + 37) % 37];     // Principal a 9 casillas
-    const targetUnderCW = WHEEL_ORDER[(idx + 4 + 37) % 37];     // Small a 4 casillas
-    const targetOverCW  = WHEEL_ORDER[(idx + 14 + 37) % 37];    // Big a 14 casillas
+    // Calibration offset — shifts all targets by N positions on the wheel
+    const off = currentAvgs.offset || 0;
     
-    // CCW Fixed Targets (Negative)
-    const avgCCW = -Math.abs(currentAvgs.ccw || -9);
-    const targetCCW      = WHEEL_ORDER[(idx - 9 + 37) % 37];    // Principal a 9 casillas
-    const targetOverCCW  = WHEEL_ORDER[(idx - 4 + 37) % 37];     // Small a -4 casillas
-    const targetUnderCCW = WHEEL_ORDER[(idx - 14 + 37) % 37];    // Big a -14 casillas
+    // CW Fixed Targets (Positive) — principal at 9 + offset
+    const targetCW      = WHEEL_ORDER[(idx + 9 + off + 37) % 37];
+    const targetUnderCW = WHEEL_ORDER[(idx + 4 + off + 37) % 37];
+    const targetOverCW  = WHEEL_ORDER[(idx + 14 + off + 37) % 37];
+    
+    // CCW Fixed Targets (Negative) — principal at -9 - offset
+    const targetCCW      = WHEEL_ORDER[(idx - 9 - off + 37 * 2) % 37];
+    const targetOverCCW  = WHEEL_ORDER[(idx - 4 - off + 37 * 2) % 37];
+    const targetUnderCCW = WHEEL_ORDER[(idx - 14 - off + 37 * 2) % 37];
 
     const signals = [];
 
@@ -143,7 +144,7 @@ function getIAMasterSignals(prox, sig, history, currentAvgs = { cw: 9, ccw: -9 }
         targetOverCCW: targetOverCCW,
         betZoneCW: getWheelNeighbors(targetCW, 4), 
         betZoneCCW: getWheelNeighbors(targetCCW, 4),
-        rule: `DYNAMIC (${Math.round(avgCW)}p)`,
+        rule: `N${9 + off}p`,
         mode: 'DUAL'
     });
 

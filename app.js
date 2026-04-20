@@ -25,7 +25,8 @@ let lastZone26Hit    = false;
 // Dynamic Reference Lines
 let currentAvgCW = 10;
 let currentAvgCCW = -10;
-let manualAvgOffset = 0; // CALIBRACIÓN MANUAL DE LÍMITES
+let manualAvgOffset = 0; // CALIBRACIÓN MANUAL DE LÍMITES TRAVEL (deprecated but kept)
+let predictorOffset = 0; // CALIBRACIÓN MANUAL DEL PREDICTOR (+/- casillas)
 
 // ─── DOZENS STATE ──────────────────────────────────────────────
 // ─── DOZENS STATE ──────────────────────────────────────────────
@@ -645,7 +646,7 @@ function submitNumber(val, silent = false, batch = false) {
             try {
                 const sig  = computeDealerSignature(history);
                 const prox = projectNextRound(history, {});
-                const masterSignals = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW });
+                const masterSignals = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
                 if (masterSignals && masterSignals.length > 0) {
                     lastSignal = masterSignals[0];
                 }
@@ -1330,14 +1331,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Botones de Calibración
+    // Botones de Calibración del Travel Chart
     document.getElementById('btn-avg-inc')?.addEventListener('click', () => {
-        manualAvgOffset += 0.5; // Incrementos más finos
+        manualAvgOffset += 0.5;
         renderTravelChart();
     });
-    
     document.getElementById('btn-avg-dec')?.addEventListener('click', () => {
         manualAvgOffset -= 0.5;
         renderTravelChart();
+    });
+
+    // ─── Botones de Calibración del PREDICTOR ±1 casilla ────
+    function updatePredBadge() {
+        const badge = document.getElementById('pred-offset-badge');
+        if (badge) {
+            const n = 9 + predictorOffset;
+            badge.innerText = `N${n}`;
+            badge.style.color = predictorOffset !== 0 ? '#f0c040' : '#00e5c8';
+        }
+    }
+    document.getElementById('btn-pred-inc')?.addEventListener('click', () => {
+        predictorOffset += 1;
+        updatePredBadge();
+        // Recalculate with new offset immediately
+        if (history.length >= 3 && typeof computeDealerSignature === 'function') {
+            const sig = computeDealerSignature(history);
+            const prox = projectNextRound(history, {});
+            const sigs = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
+            if (sigs && sigs.length > 0) { lastSignal = sigs[0]; renderDirectionPanels(); }
+        }
+    });
+    document.getElementById('btn-pred-dec')?.addEventListener('click', () => {
+        predictorOffset -= 1;
+        updatePredBadge();
+        if (history.length >= 3 && typeof computeDealerSignature === 'function') {
+            const sig = computeDealerSignature(history);
+            const prox = projectNextRound(history, {});
+            const sigs = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
+            if (sigs && sigs.length > 0) { lastSignal = sigs[0]; renderDirectionPanels(); }
+        }
     });
 });

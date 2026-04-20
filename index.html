@@ -81,10 +81,17 @@
                  <div id="z26-string" class="performance-string" style="background:#111; padding: 5px; min-height: 20px; border-radius: 4px; overflow:hidden;"></div>
              </section>
 
-             <div class="strategy-tabs" style="margin-top: 8px;">
-                 <button class="tab-btn active" id="tab-btn-dir">N1717</button>
-                 <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>
-                 <button class="tab-btn" id="tab-btn-scatter">📊 DIR CHART</button>
+             <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
+                 <div class="strategy-tabs" style="flex:1; margin-top:0;">
+                     <button class="tab-btn active" id="tab-btn-dir">N1717</button>
+                     <button class="tab-btn" id="tab-btn-sup">ZONE SUPPORT</button>
+                     <button class="tab-btn" id="tab-btn-scatter">📊 DIR CHART</button>
+                 </div>
+                 <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+                     <button id="btn-pred-dec" title="Bajar AVG -1" style="background:#1e2d45; border:1px solid var(--border); color:var(--accent); font-size:13px; width:24px; border-radius:4px; height:24px; cursor:pointer; font-weight:bold; line-height:1;">-</button>
+                     <span id="pred-offset-badge" style="font-family:var(--mono); font-size:10px; color:var(--gold); background:rgba(240,192,64,0.1); border:1px solid rgba(240,192,64,0.3); border-radius:4px; padding:2px 5px; white-space:nowrap;">N9</span>
+                     <button id="btn-pred-inc" title="Subir AVG +1" style="background:#1e2d45; border:1px solid var(--border); color:var(--accent); font-size:13px; width:24px; border-radius:4px; height:24px; cursor:pointer; font-weight:bold; line-height:1;">+</button>
+                 </div>
              </div>
 
             <!-- 1. DIR (ANDROID 1717) -->
