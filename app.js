@@ -206,20 +206,20 @@ function renderShadowPanel() {
         }
 
         // CW Stats
-        const last12cw = cwHistory.slice(-12);
-        const winsCW   = last12cw.filter(x => x === 'win').length;
+        const last10cw = cwHistory.slice(-10);
+        const winsCW   = last10cw.filter(x => x === 'win').length;
         document.getElementById('dir-cw-w').innerText = winsCW;
-        document.getElementById('dir-cw-l').innerText = last12cw.length - winsCW;
-        document.getElementById('dir-cw-rate').innerText = last12cw.length > 0 ? ((winsCW / last12cw.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('dir-cw-perf').innerHTML = last12cw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('dir-cw-l').innerText = last10cw.length - winsCW;
+        document.getElementById('dir-cw-rate').innerText = last10cw.length > 0 ? ((winsCW / last10cw.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('dir-cw-perf').innerHTML = last10cw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         // CCW Stats
-        const last12ccw = ccwHistory.slice(-12);
-        const winsCCW   = last12ccw.filter(x => x === 'win').length;
+        const last10ccw = ccwHistory.slice(-10);
+        const winsCCW   = last10ccw.filter(x => x === 'win').length;
         document.getElementById('dir-ccw-w').innerText = winsCCW;
-        document.getElementById('dir-ccw-l').innerText = last12ccw.length - winsCCW;
-        document.getElementById('dir-ccw-rate').innerText = last12ccw.length > 0 ? ((winsCCW / last12ccw.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('dir-ccw-perf').innerHTML = last12ccw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('dir-ccw-l').innerText = last10ccw.length - winsCCW;
+        document.getElementById('dir-ccw-rate').innerText = last10ccw.length > 0 ? ((winsCCW / last10ccw.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('dir-ccw-perf').innerHTML = last10ccw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         // --- NEIGHBOR BALLS: DISABLED (Per user request: remove "bolitas") ---
         document.getElementById('dir-cw-c-balls').innerHTML  = '';
@@ -250,12 +250,12 @@ function renderShadowPanel() {
         document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? '✔ HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
-        const last12s = zoneUnderHistory.slice(-12);
-        const winsS = last12s.filter(x => x === 'win').length;
+        const last10s = zoneUnderHistory.slice(-10);
+        const winsS = last10s.filter(x => x === 'win').length;
         document.getElementById('sup-s-w').innerText = winsS;
-        document.getElementById('sup-s-l').innerText = last12s.length - winsS;
-        document.getElementById('sup-s-rate').innerText = last12s.length > 0 ? ((winsS / last12s.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-s-perf').innerHTML = last12s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('sup-s-l').innerText = last10s.length - winsS;
+        document.getElementById('sup-s-rate').innerText = last10s.length > 0 ? ((winsS / last10s.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('sup-s-perf').innerHTML = last10s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         // --- OVER BLOCK (Dynamic Logic) ---
         const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
@@ -263,12 +263,12 @@ function renderShadowPanel() {
         document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? '✔ HIT' : '';
         document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
-        const last12b = zoneOverHistory.slice(-12);
-        const winsB = last12b.filter(x => x === 'win').length;
+        const last10b = zoneOverHistory.slice(-10);
+        const winsB = last10b.filter(x => x === 'win').length;
         document.getElementById('sup-b-w').innerText = winsB;
-        document.getElementById('sup-b-l').innerText = last12b.length - winsB;
-        document.getElementById('sup-b-rate').innerText = last12b.length > 0 ? ((winsB / last12b.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-b-perf').innerHTML = last12b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('sup-b-l').innerText = last10b.length - winsB;
+        document.getElementById('sup-b-rate').innerText = last10b.length > 0 ? ((winsB / last10b.length) * 100).toFixed(1) + '%' : '0.0%';
+        document.getElementById('sup-b-perf').innerHTML = last10b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         // --- NEIGHBOR BALLS: DISABLED (Per user request) ---
         document.getElementById('sup-s-c-balls').innerHTML = '';
@@ -278,11 +278,11 @@ function renderShadowPanel() {
         document.getElementById('sup-b-l-balls').innerHTML = '';
         document.getElementById('sup-b-r-balls').innerHTML = '';
         // --- ZONE 26 STATS ---
-        const last15z26 = zone26History.slice(-15);
-        const winsZ26 = last15z26.filter(x => x === 'win').length;
-        const rateZ26 = last15z26.length > 0 ? ((winsZ26 / last15z26.length) * 100).toFixed(0) : '0';
+        const last10z26 = zone26History.slice(-10);
+        const winsZ26 = last10z26.filter(x => x === 'win').length;
+        const rateZ26 = last10z26.length > 0 ? ((winsZ26 / last10z26.length) * 100).toFixed(0) : '0';
         document.getElementById('z26-rate').innerText = rateZ26 + '%';
-        document.getElementById('z26-string').innerHTML = last15z26.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+        document.getElementById('z26-string').innerHTML = last10z26.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 
         renderDozens();
     } } catch (err) { 
@@ -293,7 +293,7 @@ function renderShadowPanel() {
 
 function renderDozens() {
     try {
-        if (history.length < 18) {
+        if (history.length < 12) {
             // Not enough data yet — refresh neighbor balls with unfiltered view
             renderShadowPanelNeighborsOnly();
             return;
@@ -312,8 +312,8 @@ function renderDozens() {
         let spins = 0;
 
         // Replay history to build accurate State Machine for Dozens
-        for (let i = 18; i <= dozens.length; i++) {
-            const window = dozens.slice(i - 18, i).filter(d => d !== 0);
+        for (let i = 12; i <= dozens.length; i++) {
+            const window = dozens.slice(i - 12, i).filter(d => d !== 0);
             if (window.length === 0) continue;
 
             const counts = {1:0, 2:0, 3:0};
@@ -459,17 +459,19 @@ function renderDozens() {
         }
         
         // Render history list
-        const histEl = document.getElementById('dz-hist-list');
         if (histEl) {
              if (dzHistoryList.length === 0) {
                  histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aún</div>';
              } else {
-                 histEl.innerHTML = dzHistoryList.map(h => `
-                    <div class="dz-hist-item">
-                        <span>${h.dozens.join('ª & ')}ª</span>
-                        <span class="dur">duró ${h.duration}t</span>
-                    </div>
-                 `).join('');
+                 histEl.innerHTML = dzHistoryList.map(h => {
+                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}°</span>`).join('');
+                     return `
+                        <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center;">${chips}</div>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">duró ${h.duration}t</span>
+                        </div>
+                     `;
+                 }).join('');
              }
         }
 
@@ -527,8 +529,8 @@ function drawWheel(highlightNum = null) {
 function renderWheelAndHistory() {
     const strip = document.getElementById('history-strip-mini');
     if (!strip) return;
-    const last12 = history.slice(-12).reverse();
-    strip.innerHTML = last12.map(n => {
+    const last10 = history.slice(-10).reverse();
+    strip.innerHTML = last10.map(n => {
         const cls = n===0 ? 'ball-zero' : (RED_NUMS.has(n) ? 'ball-red' : 'ball-black');
         return `<div class="mini-ball ${cls}">${n}</div>`;
     }).join('');
@@ -679,6 +681,9 @@ function submitNumber(val, silent = false, batch = false) {
                         masterView.confidence = Math.max(masterView.confidence, 90);
                         masterView.target = jugView.agent5_top_new.direction;
                     }
+
+                    // Actualizar el motor de patrones del Travel Chart
+                    updateTravelPatternUI();
 
                     if (typeof AIChat !== 'undefined' && masterView.reasons) {
                         AIChat.onNewSpin(n, { 
@@ -858,6 +863,134 @@ function renderScatterChart() {
         canvas.parentElement.scrollLeft = canvas.parentElement.scrollWidth;
         
     } catch(err) { console.error('Scatter chart error:', err); }
+}
+
+// ─── TRAVEL PATTERN ANALYSIS (DOBLE EJE) ─────────────────────────────────────
+const travelPatternHistory = []; // Últimos 8 episodios
+
+function analyzeTravelPattern(hist) {
+    if (hist.length < 3) return { label: '—', tiradas: 0, emoji: '' };
+
+    // Build [{ dir, zone }] list from full history
+    const events = [];
+    for (let i = 1; i < hist.length; i++) {
+        const d = calcDist(hist[i - 1], hist[i]);
+        events.push({
+            dir:  d >= 0 ? 'DER' : 'IZQ',
+            zone: Math.abs(d) >= 9 ? 'BIG' : 'SMALL'
+        });
+    }
+
+    // ── Find the current streak (how many events from the end share ANY linkage) ──
+    // We measure the active window = last N events (use last 12, or fewer if not enough)
+    const window = events.slice(-12);
+    const N = window.length;
+    if (N < 2) return { label: '—', tiradas: N, emoji: '' };
+
+    const dirs  = window.map(e => e.dir);
+    const zones = window.map(e => e.zone);
+
+    // ── EJE 1: DIRECCIÓN ──
+    // Solid: last 3+ all same
+    const dirSolid = N >= 3 && dirs.slice(-N).every(d => d === dirs[dirs.length - 1]);
+    const dirLast  = dirs[dirs.length - 1];
+
+    // Zigzag: perfect alternation
+    let dirZigzag = N >= 4;
+    for (let i = 1; i < N && dirZigzag; i++) {
+        if (dirs[i] === dirs[i - 1]) dirZigzag = false;
+    }
+
+    const dirState = dirSolid ? `DER:${dirLast}` : (dirZigzag ? 'ZZ' : 'INEST');
+
+    // ── EJE 2: ZONA ──
+    const zoneSolid    = N >= 3 && zones.slice(-N).every(z => z === zones[zones.length - 1]);
+    const zoneLast     = zones[zones.length - 1];
+
+    let zoneZigzag = N >= 4;
+    for (let i = 1; i < N && zoneZigzag; i++) {
+        if (zones[i] === zones[i - 1]) zoneZigzag = false;
+    }
+
+    // Dominance: 60%+ of window is same zone
+    const smallCount = zones.filter(z => z === 'SMALL').length;
+    const bigCount   = zones.length - smallCount;
+    const domSmall   = smallCount / N >= 0.6;
+    const domBig     = bigCount   / N >= 0.6;
+
+    const zoneState = zoneSolid ? `ZS:${zoneLast}` : (zoneZigzag ? 'ZZ' : (domSmall ? 'DOM:SMALL' : (domBig ? 'DOM:BIG' : 'INEST')));
+
+    // ── COMBINED LABEL ──
+    let label = '';
+    let emoji = '';
+
+    if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
+        label = `Sólida ${dirLast}-${zoneLast}`;
+        emoji = '🔥';
+    } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
+        label = 'Zigzag doble';
+        emoji = '↔️';
+    } else if (dirState.startsWith('DER:') && zoneState === 'ZZ') {
+        label = `Dir ${dirLast} estable, zona zigzag`;
+        emoji = '↗️';
+    } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
+        label = `${zoneLast} sólida, dir zigzag`;
+        emoji = '↕️';
+    } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
+        label = `${zoneLast} sólida, dir inestable`;
+        emoji = '⚡';
+    } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
+        label = `Small dom, ${dirLast} estable`;
+        emoji = '📌';
+    } else if (zoneState === 'DOM:BIG' && dirState.startsWith('DER:')) {
+        label = `Big dom, ${dirLast} estable`;
+        emoji = '📌';
+    } else if (zoneState === 'DOM:SMALL') {
+        label = 'Small dom, dir inestable';
+        emoji = '🟢';
+    } else if (zoneState === 'DOM:BIG') {
+        label = 'Big dom, dir inestable';
+        emoji = '🔴';
+    } else if (dirState.startsWith('DER:') && zoneState === 'INEST') {
+        label = `${dirLast} estable, zona inestable`;
+        emoji = '↗️';
+    } else {
+        label = 'Caos';
+        emoji = '🌀';
+    }
+
+    return { label, tiradas: N, emoji };
+}
+
+function updateTravelPatternUI() {
+    if (history.length < 3) return;
+    const result = analyzeTravelPattern(history);
+    
+    const labelEl = document.getElementById('travel-pattern-label');
+    const tirasEl = document.getElementById('travel-pattern-count');
+    const histEl  = document.getElementById('travel-pattern-hist');
+    
+    if (labelEl) labelEl.innerText = `${result.emoji} ${result.label}`;
+    if (tirasEl) tirasEl.innerText = `${result.tiradas}t`;
+
+    // Save to history if label changed
+    const last = travelPatternHistory[0];
+    if (!last || last.label !== result.label) {
+        if (last) travelPatternHistory.unshift({ label: last.label, emoji: last.emoji, tiradas: last.tiradas });
+        if (travelPatternHistory.length > 8) travelPatternHistory.length = 8;
+    } else {
+        // Update tiradas count of current
+        if (travelPatternHistory[0]) travelPatternHistory[0].tiradas = result.tiradas;
+    }
+
+    if (histEl) {
+        histEl.innerHTML = travelPatternHistory.slice(0, 8).map(p =>
+            `<div style="display:flex; justify-content:space-between; padding: 2px 0; font-size:10px; border-bottom:1px solid var(--border);">
+                <span style="color:var(--text)">${p.emoji} ${p.label}</span>
+                <span style="color:var(--muted); font-family:var(--mono);">${p.tiradas}t</span>
+            </div>`
+        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aún</div>`;
+    }
 }
 
 function renderTravelChart() {
@@ -1307,12 +1440,12 @@ function renderMasterUI() {
     }
 
     // Stats
-    const last12 = masterHistory.slice(-12);
-    const wins = last12.filter(x => x === 'win').length;
-    const rate = last12.length > 0 ? ((wins / last12.length) * 100).toFixed(0) : 0;
+    const last10 = masterHistory.slice(-10);
+    const wins = last10.filter(x => x === 'win').length;
+    const rate = last10.length > 0 ? ((wins / last10.length) * 100).toFixed(0) : 0;
     
     rateEl.innerText = `${rate}%`;
-    perfEl.innerHTML = last12.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
 // ─── TOGGLE TRAVEL TABLE ─────────────────────────────────────────
@@ -1332,6 +1465,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Botones de Calibración del Travel Chart
+    document.getElementById('toggle-pattern-hist')?.addEventListener('click', function() {
+        const wrap = document.getElementById('travel-pattern-hist');
+        if (wrap.style.maxHeight === '0px' || !wrap.style.maxHeight) {
+            wrap.style.maxHeight = '200px';
+            this.innerText = '▲ CERRAR HISTORIAL PATRONES ▲';
+        } else {
+            wrap.style.maxHeight = '0px';
+            this.innerText = '▼ VER HISTORIAL PATRONES ▼';
+        }
+    });
+
     document.getElementById('btn-avg-inc')?.addEventListener('click', () => {
         manualAvgOffset += 0.5;
         renderTravelChart();

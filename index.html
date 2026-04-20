@@ -229,10 +229,9 @@
          <!-- ── COL 3: TRAVEL DATA ── -->
          <div class="col-travel">
             <section class="travel-section">
-                <div class="travel-top-bar">
+                <div class="travel-top-bar" style="padding-bottom: 2px;">
                     <span class="section-title">📊 TRAVEL DATA</span>
                     <div class="travel-badges">
-                        <span class="badge badge-stable" id="travel-pattern">ESTABLE</span>
                         <div style="display:flex; align-items:center; gap:3px; margin: 0 5px;">
                            <button id="btn-avg-dec" style="background:#1e2d45; border:none; color:#fff; font-size:11px; width:22px; border-radius:4px; height:20px; cursor:pointer; font-weight:bold;">-</button>
                            <span class="badge" id="travel-avg-offset" style="background: rgba(240,192,64,0.1); color: var(--gold); border: 1px solid rgba(240,192,64,0.3); padding:3px 6px;">CALIB: ±0</span>
@@ -241,6 +240,19 @@
                         <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
                     </div>
                 </div>
+
+                <!-- NEW: Travel Pattern Bar -->
+                <div style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 28px;">
+                    <div id="travel-pattern-label" style="font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 0.3px;">—</div>
+                    <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 10px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 2px 5px; border-radius: 4px;">0t</div>
+                </div>
+
+                <div id="travel-pattern-hist" style="background: rgba(0,0,0,0.3); padding: 0 10px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out;">
+                    <!-- Historial dinámico aquí -->
+                </div>
+                
+                <div id="toggle-pattern-hist" style="background: rgba(0,0,0,0.1); font-size: 9px; text-align: center; color: var(--muted); cursor: pointer; padding: 2px; border-bottom: 1px solid var(--border);">▼ VER HISTORIAL PATRONES ▼</div>
+
 
 
                 <!-- Travel Chart Canvas (SCROLLABLE V5) -->
