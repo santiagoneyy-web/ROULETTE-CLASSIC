@@ -226,7 +226,11 @@
                     <span class="section-title">📊 TRAVEL DATA</span>
                     <div class="travel-badges">
                         <span class="badge badge-stable" id="travel-pattern">ESTABLE</span>
-                        <span class="badge" id="travel-sd" style="background: rgba(240,192,64,0.1); color: var(--gold); border: 1px solid rgba(240,192,64,0.3);">SD: 0.0</span>
+                        <div style="display:flex; align-items:center; gap:3px; margin: 0 5px;">
+                           <button id="btn-avg-dec" style="background:#1e2d45; border:none; color:#fff; font-size:11px; width:22px; border-radius:4px; height:20px; cursor:pointer; font-weight:bold;">-</button>
+                           <span class="badge" id="travel-avg-offset" style="background: rgba(240,192,64,0.1); color: var(--gold); border: 1px solid rgba(240,192,64,0.3); padding:3px 6px;">CALIB: ±0</span>
+                           <button id="btn-avg-inc" style="background:#1e2d45; border:none; color:#fff; font-size:11px; width:22px; border-radius:4px; height:20px; cursor:pointer; font-weight:bold;">+</button>
+                        </div>
                         <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
                     </div>
                 </div>

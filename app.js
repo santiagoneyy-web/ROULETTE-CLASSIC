@@ -23,8 +23,9 @@ let lastZoneUnderHit = false;
 let lastZone26Hit    = false;
 
 // Dynamic Reference Lines
-let currentAvgCW = 9;
-let currentAvgCCW = -9;
+let currentAvgCW = 10;
+let currentAvgCCW = -10;
+let manualAvgOffset = 0; // CALIBRACIÓN MANUAL DE LÍMITES
 
 // ─── DOZENS STATE ──────────────────────────────────────────────
 // ─── DOZENS STATE ──────────────────────────────────────────────
@@ -701,7 +702,6 @@ function submitNumber(val, silent = false, batch = false) {
     }
 }
 
-// ─── RENDER: TRAVEL CHART (OFI-Style canvas) ──────────────
 // ─── SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) ──────────
 function renderScatterChart() {
     try {
@@ -741,7 +741,7 @@ function renderScatterChart() {
         const rangeY = maxY - minY;
         
         const scaleY = v => padT + chartH * ((maxY - v) / rangeY);
-        const scaleX = i => padL + (i / (numPoints - 1)) * chartW;
+        const scaleX = i => padL + i * pxPerPoint;
         const midY = scaleY(0);
         
         // Background
@@ -870,23 +870,30 @@ function renderTravelChart() {
     for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
     if (travels.length < 2) return;
     
-    // V5 SCROLLABLE: Show ALL data, expand canvas width as needed
+    // V5 SCROLLABLE: FIXED DISTANCE
+    const padL=30, padR=50, padT=14, padB=20;
     const pxPerPoint = 14;
+    const numPoints = travels.length;
+    
     const minW = canvas.parentElement.offsetWidth || 400;
-    const totalW = Math.max(minW, travels.length * pxPerPoint + 60);
+    const totalW = Math.max(minW, numPoints * pxPerPoint + padL + padR);
     canvas.width = totalW;
     canvas.style.width = totalW + 'px';
     const W = totalW;
     const H = canvas.height;
     ctx.clearRect(0, 0, W, H);
     const data = travels; // ALL travels, not sliced
-    const numPoints = data.length;
 
     // Averages
     const cwVals = data.filter(d => d > 0);
     const ccwVals = data.filter(d => d < 0);
-    const avgCW  = cwVals.length  > 0 ? cwVals.reduce((a,b)=>a+b,0)/cwVals.length   :  10;
-    const avgCCW = ccwVals.length > 0 ? ccwVals.reduce((a,b)=>a+b,0)/ccwVals.length : -10;
+    let avgCW  = cwVals.length  > 0 ? cwVals.reduce((a,b)=>a+b,0)/cwVals.length   :  10;
+    let avgCCW = ccwVals.length > 0 ? ccwVals.reduce((a,b)=>a+b,0)/ccwVals.length : -10;
+    
+    // APPLY MANUAL CALIBRATION (OFFSET)
+    avgCW += manualAvgOffset;
+    if (avgCCW < 0) avgCCW -= manualAvgOffset; // subtract expands the negative channel
+    else avgCCW += manualAvgOffset;
     
     // Update Global References for logic classification
     currentAvgCW = avgCW;
@@ -898,12 +905,15 @@ function renderTravelChart() {
     const upperRange = avgCW  + stdDev;
     const lowerRange = avgCCW - stdDev;
 
-    const padL=30, padR=10, padT=14, padB=20;
     const chartW = W-padL-padR, chartH = H-padT-padB;
     const midY = padT + chartH/2;
     const maxVal = 18;
     const scaleY = v => midY - (v/maxVal)*(chartH/2);
-    const scaleX = i => padL + (i/(numPoints-1))*chartW;
+    const scaleX = i => padL + i * pxPerPoint; // FIXED DISTANCE, NO STRETCHING
+
+    // Update the offset UI badge
+    const badgeCalib = document.getElementById('travel-avg-offset');
+    if (badgeCalib) badgeCalib.innerText = `CALIB: ${manualAvgOffset >= 0 ? '+'+manualAvgOffset : manualAvgOffset}`;
 
     // Grid
     ctx.strokeStyle='#1a2a3d'; ctx.lineWidth=0.5;
@@ -1319,4 +1329,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Botones de Calibración
+    document.getElementById('btn-avg-inc')?.addEventListener('click', () => {
+        manualAvgOffset += 0.5; // Incrementos más finos
+        renderTravelChart();
+    });
+    
+    document.getElementById('btn-avg-dec')?.addEventListener('click', () => {
+        manualAvgOffset -= 0.5;
+        renderTravelChart();
+    });
 });
