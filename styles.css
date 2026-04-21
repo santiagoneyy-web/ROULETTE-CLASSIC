@@ -559,10 +559,11 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
+  height: 100%;
 }
 .travel-top-bar {
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -581,7 +582,7 @@ html, body {
 /* Chart Canvas container */
 .chart-wrap {
   width: 100%;
-  padding: 8px 4px;
+  padding: 4px 0;
   background: rgba(0,0,0,0.25);
   border-bottom: 1px solid var(--border);
 }

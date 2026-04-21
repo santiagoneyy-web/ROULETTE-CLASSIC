@@ -140,7 +140,7 @@ function renderShadowPanelNeighborsOnly() {
     } catch(e) { console.error('neighborsOnly:', e); }
 }
 function wipeData() {
-    if (!confirm('⚠️ WIPE ALL DATA?')) return;
+    if (!confirm('\u{26A0} WIPE ALL DATA?')) return;
     const tableId = currentTableId;
     if (!tableId) { alert('Selecciona una mesa primero'); return; }
     fetch('/api/history/' + tableId, { method: 'DELETE' })
@@ -150,7 +150,7 @@ function wipeData() {
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
-            alert('✔ Datos borrados.');
+            alert('\u{2705} Datos borrados.');
         }).catch(() => { history.length=0; cwHistory.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
@@ -415,7 +415,7 @@ function renderDozens() {
             } else {
                 statusEl.innerText = `✔ ESTABLE (${spins}t)`;
                 statusEl.classList.add('stable');
-                if (arrow) arrow.innerText = '•';
+                if (arrow) arrow.innerText = '\u{2022}';
             }
         }
 
@@ -923,38 +923,38 @@ function analyzeTravelPattern(hist) {
     let emoji = '';
 
     if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
-        label = `Sólida ${dirLast}-${zoneLast}`;
-        emoji = '✅';
+        label = `Tendencia Sólida ${dirLast}-${zoneLast}`;
+        emoji = '\u{2705}';
     } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
-        label = 'Zigzag doble';
-        emoji = '↔';
+        label = 'Zigzag Doble';
+        emoji = '\u{2194}';
     } else if (dirState.startsWith('DER:') && zoneState === 'ZZ') {
-        label = `Dir ${dirLast} estable, zona zigzag`;
-        emoji = '↔';
+        label = `Dir ${dirLast} estable, Zona Zigzag`;
+        emoji = '\u{2194}';
     } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
-        label = `${zoneLast} sólida, dir zigzag`;
-        emoji = '↙';
+        label = `${zoneLast} sólida, Dir Zigzag`;
+        emoji = '\u{2199}';
     } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
-        label = `${zoneLast} sólida, dir inestable`;
-        emoji = '❗';
+        label = `${zoneLast} sólida, Dir Inestable`;
+        emoji = '\u{2757}';
     } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
-        label = `Small dom, ${dirLast} estable`;
-        emoji = 'ðŸ“Œ';
+        label = `Dom: Small, ${dirLast} estable`;
+        emoji = '\u{1F539}';
     } else if (zoneState === 'DOM:BIG' && dirState.startsWith('DER:')) {
-        label = `Big dom, ${dirLast} estable`;
-        emoji = 'ðŸ“Œ';
+        label = `Dom: Big, ${dirLast} estable`;
+        emoji = '\u{1F538}';
     } else if (zoneState === 'DOM:SMALL') {
-        label = 'Small dom, dir inestable';
-        emoji = 'ðŸŸ¢';
+        label = 'Dom: Small, Dir Inestable';
+        emoji = '\u{1F539}';
     } else if (zoneState === 'DOM:BIG') {
-        label = 'Big dom, dir inestable';
-        emoji = 'ðŸ”´';
+        label = 'Dom: Big, Dir Inestable';
+        emoji = '\u{1F538}';
     } else if (dirState.startsWith('DER:') && zoneState === 'INEST') {
-        label = `${dirLast} estable, zona inestable`;
-        emoji = '↔';
+        label = `${dirLast} estable, Zona Inestable`;
+        emoji = '\u{2194}';
     } else {
-        label = 'Caos';
-        emoji = 'ðŸŒ€';
+        label = 'Sin Patrón Claro';
+        emoji = '\u{26A0}';
     }
 
     return { label, tiradas: N, emoji };
@@ -987,7 +987,7 @@ function updateTravelPatternUI() {
                 <span style="color:var(--text)">${p.emoji} ${p.label}</span>
                 <span style="color:var(--muted); font-family:var(--mono);">${p.tiradas}t</span>
             </div>`
-        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aíºn</div>`;
+        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial todavía</div>`;
     }
 }
 
@@ -1270,7 +1270,7 @@ function connectSSE(tId) {
             const data = JSON.parse(e.data);
             if (data.type === 'ping') return;
             if (data.type === 'batch_load') {
-                console.log("ðŸ”¥ Lote recibido del bot. Resincronizando datos...");
+                console.log("\u{1F525} Lote recibido del bot. Resincronizando datos...");
                 syncData();
                 return;
             }
