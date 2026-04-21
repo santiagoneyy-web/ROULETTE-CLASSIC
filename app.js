@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // app.js â€” SHADOW ROULETTE UI ENGINE
 // ============================================================
 
@@ -14,7 +14,7 @@ let lastUnderHitCW = false;
 let lastOverHitCCW = false;
 let lastUnderHitCCW = false;
 
-// â”€â”€â”€ ZONE STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— ZONE STATE ——————————————————————————————————————————————
 const zoneOverHistory = [];   
 const zoneUnderHistory = [];
 const zone26History = [];
@@ -23,30 +23,29 @@ let lastZoneUnderHit = false;
 let lastZone26Hit    = false;
 
 // Dynamic Reference Lines
-let currentAvgCW = 10;
-let currentAvgCCW = -10;
-let manualAvgOffset = 0; // CALIBRACIÃ“N MANUAL DE LÃMITES TRAVEL (deprecated but kept)
-let predictorOffset = 0; // CALIBRACIÃ“N MANUAL DEL PREDICTOR (+/- casillas)
+let currentAvgCW = 9;
+let currentAvgCCW = -9;
+let predictorOffset = 0; // CALIBRACIÓN MANUAL DEL PREDICTOR (± casillas)
 
-// â”€â”€â”€ DOZENS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€â”€ DOZENS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— DOZENS STATE ———————————————————————————————————————————
+// ——— DOZENS STATE ———————————————————————————————————————————
 let dzCurrent = [];
 let dzPrevious = [];
 let dzSpinsSinceChange = 0;
-const dzHistoryList = []; // Para almacenar las Ãºltimas 8 situaciones
+const dzHistoryList = []; // Para almacenar las íºltimas 8 situaciones
 
-// â”€â”€â”€ JUGADAS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— JUGADAS STATE ———————————————————————————————————————————
 let jugView = { magnitude: 'UNDER', direction: 'CW', confidence: 0 };
 const jugHistory = [];
 let lastJugHit = false;
 let patternStatsCache = null;
 
-// â”€â”€â”€ ANALYST STATE (V26) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— ANALYST STATE (V26) —————————————————————————————————————
 const analystHistory = [];
 let analystView = { signal: 'ANALIZANDO...', targetDir: null, size: null, reason: '-', type: 'neutral' };
 let lastAnalystHit = false;
 
-// â”€â”€â”€ MASTER SNIPER STATE (CONFLUENCE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— MASTER SNIPER STATE (CONFLUENCE) —————————————————————————
 const masterHistory = [];
 let masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
 let lastMasterHit = false;
@@ -150,11 +149,11 @@ function wipeData() {
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
-            alert('âœ… Datos borrados.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+            alert('✔ Datos borrados.');
+        }).catch(() => { history.length=0; cwHistory.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
-/// â”€â”€â”€ RENDER: UNIFIED PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// ——— RENDER: UNIFIED PANEL ——————————————————————————————————
 
 function getZoneTargets(lastNum) {
     const idx = WHEEL_NUMS.indexOf(lastNum);
@@ -187,20 +186,20 @@ function renderShadowPanel() {
         document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW;
         document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW;
         document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW;
-        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'âœ” HIT' : '';
-        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'âœ” HIT' : '';
+        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? '✔ HIT' : '';
+        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? '✔ HIT' : '';
 
         // --- CCW BLOCK ---
         document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW;
         document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW;
         document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW;
-        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'âœ” HIT' : '';
-        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'âœ” HIT' : '';
+        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? '✔ HIT' : '';
+        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? '✔ HIT' : '';
 
         // Shared Tendency
         if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            const trendTxt = `TEND: ${ d >= 0 ? 'DER â†º' : 'IZQ â†»'}`;
+            const trendTxt = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
             document.getElementById('dir-cw-trend').innerText = trendTxt;
             document.getElementById('dir-ccw-trend').innerText = trendTxt;
         }
@@ -247,7 +246,7 @@ function renderShadowPanel() {
         // --- UNDER BLOCK (Dynamic Logic) ---
         const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 4 + 37) % 37];
         document.getElementById('sup-s-c-val').innerText = underTarget;
-        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? 'âœ” HIT' : '';
+        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? '✔ HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10s = zoneUnderHistory.slice(-10);
@@ -260,7 +259,7 @@ function renderShadowPanel() {
         // --- OVER BLOCK (Dynamic Logic) ---
         const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
         document.getElementById('sup-b-c-val').innerText = overTarget;
-        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? 'âœ” HIT' : '';
+        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? '✔ HIT' : '';
         document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10b = zoneOverHistory.slice(-10);
@@ -294,7 +293,7 @@ function renderShadowPanel() {
 function renderDozens() {
     try {
         if (history.length < 12) {
-            // Not enough data yet â€” refresh neighbor balls with unfiltered view
+            // Not enough data yet — refresh neighbor balls with unfiltered view
             renderShadowPanelNeighborsOnly();
             return;
         }
@@ -323,11 +322,11 @@ function renderDozens() {
             // Esto evita que salte a otra docena solo por un reordenamiento interno de Javascript.
             const sorted = [1,2,3].sort((a,b) => {
                 if (counts[b] !== counts[a]) return counts[b] - counts[a];
-                const aIsDom = cur.includes(a);
-                const bIsDom = cur.includes(b);
-                if (aIsDom && !bIsDom) return -1;
-                if (!aIsDom && bIsDom) return 1;
-                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido mÃ¡s recientemente
+                const aIsDom. = cur.includes(a);
+                const bIsDom. = cur.includes(b);
+                if (aIsDom. && !bIsDom.) return -1;
+                if (!aIsDom. && bIsDom.) return 1;
+                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido más recientemente
                 const lastIdxA = window.lastIndexOf(a);
                 const lastIdxB = window.lastIndexOf(b);
                 return lastIdxB - lastIdxA;
@@ -349,7 +348,7 @@ function renderDozens() {
                 if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
                     // Guardar en historial si hubo estabilidad previa
                     if (spins > 5 && cur.length > 0) {
-                        dzHistoryList.unshift({ dozens: [...cur], duration: spins });
+                        dzHistoryList.unshift({ dozens: [...cur], duróation: spins });
                         if (dzHistoryList.length > 8) dzHistoryList.length = 8;
                     }
                     // Start TRANSITION
@@ -405,7 +404,7 @@ function renderDozens() {
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
             if (spins <= 5 && prev.length > 0) {
-                statusEl.innerText = `âš ï¸ TRANSICIÃ“N (+${spins}t)`;
+                statusEl.innerText = `âš ï¸ TRANSICIí“N (+${spins}t)`;
                 statusEl.classList.add('warning');
                 if (arrow) arrow.innerText = 'â†’';
             } else if (spins <= 10) {
@@ -420,10 +419,10 @@ function renderDozens() {
         }
 
         if (infoEl) {
-            infoEl.innerText = `Ventana 18: DomÂ· ${fmtDoz(cur)}`;
+            infoEl.innerText = `Ventana 18: Dom.Â· ${fmtDoz(cur)}`;
         }
 
-        // DetecciÃ³n de debilitamiento: Revisamos las Ãºltimas 18 tiradas.
+        // Detección de debilitamiento: Revisamos las íºltimas 18 tiradas.
         let weakWarning = '';
         if (spins > 8 && cur.length === 2 && history.length >= 18) {
              const recentDozens = dozens.slice(-18).filter(d => d !== 0);
@@ -439,13 +438,13 @@ function renderDozens() {
                      if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
                  }
              }
-             // DÃ©bil si: aparece al menos 2 veces, y casi todas o todas sus apariciones estÃ¡n aisladas (separadas)
+             // Débil si: aparece al menos 2 veces, y casi todas o todas sus apariciones están aisladas (separadas)
              const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
              const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
              
              if (weak1 && weak2) weakWarning = 'âš ï¸ AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `ðŸŸ¡ ${cur[0]}Âª DOCENA DEBILITÃNDOSE (AISLADA)`;
-             else if (weak2) weakWarning = `ðŸŸ¡ ${cur[1]}Âª DOCENA DEBILITÃNDOSE (AISLADA)`;
+             else if (weak1) weakWarning = `ðŸŸ¡ ${cur[0]}Âª DOCENA DEBILITíNDOSE (AISLADA)`;
+             else if (weak2) weakWarning = `ðŸŸ¡ ${cur[1]}Âª DOCENA DEBILITíNDOSE (AISLADA)`;
         }
         
         const weakEl = document.getElementById('doc-weak-warning');
@@ -461,14 +460,14 @@ function renderDozens() {
         // Render history list
         if (histEl) {
              if (dzHistoryList.length === 0) {
-                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aÃºn</div>';
+                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aíºn</div>';
              } else {
                  histEl.innerHTML = dzHistoryList.map(h => {
                      const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}Â°</span>`).join('');
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">durÃ³ ${h.duration}t</span>
+                            <span class="duró" style="font-size:9px; color:var(--muted)">duróó ${h.duróation}t</span>
                         </div>
                      `;
                  }).join('');
@@ -483,7 +482,7 @@ function renderDozens() {
     }
 }
 
-// â”€â”€â”€ WHEEL DRAW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— WHEEL DRAW ——————————————————————————————————————————————
 function drawWheel(highlightNum = null) {
     const canvas = document.getElementById('wheel-canvas');
     if (!canvas) return;
@@ -537,7 +536,7 @@ function renderWheelAndHistory() {
     // drawWheel removed
 }
 
-// â”€â”€â”€ TAB LISTENERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— TAB LISTENERS —————————————————————————————————————
 document.addEventListener('click', (e) => {
     const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter'];
     const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter'];
@@ -554,7 +553,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// â”€â”€â”€ SUBMIT NUMBER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— SUBMIT NUMBER —————————————————————————————————————————
 function submitNumber(val, silent = false, batch = false) {
     const raw = val !== undefined ? val : '';
     const n = parseInt(raw);
@@ -708,7 +707,7 @@ function submitNumber(val, silent = false, batch = false) {
     }
 }
 
-// â”€â”€â”€ SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) ——————————
 function renderScatterChart() {
     try {
         const canvas = document.getElementById('scatterChart');
@@ -764,7 +763,7 @@ function renderScatterChart() {
         ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
         ctx.fillText('0', padL - 5, midY + 3);
         
-        // â”€â”€â”€ Moving Average (window=5) â”€â”€â”€
+        // ——— Moving Average (window=5) ———
         const maWindow = 5;
         const ma = [];
         for (let i = 0; i < dirs.length; i++) {
@@ -773,7 +772,7 @@ function renderScatterChart() {
             ma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
         }
         
-        // â”€â”€â”€ Support / Resistance Detection â”€â”€â”€
+        // ——— Support / Resistance Detection ———
         const maPeaks = [], maValleys = [];
         for (let i = 1; i < ma.length - 1; i++) {
             if (ma[i] > ma[i-1] && ma[i] > ma[i+1]) maPeaks.push(ma[i]);
@@ -798,7 +797,7 @@ function renderScatterChart() {
         }
         ctx.setLineDash([]);
         
-        // â”€â”€â”€ Moving Average Line (SUBTLE REFERENCE) â”€â”€â”€
+        // ——— Moving Average Line (SUBTLE REFERENCE) ———
         ctx.strokeStyle = 'rgba(245, 200, 66, 0.25)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
         ctx.beginPath();
         for (let i = 0; i < ma.length; i++) {
@@ -807,7 +806,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.setLineDash([]);
         
-        // â”€â”€â”€ SHARP PEAKS LINE (ZIG-ZAG) â”€â”€â”€
+        // ——— SHARP PEAKS LINE (ZIG-ZAG) ———
         ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.6;
         ctx.beginPath();
         for (let i = 0; i < dirs.length; i++) {
@@ -821,7 +820,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.globalAlpha = 1.0;
         
-        // â”€â”€â”€ Scatter Points â”€â”€â”€
+        // ——— Scatter Points ———
         for (let i = 0; i < numPoints; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
             ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
@@ -843,7 +842,7 @@ function renderScatterChart() {
             ctx.fillText(dirs[numPoints - 1] > 0 ? `+${dirs[numPoints - 1]}` : dirs[numPoints - 1], lx + 10, ly + 3);
         }
         
-        // â”€â”€â”€ Trend Detection â”€â”€â”€
+        // ——— Trend Detection ———
         const recent10 = binaryDirs.slice(-10);
         const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
         let trendLabel = 'NEUTRAL';
@@ -865,8 +864,8 @@ function renderScatterChart() {
     } catch(err) { console.error('Scatter chart error:', err); }
 }
 
-// â”€â”€â”€ TRAVEL PATTERN ANALYSIS (DOBLE EJE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const travelPatternHistory = []; // Ãšltimos 8 episodios
+// ——— TRAVEL PATTERN ANALYSIS (DOBLE EJE) —————————————————————————————————————
+const travelPatternHistory = []; // íšltimos 8 episodios
 
 function analyzeTravelPattern(hist) {
     if (hist.length < 3) return { label: 'â€”', tiradas: 0, emoji: '' };
@@ -881,7 +880,7 @@ function analyzeTravelPattern(hist) {
         });
     }
 
-    // â”€â”€ Find the current streak (how many events from the end share ANY linkage) â”€â”€
+    // —— Find the current streak (how many events from the end share ANY linkage) ——
     // We measure the active window = last N events (use last 12, or fewer if not enough)
     const window = events.slice(-12);
     const N = window.length;
@@ -890,7 +889,7 @@ function analyzeTravelPattern(hist) {
     const dirs  = window.map(e => e.dir);
     const zones = window.map(e => e.zone);
 
-    // â”€â”€ EJE 1: DIRECCIÃ“N â”€â”€
+    // —— EJE 1: DIRECCIí“N ——
     // Solid: last 3+ all same
     const dirSolid = N >= 3 && dirs.slice(-N).every(d => d === dirs[dirs.length - 1]);
     const dirLast  = dirs[dirs.length - 1];
@@ -903,7 +902,7 @@ function analyzeTravelPattern(hist) {
 
     const dirState = dirSolid ? `DER:${dirLast}` : (dirZigzag ? 'ZZ' : 'INEST');
 
-    // â”€â”€ EJE 2: ZONA â”€â”€
+    // —— EJE 2: ZONA ——
     const zoneSolid    = N >= 3 && zones.slice(-N).every(z => z === zones[zones.length - 1]);
     const zoneLast     = zones[zones.length - 1];
 
@@ -912,7 +911,7 @@ function analyzeTravelPattern(hist) {
         if (zones[i] === zones[i - 1]) zoneZigzag = false;
     }
 
-    // Dominance: 60%+ of window is same zone
+    // Dom.inance: 60%+ of window is same zone
     const smallCount = zones.filter(z => z === 'SMALL').length;
     const bigCount   = zones.length - smallCount;
     const domSmall   = smallCount / N >= 0.6;
@@ -920,12 +919,12 @@ function analyzeTravelPattern(hist) {
 
     const zoneState = zoneSolid ? `ZS:${zoneLast}` : (zoneZigzag ? 'ZZ' : (domSmall ? 'DOM:SMALL' : (domBig ? 'DOM:BIG' : 'INEST')));
 
-    // â”€â”€ COMBINED LABEL â”€â”€
+    // —— COMBINED LABEL ——
     let label = '';
     let emoji = '';
 
     if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
-        label = `SÃ³lida ${dirLast}-${zoneLast}`;
+        label = `Sólida ${dirLast}-${zoneLast}`;
         emoji = 'ðŸ”¥';
     } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
         label = 'Zigzag doble';
@@ -934,10 +933,10 @@ function analyzeTravelPattern(hist) {
         label = `Dir ${dirLast} estable, zona zigzag`;
         emoji = 'â†—ï¸';
     } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
-        label = `${zoneLast} sÃ³lida, dir zigzag`;
+        label = `${zoneLast} sólida, dir zigzag`;
         emoji = 'â†•ï¸';
     } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
-        label = `${zoneLast} sÃ³lida, dir inestable`;
+        label = `${zoneLast} sólida, dir inestable`;
         emoji = 'âš¡';
     } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
         label = `Small dom, ${dirLast} estable`;
@@ -989,7 +988,7 @@ function updateTravelPatternUI() {
                 <span style="color:var(--text)">${p.emoji} ${p.label}</span>
                 <span style="color:var(--muted); font-family:var(--mono);">${p.tiradas}t</span>
             </div>`
-        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aÃºn</div>`;
+        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aíºn</div>`;
     }
 }
 
@@ -1085,26 +1084,26 @@ function renderTravelChart() {
     ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
 
     // Main line (SMOOTH WAVES V5)
-    // Usamos curvas de BÃ©zier cÃºbicas con puntos de control suavizados
+    // Usamos curvas de Bézier cíºbicas con puntos de control suavizados
     ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round';
     
     for(let i=0; i < numPoints - 1; i++){
         const x1 = scaleX(i), y1 = scaleY(data[i]);
         const x2 = scaleX(i+1), y2 = scaleY(data[i+1]);
         
-        // Puntos de control para suavizado (Curva de BÃ©zier)
+        // Puntos de control para suavizado (Curva de Bézier)
         const cpX = (x1 + x2) / 2;
         
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
         
-        // Color dinÃ¡mico segÃºn la zona y pÃ©rdida de rango
+        // Color dinámico segíºn la zona y pérdida de rango
         const val = data[i+1];
         if(val > upperRange || val < lowerRange) ctx.strokeStyle='#f5c842';
         else ctx.strokeStyle = val >= 0 ? '#30e090' : '#f04060';
         
-        // Sutil brillo en la lÃ­nea
+        // Sutil brillo en la lí­nea
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.strokeStyle;
         ctx.stroke();
         ctx.shadowBlur = 0;
@@ -1147,7 +1146,7 @@ function renderTravelChart() {
     } catch(err) { console.error(err); }
 }
 
-// â”€â”€â”€ TRAVEL TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— TRAVEL TABLE ——————————————————————————————————————————
 function renderTravelPanel() {
     try {
         const tbody   = document.getElementById('travel-tbody');
@@ -1167,7 +1166,7 @@ function renderTravelPanel() {
         let pat = dealerSig.directionState;
         let patClass = 'badge-stable';
         
-        if (pat === 'SÃ“LIDA') patClass = 'badge-solid';
+        if (pat === 'Sí“LIDA') patClass = 'badge-solid';
         else if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
         else if (pat === 'CHAOS') patClass = 'badge-zone'; // Red color for chaos
         
@@ -1212,7 +1211,7 @@ function renderTravelPanel() {
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
             <td style="color:var(--text2)">${absDist}p</td>
-            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'â†º' : 'â†»'}</span></td>
+            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? '↺' : '↻'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
@@ -1220,7 +1219,7 @@ function renderTravelPanel() {
     renderTravelChart(); } catch (err) { console.error(err); }
 }
 
-// â”€â”€â”€ SYNC FROM SERVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— SYNC FROM SERVER ————————————————————————————————————————
 async function syncData() {
     if (!currentTableId) return;
     try {
@@ -1284,7 +1283,7 @@ function connectSSE(tId) {
     };
 }
 
-// â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— INIT —————————————————————————————————————————————————
 document.addEventListener('DOMContentLoaded', async () => {
     // Neural Initialization V5
     if (typeof AIChat !== 'undefined') AIChat.init();
@@ -1353,7 +1352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Boot error:', e);
     }
 });
-// â”€â”€â”€ ANALYST UI RENDERER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— ANALYST UI RENDERER —————————————————————————————————————————
 function renderAnalystUI() {
     const boxEl    = document.getElementById('analyst-panel');
     const signalEl = document.getElementById('analyst-signal');
@@ -1374,7 +1373,7 @@ function renderAnalystUI() {
     if (analystView.signal.includes('FRACTAL')) signalEl.classList.add('fractal');
     else if (analystView.signal.includes('CANAL')) signalEl.classList.add('channel');
     else if (analystView.signal.includes('RUPTURA')) signalEl.classList.add('breakout');
-    else if (analystView.signal.includes('COMPRESIÃ“N')) signalEl.classList.add('compression');
+    else if (analystView.signal.includes('COMPRESIí“N')) signalEl.classList.add('compression');
 
     if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
     else if (analystView.type === 'bearish') signalEl.style.color = 'var(--red)';
@@ -1410,7 +1409,7 @@ function renderAnalystUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// â”€â”€â”€ MASTER UI RENDERER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— MASTER UI RENDERER —————————————————————————————————————————
 function renderMasterUI() {
     const signalEl = document.getElementById('master-signal');
     const targetEl = document.getElementById('master-target');
@@ -1448,7 +1447,7 @@ function renderMasterUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// â”€â”€â”€ TOGGLE TRAVEL TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— TOGGLE TRAVEL TABLE —————————————————————————————————————————
 document.addEventListener('DOMContentLoaded', () => {
     const btnCollapse = document.getElementById('toggle-travel-table');
     if (btnCollapse) {
@@ -1456,36 +1455,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const wrap = document.getElementById('travel-table-wrap');
             if (wrap.style.display === 'none') {
                 wrap.style.display = 'block';
-                e.target.innerText = 'â–² CERRAR HISTORIAL â–²';
+                e.target.innerText = '▲ CERRAR HISTORIAL ▲';
             } else {
                 wrap.style.display = 'none';
-                e.target.innerText = 'â–¼ ABRIR HISTORIAL DE RUTAS â–¼';
+                e.target.innerText = '▼ ABRIR HISTORIAL DE RUTAS ▼';
             }
         });
     }
 
-    // Botones de CalibraciÃ³n del Travel Chart
+    // Botones de Patrones
     document.getElementById('toggle-pattern-hist')?.addEventListener('click', function() {
         const wrap = document.getElementById('travel-pattern-hist');
         if (wrap.style.maxHeight === '0px' || !wrap.style.maxHeight) {
             wrap.style.maxHeight = '200px';
-            this.innerText = 'â–² CERRAR HISTORIAL PATRONES â–²';
+            this.innerText = '▲ CERRAR HISTORIAL PATRONES ▲';
         } else {
             wrap.style.maxHeight = '0px';
-            this.innerText = 'â–¼ VER HISTORIAL PATRONES â–¼';
+            this.innerText = '▼ VER HISTORIAL PATRONES ▼';
         }
     });
 
-    document.getElementById('btn-avg-inc')?.addEventListener('click', () => {
-        manualAvgOffset += 0.5;
-        renderTravelChart();
-    });
-    document.getElementById('btn-avg-dec')?.addEventListener('click', () => {
-        manualAvgOffset -= 0.5;
-        renderTravelChart();
-    });
-
-    // â”€â”€â”€ Botones de CalibraciÃ³n del PREDICTOR Â±1 casilla â”€â”€â”€â”€
+    // ─── Botones de Calibración del PREDICTOR ±1 casilla ────
     function updatePredBadge() {
         const badge = document.getElementById('pred-offset-badge');
         if (badge) {
@@ -1497,12 +1487,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-pred-inc')?.addEventListener('click', () => {
         predictorOffset += 1;
         updatePredBadge();
-        // Recalculate with new offset immediately
         if (history.length >= 3 && typeof computeDealerSignature === 'function') {
             const sig = computeDealerSignature(history);
             const prox = projectNextRound(history, {});
             const sigs = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
-            if (sigs && sigs.length > 0) { lastSignal = sigs[0]; renderDirectionPanels(); }
+            if (sigs && sigs.length > 0) { 
+                lastSignal = sigs[0]; 
+                renderShadowPanel(); 
+            }
         }
     });
     document.getElementById('btn-pred-dec')?.addEventListener('click', () => {
@@ -1512,7 +1504,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const sig = computeDealerSignature(history);
             const prox = projectNextRound(history, {});
             const sigs = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
-            if (sigs && sigs.length > 0) { lastSignal = sigs[0]; renderDirectionPanels(); }
+            if (sigs && sigs.length > 0) { 
+                lastSignal = sigs[0]; 
+                renderShadowPanel(); 
+            }
         }
     });
 });
