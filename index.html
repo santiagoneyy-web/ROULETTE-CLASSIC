@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css?v=1005" />
+    <link rel="stylesheet" href="styles.css?v=1006" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
     /* Compact travel table */
     .travel-section { width: 100%; max-width: none; }
     .travel-table { width:auto; border-collapse:collapse; }
     .travel-table th, .travel-table td { padding:2px 4px; font-size:10px; }
-    .travel-table-wrap { max-height:180px; overflow-y:auto; }
+    .travel-table-wrap { max-height:135px; overflow-y:auto; }
 </style>
 
 
@@ -30,7 +30,7 @@
             <!-- Visual Panel (Table Image + Mini History) -->
             <section class="visual-panel-mini">
                 <div class="table-image-container" style="text-align: center; margin-bottom: 10px;">
-                    <img src="table-1.jpg" alt="Mesa de Ruleta" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                    <img src="table-1.jpg" alt="Mesa de Ruleta" style="width: 100%; max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                 </div>
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
@@ -40,11 +40,11 @@
                  <div class="agent-card-header" style="justify-content: space-between;">
                      <div>
                          <span class="agent-icon">👑</span>
-                         <span class="agent-card-name">DOCENAS DOMINANTES</span>
+                         <span class="agent-card-name">DOCENAS</span>
                      </div>
                      <div>
-                         <button class="wipe-btn" id="dz-hist-btn" onclick="document.getElementById('dz-hist-panel').classList.toggle('show')">📜 HISTORIAL</button>
-                         <button class="wipe-btn" id="wipe-btn" onclick="wipeData()">🗑 WIPE</button>
+                         <button class="wipe-btn dz-mini-btn" id="dz-hist-btn" onclick="toggleDzHistory(this)" title="Historial docenas" aria-expanded="false">&#9662;</button>
+                         <button class="wipe-btn dz-mini-btn" id="wipe-btn" onclick="wipeData()" title="Borrar datos">&#9003;</button>
                      </div>
                  </div>
                  
@@ -88,7 +88,7 @@
                  </div>
                  <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
                      <button id="btn-pred-dec" title="Bajar AVG -1" style="background:#1e2d45; border:1px solid var(--border); color:var(--accent); font-size:13px; width:24px; border-radius:4px; height:24px; cursor:pointer; font-weight:bold; line-height:1;">-</button>
-                     <span id="pred-offset-badge" style="font-family:var(--mono); font-size:10px; color:var(--gold); background:rgba(240,192,64,0.1); border:1px solid rgba(240,192,64,0.3); border-radius:4px; padding:2px 5px; white-space:nowrap;">N9</span>
+                     <span id="pred-offset-badge" style="font-family:var(--mono); font-size:10px; color:var(--gold); background:rgba(240,192,64,0.1); border:1px solid rgba(240,192,64,0.3); border-radius:4px; padding:2px 5px; white-space:nowrap;">DIR</span>
                      <button id="btn-pred-inc" title="Subir AVG +1" style="background:#1e2d45; border:1px solid var(--border); color:var(--accent); font-size:13px; width:24px; border-radius:4px; height:24px; cursor:pointer; font-weight:bold; line-height:1;">+</button>
                  </div>
              </div>
@@ -98,7 +98,7 @@
                 <!-- CW BLOCK -->
                 <div class="dual-block">
                     <div class="agent-strategy-label" id="dir-cw-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DISTANCE 9 · N9</span>
+                        <span>DIRECCION</span>
                         <span class="side-badge" style="padding:1px 6px;">CW ↺</span>
                     </div>
                     <div class="prediction-grid-3">
@@ -107,7 +107,7 @@
                             <div class="filtered-neighbors" id="dir-cw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
-                            <div class="p-val-main" id="dir-cw-c-val">--</div><div class="p-sub-main">n9</div><div class="p-tendency" id="dir-cw-trend">MAIN PRED.</div>
+                            <div class="p-val-main" id="dir-cw-c-val">--</div><div class="p-sub-main">DIR</div><div class="p-tendency" id="dir-cw-trend">MAIN PRED.</div>
                             <div class="filtered-neighbors" id="dir-cw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
@@ -116,8 +116,7 @@
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st">LAST 10 ➔ W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
-                        <span class="status-msg">RATE: <span id="dir-cw-rate">0.0%</span></span>
+                        <span class="st wl-hidden">W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span><span class="status-msg compact-rate"><span id="dir-cw-rate">0.0%</span></span>
                     </div>
                     <div class="performance-string" id="dir-cw-perf"></div>
                 </div>
@@ -125,7 +124,7 @@
                 <!-- CCW BLOCK -->
                 <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
                     <div class="agent-strategy-label" id="dir-ccw-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DISTANCE 9 · N9</span>
+                        <span>DIRECCION</span>
                         <span class="side-badge" style="padding:1px 6px;">CCW ↻</span>
                     </div>
                     <div class="prediction-grid-3">
@@ -134,7 +133,7 @@
                             <div class="filtered-neighbors" id="dir-ccw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
-                            <div class="p-val-main" id="dir-ccw-c-val">--</div><div class="p-sub-main">n9</div><div class="p-tendency" id="dir-ccw-trend">MAIN PRED.</div>
+                            <div class="p-val-main" id="dir-ccw-c-val">--</div><div class="p-sub-main">DIR</div><div class="p-tendency" id="dir-ccw-trend">MAIN PRED.</div>
                             <div class="filtered-neighbors" id="dir-ccw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
@@ -143,8 +142,7 @@
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st">LAST 10 ➔ W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
-                        <span class="status-msg">RATE: <span id="dir-ccw-rate">0.0%</span></span>
+                        <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span><span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
                     </div>
                     <div class="performance-string" id="dir-ccw-perf"></div>
                 </div>
@@ -155,7 +153,7 @@
                 <!-- SMALL BLOCK -->
                 <div class="dual-block">
                     <div class="agent-strategy-label" id="sup-s-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DIST +19 · N9</span>
+                        <span>DIRECCION</span>
                         <span class="side-badge" style="padding:1px 6px;">UNDER 🔻</span>
                     </div>
                     <div class="prediction-grid-3">
@@ -164,7 +162,7 @@
                             <div class="filtered-neighbors" id="sup-s-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
-                            <div class="p-val-main" id="sup-s-c-val">--</div><div class="p-sub-main" id="sup-s-c-sub">n9</div><div class="p-tendency" id="sup-s-trend">LAST: --</div>
+                            <div class="p-val-main" id="sup-s-c-val">--</div><div class="p-sub-main" id="sup-s-c-sub">DIR</div><div class="p-tendency" id="sup-s-trend">LAST: --</div>
                             <div class="filtered-neighbors" id="sup-s-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
@@ -173,8 +171,7 @@
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st">LAST 10 ➔ W:<span id="sup-s-w">0</span> L:<span id="sup-s-l">0</span></span>
-                        <span class="status-msg">RATE: <span id="sup-s-rate">0.0%</span></span>
+                        <span class="st wl-hidden">W:<span id="sup-s-w">0</span> L:<span id="sup-s-l">0</span></span><span class="status-msg compact-rate"><span id="sup-s-rate">0.0%</span></span>
                     </div>
                     <div class="performance-string" id="sup-s-perf"></div>
                 </div>
@@ -182,7 +179,7 @@
                 <!-- BIG BLOCK -->
                 <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
                     <div class="agent-strategy-label" id="sup-b-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DIST +19 · N9</span>
+                        <span>DIRECCION</span>
                         <span class="side-badge" style="padding:1px 6px;">OVER 🔺</span>
                     </div>
                     <div class="prediction-grid-3">
@@ -191,7 +188,7 @@
                             <div class="filtered-neighbors" id="sup-b-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
-                            <div class="p-val-main" id="sup-b-c-val">--</div><div class="p-sub-main" id="sup-b-c-sub">n9</div><div class="p-tendency" id="sup-b-trend">LAST: --</div>
+                            <div class="p-val-main" id="sup-b-c-val">--</div><div class="p-sub-main" id="sup-b-c-sub">DIR</div><div class="p-tendency" id="sup-b-trend">LAST: --</div>
                             <div class="filtered-neighbors" id="sup-b-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
@@ -200,8 +197,7 @@
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st">LAST 10 ➔ W:<span id="sup-b-w">0</span> L:<span id="sup-b-l">0</span></span>
-                        <span class="status-msg">RATE: <span id="sup-b-rate">0.0%</span></span>
+                        <span class="st wl-hidden">W:<span id="sup-b-w">0</span> L:<span id="sup-b-l">0</span></span><span class="status-msg compact-rate"><span id="sup-b-rate">0.0%</span></span>
                     </div>
                     <div class="performance-string" id="sup-b-perf"></div>
                 </div>
@@ -252,10 +248,10 @@
 
                 <!-- Travel Chart Canvas (SCROLLABLE V5) -->
                 <div style="padding: 2px 0; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); overflow-x: auto;">
-                    <canvas id="travelChart" height="120" style="min-width: 100%; display: block;"></canvas>
+                    <canvas id="travelChart" height="90" style="min-width: 100%; display: block;"></canvas>
                 </div>
                 
-                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 140px; overflow-y: auto;">
+                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 105px; overflow-y: auto;">
                     <table style="width: 100%; border-collapse: collapse; font-family: var(--mono);">
                         <thead>
                             <tr style="background: rgba(255,255,255,0.03);">
@@ -282,9 +278,12 @@
 
 <script src="predictor.js?v=999"></script>
 <script src="ai_chat.js?v=5"></script>
-<script src="app.js?v=1005"></script>
+<script src="app.js?v=1006"></script>
 </body>
 </html>
+
+
+
 
 
 

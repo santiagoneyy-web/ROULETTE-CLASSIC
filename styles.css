@@ -162,12 +162,26 @@ html, body {
 @media (max-width: 768px) {
   .three-col-body {
     grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 10px;
+    gap: 8px;
+    padding: 8px;
   }
   .col-visual, .col-travel {
-    width: min(100%, 430px);
-    margin: 0 auto;
+    width: 100%;
+    margin: 0;
+  }
+  .resizable-wrapper {
+    min-width: 0;
+    width: 100%;
+    border: none;
+  }
+  .app-shell {
+    max-width: 100%;
+  }
+  #panel-dozens .agent-card-header {
+    padding: 4px 8px;
+  }
+  .travel-section {
+    border-radius: 8px;
   }
 }
 
@@ -340,9 +354,9 @@ html, body {
 /* Strategy label */
 .agent-strategy-label {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--muted);
-  padding: 5px 14px;
+  padding: 4px 10px;
   letter-spacing: 0.5px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
 }
@@ -425,16 +439,18 @@ html, body {
 /* Footer Stats */
 .agent-footer-stats {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text2);
 }
 .agent-footer-stats .st { color: var(--text); }
 .status-msg { color: var(--green); }
+.wl-hidden { display: none !important; }
+.compact-rate { font-weight: 800; letter-spacing: 0.3px; }
 
 /* W/L Performance string */
 .performance-string {
@@ -444,6 +460,10 @@ html, body {
   gap: 2px;
   padding: 4px 14px 6px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
+}
+#panel-dir .performance-string,
+#panel-sup .performance-string {
+  display: none;
 }
 .perf-w {
   font-family: var(--mono);
@@ -615,7 +635,7 @@ html, body {
 
 /* ── TRAVEL TABLE ── */
 .filtered-neighbors { display: none !important; }
-.travel-table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+.travel-table-wrap { overflow-x: auto; max-height: 315px; overflow-y: auto; }
 .travel-table {
   width: 100%;
   border-collapse: collapse;
@@ -684,18 +704,18 @@ html, body {
 .dozens-tracker {
   display: flex;
   justify-content: space-around;
-  padding: 12px 0 8px;
+  padding: 8px 0 6px;
 }
 .dozen-ball {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: #111;
     border: 2px solid #333;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: #555;
     text-align: center;
@@ -828,7 +848,16 @@ html, body {
   cursor: pointer;
   font-weight: 700;
   transition: all 0.18s;
-  margin-left: auto;
+  margin-left: 4px;
+}
+.dz-mini-btn {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
 }
 .wipe-btn:hover {
   background: rgba(185,28,28,0.5);

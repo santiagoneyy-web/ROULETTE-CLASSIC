@@ -155,6 +155,18 @@ function wipeData() {
         }).catch(() => { history.length=0; cwHistory.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
+function toggleDzHistory(btn) {
+    const panel = document.getElementById('dz-hist-panel');
+    if (!panel) return;
+    panel.classList.toggle('show');
+    const opened = panel.classList.contains('show');
+    if (btn) {
+        btn.innerHTML = opened ? '&#9652;' : '&#9662;';
+        btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+    }
+}
+
+
 /// ——— RENDER: UNIFIED PANEL ——————————————————————————————————
 
 function getZoneTargets(lastNum) {
@@ -1512,8 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePredBadge() {
         const badge = document.getElementById('pred-offset-badge');
         if (badge) {
-            const n = 9 + predictorOffset;
-            badge.innerText = `N${n}`;
+            badge.innerText = predictorOffset === 0 ? 'DIR' : `DIR ${predictorOffset > 0 ? '+' : ''}${predictorOffset}`;
             badge.style.color = predictorOffset !== 0 ? '#f0c040' : '#00e5c8';
         }
     }
@@ -1544,6 +1555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
 
 
