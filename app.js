@@ -1044,17 +1044,17 @@ function renderTravelChart() {
             return;
         }
     
-    // V5 SCROLLABLE: FIXED DISTANCE
-    const pxPerPoint = isMobile ? 8 : 11;
-    const numPoints = travels.length;
-    
-    const minW = baseW;
-    const totalW = isMobile ? minW : Math.max(minW, numPoints * pxPerPoint + padL + padR);
+    // WINDOWED TRAVEL: fixed viewport (latest points only)
+    const windowSize = isMobile ? 16 : 22;
+    const dataStart = Math.max(0, travels.length - windowSize);
+    const data = travels.slice(dataStart);
+    const numPoints = data.length;
+
+    const totalW = baseW;
     canvas.width = totalW;
     canvas.style.width = totalW + 'px';
     const W = totalW;
     ctx.clearRect(0, 0, W, H);
-    const data = travels; // ALL travels, not sliced
 
     // Averages
     const cwVals = data.filter(d => d > 0);
@@ -1081,7 +1081,8 @@ function renderTravelChart() {
     const midY = padT + chartH/2;
     const maxVal = 18;
     const scaleY = v => midY - (v/maxVal)*(chartH/2);
-    const scaleX = i => padL + i * pxPerPoint; // FIXED DISTANCE, NO STRETCHING
+    const pxPerPoint = (windowSize > 1) ? (chartW / (windowSize - 1)) : chartW;
+    const scaleX = i => padL + i * pxPerPoint;
 
     // Update the offset UI badge
     const badgeCalib = document.getElementById('travel-avg-offset');
@@ -1100,7 +1101,7 @@ function renderTravelChart() {
     // X labels
     ctx.textAlign='center';ctx.fillStyle='#3a5070';
     const step=Math.max(1,Math.floor(numPoints/8));
-    for(let i=0;i<numPoints;i+=step){ctx.fillText(travels.length-numPoints+i+1,scaleX(i),H-4);}
+    for(let i=0;i<numPoints;i+=step){ctx.fillText(dataStart+i+1,scaleX(i),H-4);}
 
     // Range bands
     ctx.setLineDash([4,4]);
@@ -1175,13 +1176,7 @@ function renderTravelChart() {
         ctx.fillStyle='#7a9bb8';ctx.textAlign='left';
         ctx.fillText(label,lx2+10,13);
         lx2+=ctx.measureText(label).width+22;
-    }); 
-    
-    // Auto-scroll to the rightmost point (latest spins)
-    if (canvas.parentElement) {
-        canvas.parentElement.scrollLeft = canvas.parentElement.scrollWidth;
-    }
-
+    });
     } catch(err) { console.error(err); }
 }
 
@@ -1578,6 +1573,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 
 
