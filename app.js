@@ -1,5 +1,5 @@
-// ============================================================
-// app.js — SHADOW ROULETTE UI ENGINE
+﻿// ============================================================
+// app.js â€” SHADOW ROULETTE UI ENGINE
 // ============================================================
 
 const history = [];
@@ -14,7 +14,7 @@ let lastUnderHitCW = false;
 let lastOverHitCCW = false;
 let lastUnderHitCCW = false;
 
-// ─── ZONE STATE ──────────────────────────────────────────────
+// â”€â”€â”€ ZONE STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const zoneOverHistory = [];   
 const zoneUnderHistory = [];
 const zone26History = [];
@@ -25,28 +25,28 @@ let lastZone26Hit    = false;
 // Dynamic Reference Lines
 let currentAvgCW = 10;
 let currentAvgCCW = -10;
-let manualAvgOffset = 0; // CALIBRACIÓN MANUAL DE LÍMITES TRAVEL (deprecated but kept)
-let predictorOffset = 0; // CALIBRACIÓN MANUAL DEL PREDICTOR (+/- casillas)
+let manualAvgOffset = 0; // CALIBRACIÃ“N MANUAL DE LÃMITES TRAVEL (deprecated but kept)
+let predictorOffset = 0; // CALIBRACIÃ“N MANUAL DEL PREDICTOR (+/- casillas)
 
-// ─── DOZENS STATE ──────────────────────────────────────────────
-// ─── DOZENS STATE ──────────────────────────────────────────────
+// â”€â”€â”€ DOZENS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ DOZENS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let dzCurrent = [];
 let dzPrevious = [];
 let dzSpinsSinceChange = 0;
-const dzHistoryList = []; // Para almacenar las últimas 8 situaciones
+const dzHistoryList = []; // Para almacenar las Ãºltimas 8 situaciones
 
-// ─── JUGADAS STATE ───────────────────────────────────────────
+// â”€â”€â”€ JUGADAS STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let jugView = { magnitude: 'UNDER', direction: 'CW', confidence: 0 };
 const jugHistory = [];
 let lastJugHit = false;
 let patternStatsCache = null;
 
-// ─── ANALYST STATE (V26) ─────────────────────────────────────
+// â”€â”€â”€ ANALYST STATE (V26) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const analystHistory = [];
 let analystView = { signal: 'ANALIZANDO...', targetDir: null, size: null, reason: '-', type: 'neutral' };
 let lastAnalystHit = false;
 
-// ─── MASTER SNIPER STATE (CONFLUENCE) ─────────────────────────
+// â”€â”€â”€ MASTER SNIPER STATE (CONFLUENCE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const masterHistory = [];
 let masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
 let lastMasterHit = false;
@@ -140,7 +140,7 @@ function renderShadowPanelNeighborsOnly() {
     } catch(e) { console.error('neighborsOnly:', e); }
 }
 function wipeData() {
-    if (!confirm('⚠️ WIPE ALL DATA?')) return;
+    if (!confirm('âš ï¸ WIPE ALL DATA?')) return;
     const tableId = currentTableId;
     if (!tableId) { alert('Selecciona una mesa primero'); return; }
     fetch('/api/history/' + tableId, { method: 'DELETE' })
@@ -150,11 +150,11 @@ function wipeData() {
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
-            alert('✅ Datos borrados.');
+            alert('âœ… Datos borrados.');
         }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
-/// ─── RENDER: UNIFIED PANEL ───────────────────────────────
+/// â”€â”€â”€ RENDER: UNIFIED PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getZoneTargets(lastNum) {
     const idx = WHEEL_NUMS.indexOf(lastNum);
@@ -187,20 +187,20 @@ function renderShadowPanel() {
         document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW;
         document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW;
         document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW;
-        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? '✔ HIT' : '';
-        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? '✔ HIT' : '';
+        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'âœ” HIT' : '';
+        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'âœ” HIT' : '';
 
         // --- CCW BLOCK ---
         document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW;
         document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW;
         document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW;
-        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? '✔ HIT' : '';
-        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? '✔ HIT' : '';
+        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'âœ” HIT' : '';
+        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'âœ” HIT' : '';
 
         // Shared Tendency
         if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            const trendTxt = `TEND: ${ d >= 0 ? 'DER ↺' : 'IZQ ↻'}`;
+            const trendTxt = `TEND: ${ d >= 0 ? 'DER â†º' : 'IZQ â†»'}`;
             document.getElementById('dir-cw-trend').innerText = trendTxt;
             document.getElementById('dir-ccw-trend').innerText = trendTxt;
         }
@@ -247,7 +247,7 @@ function renderShadowPanel() {
         // --- UNDER BLOCK (Dynamic Logic) ---
         const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 4 + 37) % 37];
         document.getElementById('sup-s-c-val').innerText = underTarget;
-        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? '✔ HIT' : '';
+        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? 'âœ” HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10s = zoneUnderHistory.slice(-10);
@@ -260,7 +260,7 @@ function renderShadowPanel() {
         // --- OVER BLOCK (Dynamic Logic) ---
         const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
         document.getElementById('sup-b-c-val').innerText = overTarget;
-        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? '✔ HIT' : '';
+        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? 'âœ” HIT' : '';
         document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10b = zoneOverHistory.slice(-10);
@@ -294,7 +294,7 @@ function renderShadowPanel() {
 function renderDozens() {
     try {
         if (history.length < 12) {
-            // Not enough data yet — refresh neighbor balls with unfiltered view
+            // Not enough data yet â€” refresh neighbor balls with unfiltered view
             renderShadowPanelNeighborsOnly();
             return;
         }
@@ -327,7 +327,7 @@ function renderDozens() {
                 const bIsDom = cur.includes(b);
                 if (aIsDom && !bIsDom) return -1;
                 if (!aIsDom && bIsDom) return 1;
-                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido más recientemente
+                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido mÃ¡s recientemente
                 const lastIdxA = window.lastIndexOf(a);
                 const lastIdxB = window.lastIndexOf(b);
                 return lastIdxB - lastIdxA;
@@ -396,7 +396,7 @@ function renderDozens() {
         const statusEl     = document.getElementById('doc-transition-status');
         const infoEl       = document.getElementById('doc-info');
 
-        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + '°').join(' & ') : '--';
+        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + 'Â°').join(' & ') : '--';
 
         if (prevBadge) prevBadge.innerText = fmtDoz(prev);
         if (currBadge) currBadge.innerText = fmtDoz(cur);
@@ -405,25 +405,25 @@ function renderDozens() {
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
             if (spins <= 5 && prev.length > 0) {
-                statusEl.innerText = `⚠️ TRANSICIÓN (+${spins}t)`;
+                statusEl.innerText = `âš ï¸ TRANSICIÃ“N (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = '→';
+                if (arrow) arrow.innerText = 'â†’';
             } else if (spins <= 10) {
                 statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = '→';
+                if (arrow) arrow.innerText = 'â†’';
             } else {
-                statusEl.innerText = `✅ ESTABLE (${spins}t)`;
+                statusEl.innerText = `âœ… ESTABLE (${spins}t)`;
                 statusEl.classList.add('stable');
-                if (arrow) arrow.innerText = '•';
+                if (arrow) arrow.innerText = 'â€¢';
             }
         }
 
         if (infoEl) {
-            infoEl.innerText = `Ventana 18: Dom· ${fmtDoz(cur)}`;
+            infoEl.innerText = `Ventana 18: DomÂ· ${fmtDoz(cur)}`;
         }
 
-        // Detección de debilitamiento: Revisamos las últimas 18 tiradas.
+        // DetecciÃ³n de debilitamiento: Revisamos las Ãºltimas 18 tiradas.
         let weakWarning = '';
         if (spins > 8 && cur.length === 2 && history.length >= 18) {
              const recentDozens = dozens.slice(-18).filter(d => d !== 0);
@@ -439,13 +439,13 @@ function renderDozens() {
                      if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
                  }
              }
-             // Débil si: aparece al menos 2 veces, y casi todas o todas sus apariciones están aisladas (separadas)
+             // DÃ©bil si: aparece al menos 2 veces, y casi todas o todas sus apariciones estÃ¡n aisladas (separadas)
              const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
              const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
              
-             if (weak1 && weak2) weakWarning = '⚠️ AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `🟡 ${cur[0]}ª DOCENA DEBILITÁNDOSE (AISLADA)`;
-             else if (weak2) weakWarning = `🟡 ${cur[1]}ª DOCENA DEBILITÁNDOSE (AISLADA)`;
+             if (weak1 && weak2) weakWarning = 'âš ï¸ AMBAS DOCENAS DEBILITADAS';
+             else if (weak1) weakWarning = `ðŸŸ¡ ${cur[0]}Âª DOCENA DEBILITÃNDOSE (AISLADA)`;
+             else if (weak2) weakWarning = `ðŸŸ¡ ${cur[1]}Âª DOCENA DEBILITÃNDOSE (AISLADA)`;
         }
         
         const weakEl = document.getElementById('doc-weak-warning');
@@ -461,14 +461,14 @@ function renderDozens() {
         // Render history list
         if (histEl) {
              if (dzHistoryList.length === 0) {
-                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aún</div>';
+                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aÃºn</div>';
              } else {
                  histEl.innerHTML = dzHistoryList.map(h => {
-                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}°</span>`).join('');
+                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}Â°</span>`).join('');
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">duró ${h.duration}t</span>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">durÃ³ ${h.duration}t</span>
                         </div>
                      `;
                  }).join('');
@@ -483,7 +483,7 @@ function renderDozens() {
     }
 }
 
-// ─── WHEEL DRAW ──────────────────────────────────────────────
+// â”€â”€â”€ WHEEL DRAW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function drawWheel(highlightNum = null) {
     const canvas = document.getElementById('wheel-canvas');
     if (!canvas) return;
@@ -537,7 +537,7 @@ function renderWheelAndHistory() {
     // drawWheel removed
 }
 
-// ─── TAB LISTENERS ─────────────────────────────────────
+// â”€â”€â”€ TAB LISTENERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('click', (e) => {
     const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter'];
     const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter'];
@@ -554,7 +554,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ─── SUBMIT NUMBER ─────────────────────────────────────────
+// â”€â”€â”€ SUBMIT NUMBER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function submitNumber(val, silent = false, batch = false) {
     const raw = val !== undefined ? val : '';
     const n = parseInt(raw);
@@ -562,7 +562,7 @@ function submitNumber(val, silent = false, batch = false) {
     if (!isNaN(n) && n >= 0 && n <= 36) {
         // Evaluate previous predictions before pushing to history
         if (lastSignal && history.length > 0) {
-            // Main CW prediction — evaluated at N9 (win radius 9, under/over radius 4)
+            // Main CW prediction â€” evaluated at N9 (win radius 9, under/over radius 4)
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
                 cwHistory.push(distCW <= 9 ? 'win' : 'loss');
@@ -571,7 +571,7 @@ function submitNumber(val, silent = false, batch = false) {
                 lastUnderHitCW = Math.abs(calcDist(n, lastSignal.targetUnderCW)) <= 4;
                 lastOverHitCW  = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
             }
-            // Main CCW prediction — evaluated at N9 (9-ball neighborhood = radius 4)
+            // Main CCW prediction â€” evaluated at N9 (9-ball neighborhood = radius 4)
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
                 ccwHistory.push(distCCW <= 9 ? 'win' : 'loss');
@@ -582,7 +582,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE OVER prediction — Offset 14
+        // Evaluate ZONE OVER prediction â€” Offset 14
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -594,7 +594,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate ZONE UNDER prediction — Offset 4
+        // Evaluate ZONE UNDER prediction â€” Offset 4
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -611,7 +611,7 @@ function submitNumber(val, silent = false, batch = false) {
         lastZone26Hit = (d26 <= 9);
         zone26History.push(lastZone26Hit ? 'win' : 'loss');
 
-        // Evaluate JUGADAS prediction — only when ACTIVE (not charging)
+        // Evaluate JUGADAS prediction â€” only when ACTIVE (not charging)
         if (history.length >= 1 && jugView.isCharging === false) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
@@ -676,7 +676,7 @@ function submitNumber(val, silent = false, batch = false) {
 
                     // V5 Neural Overlay: If Agent 5 has Expert knowledge, it overrides
                     if (jugView.agent5_top_new && jugView.agent5_top_new.dnaMatch) {
-                        masterView.signal = `🧠 NEURAL: ${jugView.agent5_top_new.direction}`;
+                        masterView.signal = `ðŸ§  NEURAL: ${jugView.agent5_top_new.direction}`;
                         masterView.reasons = jugView.agent5_top_new.reason;
                         masterView.confidence = Math.max(masterView.confidence, 90);
                         masterView.target = jugView.agent5_top_new.direction;
@@ -708,7 +708,7 @@ function submitNumber(val, silent = false, batch = false) {
     }
 }
 
-// ─── SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) ──────────
+// â”€â”€â”€ SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderScatterChart() {
     try {
         const canvas = document.getElementById('scatterChart');
@@ -764,7 +764,7 @@ function renderScatterChart() {
         ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
         ctx.fillText('0', padL - 5, midY + 3);
         
-        // ─── Moving Average (window=5) ───
+        // â”€â”€â”€ Moving Average (window=5) â”€â”€â”€
         const maWindow = 5;
         const ma = [];
         for (let i = 0; i < dirs.length; i++) {
@@ -773,7 +773,7 @@ function renderScatterChart() {
             ma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
         }
         
-        // ─── Support / Resistance Detection ───
+        // â”€â”€â”€ Support / Resistance Detection â”€â”€â”€
         const maPeaks = [], maValleys = [];
         for (let i = 1; i < ma.length - 1; i++) {
             if (ma[i] > ma[i-1] && ma[i] > ma[i+1]) maPeaks.push(ma[i]);
@@ -798,7 +798,7 @@ function renderScatterChart() {
         }
         ctx.setLineDash([]);
         
-        // ─── Moving Average Line (SUBTLE REFERENCE) ───
+        // â”€â”€â”€ Moving Average Line (SUBTLE REFERENCE) â”€â”€â”€
         ctx.strokeStyle = 'rgba(245, 200, 66, 0.25)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
         ctx.beginPath();
         for (let i = 0; i < ma.length; i++) {
@@ -807,7 +807,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.setLineDash([]);
         
-        // ─── SHARP PEAKS LINE (ZIG-ZAG) ───
+        // â”€â”€â”€ SHARP PEAKS LINE (ZIG-ZAG) â”€â”€â”€
         ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.6;
         ctx.beginPath();
         for (let i = 0; i < dirs.length; i++) {
@@ -821,7 +821,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.globalAlpha = 1.0;
         
-        // ─── Scatter Points ───
+        // â”€â”€â”€ Scatter Points â”€â”€â”€
         for (let i = 0; i < numPoints; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
             ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
@@ -843,15 +843,15 @@ function renderScatterChart() {
             ctx.fillText(dirs[numPoints - 1] > 0 ? `+${dirs[numPoints - 1]}` : dirs[numPoints - 1], lx + 10, ly + 3);
         }
         
-        // ─── Trend Detection ───
+        // â”€â”€â”€ Trend Detection â”€â”€â”€
         const recent10 = binaryDirs.slice(-10);
         const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
         let trendLabel = 'NEUTRAL';
         let trendColor = '#6a8aa8';
-        if (cwRatio >= 0.7) { trendLabel = '⬆️ TENDENCIA CW'; trendColor = '#30e090'; }
-        else if (cwRatio <= 0.3) { trendLabel = '⬇️ TENDENCIA CCW'; trendColor = '#f04060'; }
-        else if (cwRatio >= 0.55) { trendLabel = '↗️ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
-        else if (cwRatio <= 0.45) { trendLabel = '↙️ SESGO CCW LEVE'; trendColor = '#e07a90'; }
+        if (cwRatio >= 0.7) { trendLabel = 'â¬†ï¸ TENDENCIA CW'; trendColor = '#30e090'; }
+        else if (cwRatio <= 0.3) { trendLabel = 'â¬‡ï¸ TENDENCIA CCW'; trendColor = '#f04060'; }
+        else if (cwRatio >= 0.55) { trendLabel = 'â†—ï¸ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
+        else if (cwRatio <= 0.45) { trendLabel = 'â†™ï¸ SESGO CCW LEVE'; trendColor = '#e07a90'; }
         
         const trendEl = document.getElementById('scatter-trend-label');
         if (trendEl) { trendEl.innerText = trendLabel; trendEl.style.color = trendColor; }
@@ -865,11 +865,11 @@ function renderScatterChart() {
     } catch(err) { console.error('Scatter chart error:', err); }
 }
 
-// ─── TRAVEL PATTERN ANALYSIS (DOBLE EJE) ─────────────────────────────────────
-const travelPatternHistory = []; // Últimos 8 episodios
+// â”€â”€â”€ TRAVEL PATTERN ANALYSIS (DOBLE EJE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const travelPatternHistory = []; // Ãšltimos 8 episodios
 
 function analyzeTravelPattern(hist) {
-    if (hist.length < 3) return { label: '—', tiradas: 0, emoji: '' };
+    if (hist.length < 3) return { label: 'â€”', tiradas: 0, emoji: '' };
 
     // Build [{ dir, zone }] list from full history
     const events = [];
@@ -881,16 +881,16 @@ function analyzeTravelPattern(hist) {
         });
     }
 
-    // ── Find the current streak (how many events from the end share ANY linkage) ──
+    // â”€â”€ Find the current streak (how many events from the end share ANY linkage) â”€â”€
     // We measure the active window = last N events (use last 12, or fewer if not enough)
     const window = events.slice(-12);
     const N = window.length;
-    if (N < 2) return { label: '—', tiradas: N, emoji: '' };
+    if (N < 2) return { label: 'â€”', tiradas: N, emoji: '' };
 
     const dirs  = window.map(e => e.dir);
     const zones = window.map(e => e.zone);
 
-    // ── EJE 1: DIRECCIÓN ──
+    // â”€â”€ EJE 1: DIRECCIÃ“N â”€â”€
     // Solid: last 3+ all same
     const dirSolid = N >= 3 && dirs.slice(-N).every(d => d === dirs[dirs.length - 1]);
     const dirLast  = dirs[dirs.length - 1];
@@ -903,7 +903,7 @@ function analyzeTravelPattern(hist) {
 
     const dirState = dirSolid ? `DER:${dirLast}` : (dirZigzag ? 'ZZ' : 'INEST');
 
-    // ── EJE 2: ZONA ──
+    // â”€â”€ EJE 2: ZONA â”€â”€
     const zoneSolid    = N >= 3 && zones.slice(-N).every(z => z === zones[zones.length - 1]);
     const zoneLast     = zones[zones.length - 1];
 
@@ -920,43 +920,43 @@ function analyzeTravelPattern(hist) {
 
     const zoneState = zoneSolid ? `ZS:${zoneLast}` : (zoneZigzag ? 'ZZ' : (domSmall ? 'DOM:SMALL' : (domBig ? 'DOM:BIG' : 'INEST')));
 
-    // ── COMBINED LABEL ──
+    // â”€â”€ COMBINED LABEL â”€â”€
     let label = '';
     let emoji = '';
 
     if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
-        label = `Sólida ${dirLast}-${zoneLast}`;
-        emoji = '🔥';
+        label = `SÃ³lida ${dirLast}-${zoneLast}`;
+        emoji = 'ðŸ”¥';
     } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
         label = 'Zigzag doble';
-        emoji = '↔️';
+        emoji = 'â†”ï¸';
     } else if (dirState.startsWith('DER:') && zoneState === 'ZZ') {
         label = `Dir ${dirLast} estable, zona zigzag`;
-        emoji = '↗️';
+        emoji = 'â†—ï¸';
     } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
-        label = `${zoneLast} sólida, dir zigzag`;
-        emoji = '↕️';
+        label = `${zoneLast} sÃ³lida, dir zigzag`;
+        emoji = 'â†•ï¸';
     } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
-        label = `${zoneLast} sólida, dir inestable`;
-        emoji = '⚡';
+        label = `${zoneLast} sÃ³lida, dir inestable`;
+        emoji = 'âš¡';
     } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
         label = `Small dom, ${dirLast} estable`;
-        emoji = '📌';
+        emoji = 'ðŸ“Œ';
     } else if (zoneState === 'DOM:BIG' && dirState.startsWith('DER:')) {
         label = `Big dom, ${dirLast} estable`;
-        emoji = '📌';
+        emoji = 'ðŸ“Œ';
     } else if (zoneState === 'DOM:SMALL') {
         label = 'Small dom, dir inestable';
-        emoji = '🟢';
+        emoji = 'ðŸŸ¢';
     } else if (zoneState === 'DOM:BIG') {
         label = 'Big dom, dir inestable';
-        emoji = '🔴';
+        emoji = 'ðŸ”´';
     } else if (dirState.startsWith('DER:') && zoneState === 'INEST') {
         label = `${dirLast} estable, zona inestable`;
-        emoji = '↗️';
+        emoji = 'â†—ï¸';
     } else {
         label = 'Caos';
-        emoji = '🌀';
+        emoji = 'ðŸŒ€';
     }
 
     return { label, tiradas: N, emoji };
@@ -989,7 +989,7 @@ function updateTravelPatternUI() {
                 <span style="color:var(--text)">${p.emoji} ${p.label}</span>
                 <span style="color:var(--muted); font-family:var(--mono);">${p.tiradas}t</span>
             </div>`
-        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aún</div>`;
+        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial aÃºn</div>`;
     }
 }
 
@@ -1085,26 +1085,26 @@ function renderTravelChart() {
     ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
 
     // Main line (SMOOTH WAVES V5)
-    // Usamos curvas de Bézier cúbicas con puntos de control suavizados
+    // Usamos curvas de BÃ©zier cÃºbicas con puntos de control suavizados
     ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round';
     
     for(let i=0; i < numPoints - 1; i++){
         const x1 = scaleX(i), y1 = scaleY(data[i]);
         const x2 = scaleX(i+1), y2 = scaleY(data[i+1]);
         
-        // Puntos de control para suavizado (Curva de Bézier)
+        // Puntos de control para suavizado (Curva de BÃ©zier)
         const cpX = (x1 + x2) / 2;
         
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
         
-        // Color dinámico según la zona y pérdida de rango
+        // Color dinÃ¡mico segÃºn la zona y pÃ©rdida de rango
         const val = data[i+1];
         if(val > upperRange || val < lowerRange) ctx.strokeStyle='#f5c842';
         else ctx.strokeStyle = val >= 0 ? '#30e090' : '#f04060';
         
-        // Sutil brillo en la línea
+        // Sutil brillo en la lÃ­nea
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.strokeStyle;
         ctx.stroke();
         ctx.shadowBlur = 0;
@@ -1147,7 +1147,7 @@ function renderTravelChart() {
     } catch(err) { console.error(err); }
 }
 
-// ─── TRAVEL TABLE ──────────────────────────────────────────
+// â”€â”€â”€ TRAVEL TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderTravelPanel() {
     try {
         const tbody   = document.getElementById('travel-tbody');
@@ -1167,7 +1167,7 @@ function renderTravelPanel() {
         let pat = dealerSig.directionState;
         let patClass = 'badge-stable';
         
-        if (pat === 'SÓLIDA') patClass = 'badge-solid';
+        if (pat === 'SÃ“LIDA') patClass = 'badge-solid';
         else if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
         else if (pat === 'CHAOS') patClass = 'badge-zone'; // Red color for chaos
         
@@ -1212,7 +1212,7 @@ function renderTravelPanel() {
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
             <td style="color:var(--text2)">${absDist}p</td>
-            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? '↺' : '↻'}</span></td>
+            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'â†º' : 'â†»'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
@@ -1220,7 +1220,7 @@ function renderTravelPanel() {
     renderTravelChart(); } catch (err) { console.error(err); }
 }
 
-// ─── SYNC FROM SERVER ────────────────────────────────────────
+// â”€â”€â”€ SYNC FROM SERVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function syncData() {
     if (!currentTableId) return;
     try {
@@ -1272,7 +1272,7 @@ function connectSSE(tId) {
             const data = JSON.parse(e.data);
             if (data.type === 'ping') return;
             if (data.type === 'batch_load') {
-                console.log("🔥 Lote recibido del bot. Resincronizando datos...");
+                console.log("ðŸ”¥ Lote recibido del bot. Resincronizando datos...");
                 syncData();
                 return;
             }
@@ -1284,7 +1284,7 @@ function connectSSE(tId) {
     };
 }
 
-// ─── INIT ─────────────────────────────────────────────────
+// â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', async () => {
     // Neural Initialization V5
     if (typeof AIChat !== 'undefined') AIChat.init();
@@ -1353,7 +1353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Boot error:', e);
     }
 });
-// ─── ANALYST UI RENDERER ─────────────────────────────────────────
+// â”€â”€â”€ ANALYST UI RENDERER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderAnalystUI() {
     const boxEl    = document.getElementById('analyst-panel');
     const signalEl = document.getElementById('analyst-signal');
@@ -1374,7 +1374,7 @@ function renderAnalystUI() {
     if (analystView.signal.includes('FRACTAL')) signalEl.classList.add('fractal');
     else if (analystView.signal.includes('CANAL')) signalEl.classList.add('channel');
     else if (analystView.signal.includes('RUPTURA')) signalEl.classList.add('breakout');
-    else if (analystView.signal.includes('COMPRESIÓN')) signalEl.classList.add('compression');
+    else if (analystView.signal.includes('COMPRESIÃ“N')) signalEl.classList.add('compression');
 
     if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
     else if (analystView.type === 'bearish') signalEl.style.color = 'var(--red)';
@@ -1410,7 +1410,7 @@ function renderAnalystUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// ─── MASTER UI RENDERER ─────────────────────────────────────────
+// â”€â”€â”€ MASTER UI RENDERER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderMasterUI() {
     const signalEl = document.getElementById('master-signal');
     const targetEl = document.getElementById('master-target');
@@ -1448,7 +1448,7 @@ function renderMasterUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// ─── TOGGLE TRAVEL TABLE ─────────────────────────────────────────
+// â”€â”€â”€ TOGGLE TRAVEL TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', () => {
     const btnCollapse = document.getElementById('toggle-travel-table');
     if (btnCollapse) {
@@ -1456,23 +1456,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const wrap = document.getElementById('travel-table-wrap');
             if (wrap.style.display === 'none') {
                 wrap.style.display = 'block';
-                e.target.innerText = '▲ CERRAR HISTORIAL ▲';
+                e.target.innerText = 'â–² CERRAR HISTORIAL â–²';
             } else {
                 wrap.style.display = 'none';
-                e.target.innerText = '▼ ABRIR HISTORIAL DE RUTAS ▼';
+                e.target.innerText = 'â–¼ ABRIR HISTORIAL DE RUTAS â–¼';
             }
         });
     }
 
-    // Botones de Calibración del Travel Chart
+    // Botones de CalibraciÃ³n del Travel Chart
     document.getElementById('toggle-pattern-hist')?.addEventListener('click', function() {
         const wrap = document.getElementById('travel-pattern-hist');
         if (wrap.style.maxHeight === '0px' || !wrap.style.maxHeight) {
             wrap.style.maxHeight = '200px';
-            this.innerText = '▲ CERRAR HISTORIAL PATRONES ▲';
+            this.innerText = 'â–² CERRAR HISTORIAL PATRONES â–²';
         } else {
             wrap.style.maxHeight = '0px';
-            this.innerText = '▼ VER HISTORIAL PATRONES ▼';
+            this.innerText = 'â–¼ VER HISTORIAL PATRONES â–¼';
         }
     });
 
@@ -1485,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTravelChart();
     });
 
-    // ─── Botones de Calibración del PREDICTOR ±1 casilla ────
+    // â”€â”€â”€ Botones de CalibraciÃ³n del PREDICTOR Â±1 casilla â”€â”€â”€â”€
     function updatePredBadge() {
         const badge = document.getElementById('pred-offset-badge');
         if (badge) {
@@ -1516,5 +1516,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-/ /   T r i g g e r i n g   n e w   b u i l d   f o r   v e r s i o n   1 . 1 . 0   f i n a l  
- 
