@@ -1010,15 +1010,17 @@ function renderTravelChart() {
     const canvas = document.getElementById('travelChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const padL=30, padR=50, padT=14, padB=20;
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    const padL = isMobile ? 24 : 30, padR = isMobile ? 34 : 50, padT = 14, padB = 20;
     const H = canvas.height || 120;
     const parentW = (canvas.parentElement && canvas.parentElement.offsetWidth) || canvas.clientWidth || 420;
+    const baseW = Math.max(parentW, isMobile ? 240 : 320);
     
     // Build travel array
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
         if (history.length < 2 || travels.length < 1) {
-            const W = Math.max(parentW, 420);
+            const W = baseW;
             canvas.width = W;
             canvas.style.width = W + 'px';
             ctx.clearRect(0, 0, W, H);
@@ -1043,11 +1045,11 @@ function renderTravelChart() {
         }
     
     // V5 SCROLLABLE: FIXED DISTANCE
-    const pxPerPoint = 14;
+    const pxPerPoint = isMobile ? 8 : 11;
     const numPoints = travels.length;
     
-    const minW = parentW;
-    const totalW = Math.max(minW, numPoints * pxPerPoint + padL + padR);
+    const minW = baseW;
+    const totalW = isMobile ? minW : Math.max(minW, numPoints * pxPerPoint + padL + padR);
     canvas.width = totalW;
     canvas.style.width = totalW + 'px';
     const W = totalW;
@@ -1555,6 +1557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
 
 

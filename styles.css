@@ -42,10 +42,11 @@ html, body {
 
 .three-col-body {
   display: grid;
-  grid-template-columns: clamp(170px, 28vw, 230px) minmax(0, 1fr);
+  grid-template-columns: clamp(160px, 26vw, 220px) minmax(300px, 560px);
   gap: 12px;
   padding: 12px;
   align-items: start;
+  justify-content: start;
   flex: 1;
 }
 
@@ -54,6 +55,7 @@ html, body {
   flex-direction: column;
   gap: 12px;
 }
+.col-travel { width: 100%; max-width: 560px; }
 
 .analyst-box[data-type="bullish"] { border-left: 4px solid var(--green); }
 .analyst-box[data-type="bearish"] { border-left: 4px solid var(--red); }
@@ -155,7 +157,7 @@ html, body {
 /* Mobile: stack columns */
 @media (max-width: 1100px) {
   .three-col-body {
-    grid-template-columns: clamp(150px, 33vw, 220px) minmax(0, 1fr);
+    grid-template-columns: clamp(145px, 32vw, 210px) minmax(260px, 500px);
   }
 }
 
