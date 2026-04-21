@@ -55,7 +55,7 @@ html, body {
   flex-direction: column;
   gap: 12px;
 }
-.col-travel { width: 100%; max-width: 360px; min-width: 0; }
+.col-travel { width: 100%; max-width: none; min-width: 0; }
 
 .analyst-box[data-type="bullish"] { border-left: 4px solid var(--green); }
 .analyst-box[data-type="bearish"] { border-left: 4px solid var(--red); }
@@ -161,7 +161,7 @@ html, body {
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1360px) {
   .three-col-body {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -279,7 +279,8 @@ html, body {
   font-weight: 700;
   outline: none;
   cursor: pointer;
-  min-width: 140px;
+  min-width: 84px;
+  max-width: 120px;
   text-transform: uppercase;
 }
 .compact-select option { background: var(--card); }
@@ -943,8 +944,9 @@ html, body {
 
 .resizable-wrapper {
   resize: none;
-  overflow: auto;
-  min-width: 120px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 0;
   min-height: 250px;
   width: 100%;
   border: 1px solid var(--border);
@@ -1110,3 +1112,4 @@ html, body {
     transition: all 0.2s;
 }
 .mini-tool-btn:hover { background: rgba(0,229,200,0.1); border-color: #00e5c8; }
+
