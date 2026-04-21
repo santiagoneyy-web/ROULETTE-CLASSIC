@@ -888,7 +888,7 @@ function analyzeTravelPattern(hist) {
     const dirs  = window.map(e => e.dir);
     const zones = window.map(e => e.zone);
 
-    // —— EJE 1: DIRECCIí“N ——
+    // —— EJE 1: DIRECCIÓN ——
     // Solid: last 3+ all same
     const dirSolid = N >= 3 && dirs.slice(-N).every(d => d === dirs[dirs.length - 1]);
     const dirLast  = dirs[dirs.length - 1];
@@ -924,7 +924,7 @@ function analyzeTravelPattern(hist) {
 
     if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
         label = `Sólida ${dirLast}-${zoneLast}`;
-        emoji = 'ðŸ”¥';
+        emoji = '✅';
     } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
         label = 'Zigzag doble';
         emoji = '↔';

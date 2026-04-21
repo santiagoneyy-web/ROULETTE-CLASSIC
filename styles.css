@@ -557,7 +557,9 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  height: 100%; /* fill the right column height */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .travel-top-bar {
   padding: 10px 14px;
