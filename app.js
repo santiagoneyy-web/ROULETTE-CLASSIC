@@ -1524,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePredBadge() {
         const badge = document.getElementById('pred-offset-badge');
         if (badge) {
-            badge.innerText = predictorOffset === 0 ? 'DIR' : `DIR ${predictorOffset > 0 ? '+' : ''}${predictorOffset}`;
+            badge.innerText = predictorOffset === 0 ? '0' : ((predictorOffset > 0 ? '+' : '') + predictorOffset);
             badge.style.color = predictorOffset !== 0 ? '#f0c040' : '#00e5c8';
         }
     }
@@ -1555,6 +1555,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 
 
