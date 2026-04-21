@@ -757,13 +757,8 @@ function renderScatterChart() {
         // Zero line
         ctx.strokeStyle = '#2a3a5d'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(padL, midY); ctx.lineTo(totalW - padR, midY); ctx.stroke();
-        <style>
-        /* Compact travel table */
-        .travel-table th, .travel-table td { padding:2px 4px; font-size:10px; }
-        .travel-section { max-width:260px; }
-        .travel-table { width:auto; border-collapse:collapse; }
-        .travel-table-wrap { max-height:180px; overflow-y:auto; }
-    </style>
+        ctx.fillStyle = '#4a6080'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(`+${maxAbs}`, padL - 5, padT + 6);
     ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
         ctx.fillText('0', padL - 5, midY + 3);
         

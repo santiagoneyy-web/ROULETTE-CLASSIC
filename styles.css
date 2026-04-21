@@ -44,7 +44,7 @@ html, body {
 
 .three-col-body {
   display: grid;
-  grid-template-columns: 310px 1fr; /* 2 columns: Visual/Predictions on the left, Travel on the right */
+  grid-template-columns: 230px 1fr; /* left column even narrower, right column even wider */
   gap: 12px;
   padding: 12px;
   align-items: start;
