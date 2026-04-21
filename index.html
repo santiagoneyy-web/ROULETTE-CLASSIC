@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css?v=1012" />
+    <link rel="stylesheet" href="styles.css?v=1013" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
     /* Compact travel table */
-    .travel-section { width: min(100%, 390px); max-width: 390px; }
-    .travel-table { width:auto; border-collapse:collapse; }
+    .travel-section { width: 100%; max-width: 100%; }
+    .travel-table { width:100%; border-collapse:collapse; table-layout: fixed; }
     .travel-table th, .travel-table td { padding:1px 3px; font-size:9px; }
-    .travel-table-wrap { max-height:140px; overflow-y:auto; }
+    .travel-table-wrap { max-height:140px; overflow-y:auto; overflow-x:hidden; }
 </style>
 
 
@@ -251,11 +251,11 @@
 
 
                 <!-- Travel Chart Canvas (SCROLLABLE V5) -->
-                <div style="padding: 2px 0; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); overflow-x: auto;">
-                    <canvas id="travelChart" height="102" style="min-width: 100%; display: block;"></canvas>
+                <div style="padding: 2px 0; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); overflow-x: hidden;">
+                    <canvas id="travelChart" height="102" style="width: 100%; min-width: 0; display: block;"></canvas>
                 </div>
                 
-                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 118px; overflow-y: auto;">
+                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 118px; overflow-y: auto; overflow-x: hidden;">
                     <table style="width: 100%; border-collapse: collapse; font-family: var(--mono);">
                         <thead>
                             <tr style="background: rgba(255,255,255,0.03);">
@@ -282,7 +282,7 @@
 
 <script src="predictor.js?v=999"></script>
 <script src="ai_chat.js?v=5"></script>
-<script src="app.js?v=1012"></script>
+<script src="app.js?v=1013"></script>
 </body>
 </html>
 

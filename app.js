@@ -1014,7 +1014,7 @@ function renderTravelChart() {
     const padL = isMobile ? 24 : 30, padR = isMobile ? 34 : 50, padT = 14, padB = 20;
     const H = canvas.height || 120;
     const parentW = (canvas.parentElement && canvas.parentElement.offsetWidth) || canvas.clientWidth || 420;
-    const baseW = Math.max(parentW, isMobile ? 240 : 320);
+    const baseW = Math.max(120, Math.floor(parentW));
     
     // Build travel array
     const travels = [];
@@ -1327,24 +1327,10 @@ function applyUniformScale() {
     const shell = document.querySelector('.app-shell');
     if (!shell) return;
 
-    const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-    if (isMobile) {
-        shell.style.zoom = '1';
-        shell.style.width = '100%';
-        return;
-    }
-
-    if (!shell.dataset.baseWidth) {
-        const prevZoom = shell.style.zoom;
-        shell.style.zoom = '1';
-        shell.dataset.baseWidth = String(shell.scrollWidth || shell.offsetWidth || 652);
-        shell.style.zoom = prevZoom;
-    }
-
-    const baseWidth = Number(shell.dataset.baseWidth) || 652;
-    const available = Math.max(220, window.innerWidth - 12);
-    const zoom = Math.min(1, available / baseWidth);
-    shell.style.zoom = zoom.toFixed(3);
+    // Keep real responsive sizing without artificial zoom gaps.
+    shell.style.zoom = '1';
+    shell.style.width = '100%';
+    shell.style.maxWidth = '100%';
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
