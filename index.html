@@ -18,17 +18,7 @@
 <body>
 <div class="app-shell">
 
-    <!-- ═══ TOP BAR ═══ -->
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <span class="app-logo">🎰</span>
-            <span class="app-title">CLASI ROULETTE</span>
-        </div>
-        <div class="top-bar-right">
-            <select id="table-select" class="compact-select"></select>
-            <span class="live-clock" id="live-clock">00:00:00</span>
-        </div>
-    </header>
+    <!-- (Top bar removed as per user request) -->
 
     <!-- ═══ THREE-COLUMN BODY ═══ -->
     <div class="three-col-body">
@@ -237,8 +227,11 @@
          <!-- ── COL 3: TRAVEL DATA ── -->
          <div class="col-travel">
             <section class="travel-section">
-                <div style="padding: 6px 10px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; font-weight: 700; color: var(--accent); font-family: var(--mono); letter-spacing: 0.5px;">\u{1F4CA} HISTORIAL VIAJES</span>
+                <div style="padding: 6px 10px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 11px; font-weight: 700; color: var(--accent); font-family: var(--mono); letter-spacing: 0.5px;">&#x1F4CA; TRAVEL</span>
+                        <select id="table-select" class="compact-select" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #00e5c8; font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: 700; outline: none; cursor: pointer;"></select>
+                    </div>
                     <span class="badge badge-zone" id="travel-last-zone" style="font-size: 9px; padding: 2px 6px;">Último: --</span>
                 </div>
 

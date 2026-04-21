@@ -1287,10 +1287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Neural Initialization V5
     if (typeof AIChat !== 'undefined') AIChat.init();
     
-    setInterval(() => {
-        const el = document.getElementById('live-clock');
-        if (el) el.innerText = new Date().toLocaleTimeString();
-    }, 1000);
+    // (Live clock interval removed)
 
     renderShadowPanel();
     renderTravelPanel();
