@@ -994,25 +994,49 @@ function updateTravelPatternUI() {
 function renderTravelChart() {
     try {
     const canvas = document.getElementById('travelChart');
-    if (!canvas || history.length < 3) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    const padL=30, padR=50, padT=14, padB=20;
+    const H = canvas.height || 120;
+    const parentW = (canvas.parentElement && canvas.parentElement.offsetWidth) || canvas.clientWidth || 420;
     
     // Build travel array
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
-    if (travels.length < 2) return;
+        if (history.length < 2 || travels.length < 2) {
+            const W = Math.max(parentW, 420);
+            canvas.width = W;
+            canvas.style.width = W + 'px';
+            ctx.clearRect(0, 0, W, H);
+            // Draw placeholder axes
+            ctx.strokeStyle = '#2a3a5d';
+            ctx.lineWidth = 1;
+            // X axis
+            ctx.beginPath();
+            ctx.moveTo(padL, H - padB);
+            ctx.lineTo(W - padR, H - padB);
+            ctx.stroke();
+            // Y axis
+            ctx.beginPath();
+            ctx.moveTo(padL, padT);
+            ctx.lineTo(padL, H - padB);
+            ctx.stroke();
+            // Text
+            ctx.fillStyle = '#7a9bb8';
+            ctx.font = '10px Inter';
+            ctx.fillText('Sin datos', W/2, H/2);
+            return;
+        }
     
     // V5 SCROLLABLE: FIXED DISTANCE
-    const padL=30, padR=50, padT=14, padB=20;
     const pxPerPoint = 14;
     const numPoints = travels.length;
     
-    const minW = canvas.parentElement.offsetWidth || 400;
+    const minW = parentW;
     const totalW = Math.max(minW, numPoints * pxPerPoint + padL + padR);
     canvas.width = totalW;
     canvas.style.width = totalW + 'px';
     const W = totalW;
-    const H = canvas.height;
     ctx.clearRect(0, 0, W, H);
     const data = travels; // ALL travels, not sliced
 
@@ -1460,15 +1484,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Botones de Patrones
-    document.getElementById('toggle-pattern-hist')?.addEventListener('click', function() {
+    document.getElementById('travel-history-toggle')?.addEventListener('click', function() {
         const wrap = document.getElementById('travel-pattern-hist');
-        if (wrap.style.maxHeight === '0px' || !wrap.style.maxHeight) {
-            wrap.style.maxHeight = '200px';
-            this.innerText = '▲ CERRAR HISTORIAL PATRONES ▲';
+        if (!wrap) return;
+        if (wrap.classList.contains('hidden')) {
+            wrap.classList.remove('hidden');
+            this.innerText = 'Ocultar historial';
         } else {
-            wrap.style.maxHeight = '0px';
-            this.innerText = '▼ VER HISTORIAL PATRONES ▼';
+            wrap.classList.add('hidden');
+            this.innerText = 'Mostrar historial';
         }
+    });
+
+    window.addEventListener('resize', () => {
+        if (history.length >= 2) renderTravelChart();
     });
 
     // ─── Botones de Calibración del PREDICTOR ±1 casilla ────
@@ -1507,3 +1536,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
