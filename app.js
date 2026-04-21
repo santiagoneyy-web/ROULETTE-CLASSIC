@@ -1003,7 +1003,7 @@ function renderTravelChart() {
     // Build travel array
     const travels = [];
     for (let i = 1; i < history.length; i++) travels.push(calcDist(history[i-1], history[i]));
-        if (history.length < 2 || travels.length < 2) {
+        if (history.length < 2 || travels.length < 1) {
             const W = Math.max(parentW, 420);
             canvas.width = W;
             canvas.style.width = W + 'px';
@@ -1489,10 +1489,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!wrap) return;
         if (wrap.classList.contains('hidden')) {
             wrap.classList.remove('hidden');
-            this.innerText = 'Ocultar historial';
+            this.innerHTML = '&#9652;';
+            this.setAttribute('aria-expanded', 'true');
         } else {
             wrap.classList.add('hidden');
-            this.innerText = 'Mostrar historial';
+            this.innerHTML = '&#9662;';
+            this.setAttribute('aria-expanded', 'false');
         }
     });
 
@@ -1536,4 +1538,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 

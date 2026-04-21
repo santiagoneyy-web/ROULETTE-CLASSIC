@@ -16,6 +16,7 @@
 
 
 <body>
+<div class="resizable-wrapper">
 <div class="app-shell">
 
     <!-- (Top bar removed as per user request) -->
@@ -237,14 +238,13 @@
 
                 <!-- NEW: Travel Pattern Bar -->
                 <div style="background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); padding: 4px 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div id="travel-pattern-label" style="font-size: 10px; font-weight: 700; color: #fff;">Patrón: Detectando...</div>
-                    <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 9px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 1px 4px; border-radius: 3px;">0t</div>
+                    <div id="travel-pattern-label" style="font-size: 10px; font-weight: 700; color: #fff;">Patr�n: Detectando...</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 9px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 1px 4px; border-radius: 3px;">0t</div>
+                        <button id="travel-history-toggle" class="travel-history-toggle" title="Mostrar/Ocultar historial de patrones" aria-expanded="false">&#9662;</button>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; padding: 2px 8px; background: rgba(0,0,0,0.08); border-bottom: 1px solid var(--border);">
-                    <input type="checkbox" id="travel-history-toggle" style="margin-right:6px;" checked>
-                    <label for="travel-history-toggle" style="font-size:9px; color:var(--muted);">Mostrar historial</label>
-                </div>
-                <div id="travel-pattern-hist" style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); padding: 2px 8px; max-height: 45px; overflow-y: auto;">
+                <div id="travel-pattern-hist" class="hidden" style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); padding: 2px 8px; max-height: 45px; overflow-y: auto;">
                     <!-- Historial dinámico -->
                 </div>
 
@@ -276,9 +276,14 @@
      </div><!-- /three-col-body -->
 
 </div>
+</div>
+<div class="resizer"></div>
+</div>
 
 <script src="predictor.js?v=999"></script>
 <script src="ai_chat.js?v=5"></script>
 <script src="app.js?v=999"></script>
 </body>
 </html>
+
+
