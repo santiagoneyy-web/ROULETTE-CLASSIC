@@ -1,5 +1,6 @@
-// ============================================================
-// app.js â€” SHADOW ROULETTE UI ENGINE
+// Version bump 20240421
+
+// app.js — SHADOW ROULETTE UI ENGINE
 // ============================================================
 
 const history = [];
@@ -139,7 +140,7 @@ function renderShadowPanelNeighborsOnly() {
     } catch(e) { console.error('neighborsOnly:', e); }
 }
 function wipeData() {
-    if (!confirm('âš ï¸ WIPE ALL DATA?')) return;
+    if (!confirm('⚠️ WIPE ALL DATA?')) return;
     const tableId = currentTableId;
     if (!tableId) { alert('Selecciona una mesa primero'); return; }
     fetch('/api/history/' + tableId, { method: 'DELETE' })
@@ -395,7 +396,7 @@ function renderDozens() {
         const statusEl     = document.getElementById('doc-transition-status');
         const infoEl       = document.getElementById('doc-info');
 
-        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + 'Â°').join(' & ') : '--';
+        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + '°').join(' & ') : '--';
 
         if (prevBadge) prevBadge.innerText = fmtDoz(prev);
         if (currBadge) currBadge.innerText = fmtDoz(cur);
@@ -404,25 +405,25 @@ function renderDozens() {
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
             if (spins <= 5 && prev.length > 0) {
-                statusEl.innerText = `âš ï¸ TRANSICIí“N (+${spins}t)`;
+                statusEl.innerText = `⚠️ TRANSICIÓN (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'â†’';
+                if (arrow) arrow.innerText = '→';
             } else if (spins <= 10) {
                 statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'â†’';
+                if (arrow) arrow.innerText = '→';
             } else {
-                statusEl.innerText = `âœ… ESTABLE (${spins}t)`;
+                statusEl.innerText = `✔ ESTABLE (${spins}t)`;
                 statusEl.classList.add('stable');
-                if (arrow) arrow.innerText = 'â€¢';
+                if (arrow) arrow.innerText = '•';
             }
         }
 
         if (infoEl) {
-            infoEl.innerText = `Ventana 18: Dom.Â· ${fmtDoz(cur)}`;
+            infoEl.innerText = `Ventana 18: Dom.° ${fmtDoz(cur)}`;
         }
 
-        // Detección de debilitamiento: Revisamos las íºltimas 18 tiradas.
+        // Detección de debilitamiento: Revisamos las últimas 18 tiradas.
         let weakWarning = '';
         if (spins > 8 && cur.length === 2 && history.length >= 18) {
              const recentDozens = dozens.slice(-18).filter(d => d !== 0);
@@ -442,9 +443,9 @@ function renderDozens() {
              const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
              const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
              
-             if (weak1 && weak2) weakWarning = 'âš ï¸ AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `ðŸŸ¡ ${cur[0]}Âª DOCENA DEBILITíNDOSE (AISLADA)`;
-             else if (weak2) weakWarning = `ðŸŸ¡ ${cur[1]}Âª DOCENA DEBILITíNDOSE (AISLADA)`;
+             if (weak1 && weak2) weakWarning = '⚠️ AMBAS DOCENAS DEBILITADAS';
+             else if (weak1) weakWarning = `❗ ${cur[0]}ª DOCENA DEBILITADA (AISLADA)`;
+             else if (weak2) weakWarning = `❗ ${cur[1]}ª DOCENA DEBILITADA (AISLADA)`;
         }
         
         const weakEl = document.getElementById('doc-weak-warning');
@@ -460,14 +461,14 @@ function renderDozens() {
         // Render history list
         if (histEl) {
              if (dzHistoryList.length === 0) {
-                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aíºn</div>';
+                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aún</div>';
              } else {
                  histEl.innerHTML = dzHistoryList.map(h => {
-                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}Â°</span>`).join('');
+                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}°</span>`).join('');
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="duró" style="font-size:9px; color:var(--muted)">duróó ${h.duróation}t</span>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">duró ${h.duration}t</span>
                         </div>
                      `;
                  }).join('');
@@ -561,7 +562,7 @@ function submitNumber(val, silent = false, batch = false) {
     if (!isNaN(n) && n >= 0 && n <= 36) {
         // Evaluate previous predictions before pushing to history
         if (lastSignal && history.length > 0) {
-            // Main CW prediction â€” evaluated at N9 (win radius 9, under/over radius 4)
+            // Main CW prediction — evaluated at N9 (win radius 9, under/over radius 4)
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
                 cwHistory.push(distCW <= 9 ? 'win' : 'loss');
@@ -570,7 +571,7 @@ function submitNumber(val, silent = false, batch = false) {
                 lastUnderHitCW = Math.abs(calcDist(n, lastSignal.targetUnderCW)) <= 4;
                 lastOverHitCW  = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
             }
-            // Main CCW prediction â€” evaluated at N9 (9-ball neighborhood = radius 4)
+            // Main CCW prediction — evaluated at N9 (9-ball neighborhood = radius 4)
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
                 ccwHistory.push(distCCW <= 9 ? 'win' : 'loss');
@@ -581,7 +582,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE OVER prediction â€” Offset 14
+        // Evaluate ZONE OVER prediction — Offset 14
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -593,7 +594,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate ZONE UNDER prediction â€” Offset 4
+        // Evaluate ZONE UNDER prediction — Offset 4
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -610,7 +611,7 @@ function submitNumber(val, silent = false, batch = false) {
         lastZone26Hit = (d26 <= 9);
         zone26History.push(lastZone26Hit ? 'win' : 'loss');
 
-        // Evaluate JUGADAS prediction â€” only when ACTIVE (not charging)
+        // Evaluate JUGADAS prediction — only when ACTIVE (not charging)
         if (history.length >= 1 && jugView.isCharging === false) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
@@ -675,7 +676,7 @@ function submitNumber(val, silent = false, batch = false) {
 
                     // V5 Neural Overlay: If Agent 5 has Expert knowledge, it overrides
                     if (jugView.agent5_top_new && jugView.agent5_top_new.dnaMatch) {
-                        masterView.signal = `ðŸ§  NEURAL: ${jugView.agent5_top_new.direction}`;
+                        masterView.signal = `🧠 NEURAL: ${jugView.agent5_top_new.direction}`;
                         masterView.reasons = jugView.agent5_top_new.reason;
                         masterView.confidence = Math.max(masterView.confidence, 90);
                         masterView.target = jugView.agent5_top_new.direction;
@@ -756,11 +757,14 @@ function renderScatterChart() {
         // Zero line
         ctx.strokeStyle = '#2a3a5d'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(padL, midY); ctx.lineTo(totalW - padR, midY); ctx.stroke();
-        
-        // Y axis labels
-        ctx.fillStyle = '#4a6080'; ctx.font = '9px Inter'; ctx.textAlign = 'right';
-        ctx.fillText(`+${maxAbs}`, padL - 5, padT + 6);
-        ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
+        <style>
+        /* Compact travel table */
+        .travel-table th, .travel-table td { padding:2px 4px; font-size:10px; }
+        .travel-section { max-width:260px; }
+        .travel-table { width:auto; border-collapse:collapse; }
+        .travel-table-wrap { max-height:180px; overflow-y:auto; }
+    </style>
+    ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
         ctx.fillText('0', padL - 5, midY + 3);
         
         // ——— Moving Average (window=5) ———
@@ -847,10 +851,10 @@ function renderScatterChart() {
         const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
         let trendLabel = 'NEUTRAL';
         let trendColor = '#6a8aa8';
-        if (cwRatio >= 0.7) { trendLabel = 'â¬†ï¸ TENDENCIA CW'; trendColor = '#30e090'; }
-        else if (cwRatio <= 0.3) { trendLabel = 'â¬‡ï¸ TENDENCIA CCW'; trendColor = '#f04060'; }
-        else if (cwRatio >= 0.55) { trendLabel = 'â†—ï¸ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
-        else if (cwRatio <= 0.45) { trendLabel = 'â†™ï¸ SESGO CCW LEVE'; trendColor = '#e07a90'; }
+        if (cwRatio >= 0.7) { trendLabel = '🔼 TENDENCIA CW'; trendColor = '#30e090'; }
+        else if (cwRatio <= 0.3) { trendLabel = '🔽 TENDENCIA CCW'; trendColor = '#f04060'; }
+        else if (cwRatio >= 0.55) { trendLabel = '↔ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
+        else if (cwRatio <= 0.45) { trendLabel = '↔ SESGO CCW LEVE'; trendColor = '#e07a90'; }
         
         const trendEl = document.getElementById('scatter-trend-label');
         if (trendEl) { trendEl.innerText = trendLabel; trendEl.style.color = trendColor; }
@@ -868,7 +872,7 @@ function renderScatterChart() {
 const travelPatternHistory = []; // íšltimos 8 episodios
 
 function analyzeTravelPattern(hist) {
-    if (hist.length < 3) return { label: 'â€”', tiradas: 0, emoji: '' };
+    if (hist.length < 3) return { label: '—', tiradas: 0, emoji: '' };
 
     // Build [{ dir, zone }] list from full history
     const events = [];
@@ -884,7 +888,7 @@ function analyzeTravelPattern(hist) {
     // We measure the active window = last N events (use last 12, or fewer if not enough)
     const window = events.slice(-12);
     const N = window.length;
-    if (N < 2) return { label: 'â€”', tiradas: N, emoji: '' };
+    if (N < 2) return { label: '—', tiradas: N, emoji: '' };
 
     const dirs  = window.map(e => e.dir);
     const zones = window.map(e => e.zone);
@@ -928,16 +932,16 @@ function analyzeTravelPattern(hist) {
         emoji = 'ðŸ”¥';
     } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
         label = 'Zigzag doble';
-        emoji = 'â†”ï¸';
+        emoji = '↔';
     } else if (dirState.startsWith('DER:') && zoneState === 'ZZ') {
         label = `Dir ${dirLast} estable, zona zigzag`;
-        emoji = 'â†—ï¸';
+        emoji = '↔';
     } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
         label = `${zoneLast} sólida, dir zigzag`;
-        emoji = 'â†•ï¸';
+        emoji = '↙';
     } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
         label = `${zoneLast} sólida, dir inestable`;
-        emoji = 'âš¡';
+        emoji = '❗';
     } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
         label = `Small dom, ${dirLast} estable`;
         emoji = 'ðŸ“Œ';
@@ -952,7 +956,7 @@ function analyzeTravelPattern(hist) {
         emoji = 'ðŸ”´';
     } else if (dirState.startsWith('DER:') && zoneState === 'INEST') {
         label = `${dirLast} estable, zona inestable`;
-        emoji = 'â†—ï¸';
+        emoji = '↔';
     } else {
         label = 'Caos';
         emoji = 'ðŸŒ€';

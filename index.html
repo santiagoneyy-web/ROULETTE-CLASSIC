@@ -6,7 +6,15 @@
     <title>CLASI ROULETTE</title>
     <link rel="stylesheet" href="styles.css?v=999" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-</head>
+    <style>
+    /* Compact travel table */
+    .travel-section { max-width:260px; }
+    .travel-table { width:auto; border-collapse:collapse; }
+    .travel-table th, .travel-table td { padding:2px 4px; font-size:10px; }
+    .travel-table-wrap { max-height:180px; overflow-y:auto; }
+</style>
+
+
 <body>
 <div class="app-shell">
 
@@ -230,15 +238,15 @@
          <div class="col-travel">
             <section class="travel-section">
                 <div class="travel-top-bar" style="padding-bottom: 2px;">
-                    <span class="section-title">📊 TRAVEL DATA</span>
+                    <span class="section-title">📊 Historial de Viajes</span>
                     <div class="travel-badges">
-                        <span class="badge badge-zone" id="travel-last-zone">LAST: --</span>
+                        <span class="badge badge-zone" id="travel-last-zone">Último: --</span>
                     </div>
                 </div>
 
                 <!-- NEW: Travel Pattern Bar -->
                 <div style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 28px;">
-                    <div id="travel-pattern-label" style="font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 0.3px;">—</div>
+                    <div id="travel-pattern-label" style="font-size: 11px; font-weight: bold; color: var(--accent); letter-spacing: 0.3px;">Patrón:</div>
                     <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 10px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 2px 5px; border-radius: 4px;">0t</div>
                 </div>
 
@@ -257,17 +265,17 @@
                 
                 <button id="toggle-travel-table" style="background:transparent; border:none; border-top:1px solid var(--border); color:var(--muted); font-family:var(--mono); width:100%; text-align:center; padding: 6px; cursor: pointer; font-size: 10px; font-weight:700; transition: color 0.3s; letter-spacing:0.5px;">▼ ABRIR HISTORIAL DE RUTAS ▼</button>
                 <div class="travel-table-wrap" id="travel-table-wrap" style="display: none;">
-                    <table class="travel-table">
+                    <table class="travel-table" style="width:auto; border-collapse:collapse;">
                         <thead>
                             <tr>
-                                <th>NUM</th>
-                                <th>DIST</th>
-                                <th>DIR</th>
-                                <th>ZONE</th>
+                                <th style="padding:2px 4px; font-size:10px;">NUM</th>
+                                <th style="padding:2px 4px; font-size:10px;">DIST</th>
+                                <th style="padding:2px 4px; font-size:10px;">DIR</th>
+                                <th style="padding:2px 4px; font-size:10px;">ZONE</th>
                             </tr>
                         </thead>
                         <tbody id="travel-tbody">
-                            <tr><td colspan="4" class="muted">Selecciona una mesa...</td></tr>
+                            <tr><td colspan="4" class="muted" style="padding:2px 4px; font-size:10px;">Selecciona una mesa...</td></tr>
                         </tbody>
                     </table>
                 </div>
