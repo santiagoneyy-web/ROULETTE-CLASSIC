@@ -26,7 +26,8 @@ let lastZone26Hit    = false;
 // Dynamic Reference Lines
 let currentAvgCW = 9;
 let currentAvgCCW = -9;
-let predictorOffset = 0; // CALIBRACIÓN MANUAL DEL PREDICTOR (± casillas)
+let predictorOffset = 0; // CALIBRACION MANUAL DEL PREDICTOR (+/- casillas)
+let manualAvgOffset = 0; // CALIBRACION MANUAL DEL TRAVEL CHART
 
 // ——— DOZENS STATE ———————————————————————————————————————————
 // ——— DOZENS STATE ———————————————————————————————————————————
@@ -1538,6 +1539,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 
 
