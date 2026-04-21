@@ -350,7 +350,7 @@ function renderDozens() {
                 if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
                     // Guardar en historial si hubo estabilidad previa
                     if (spins > 5 && cur.length > 0) {
-                        dzHistoryList.unshift({ dozens: [...cur], duróation: spins });
+                        dzHistoryList.unshift({ dozens: [...cur], duration: spins });
                         if (dzHistoryList.length > 8) dzHistoryList.length = 8;
                     }
                     // Start TRANSITION
@@ -469,7 +469,7 @@ function renderDozens() {
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">duró ${h.duration}t</span>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">dur� ${Number(h.duration || 0)}t</span>
                         </div>
                      `;
                  }).join('');
@@ -964,22 +964,23 @@ function analyzeTravelPattern(hist) {
 function updateTravelPatternUI() {
     if (history.length < 3) return;
     const result = analyzeTravelPattern(history);
-    
+
     const labelEl = document.getElementById('travel-pattern-label');
     const tirasEl = document.getElementById('travel-pattern-count');
     const histEl  = document.getElementById('travel-pattern-hist');
-    
+
     if (labelEl) labelEl.innerText = `${result.emoji} ${result.label}`;
     if (tirasEl) tirasEl.innerText = `${result.tiradas}t`;
 
-    // Save to history if label changed
-    const last = travelPatternHistory[0];
-    if (!last || last.label !== result.label) {
-        if (last) travelPatternHistory.unshift({ label: last.label, emoji: last.emoji, tiradas: last.tiradas });
+    const current = travelPatternHistory[0];
+    if (!current) {
+        travelPatternHistory.unshift({ label: result.label, emoji: result.emoji, tiradas: result.tiradas });
+    } else if (current.label !== result.label) {
+        travelPatternHistory.unshift({ label: result.label, emoji: result.emoji, tiradas: result.tiradas });
         if (travelPatternHistory.length > 8) travelPatternHistory.length = 8;
     } else {
-        // Update tiradas count of current
-        if (travelPatternHistory[0]) travelPatternHistory[0].tiradas = result.tiradas;
+        current.tiradas = result.tiradas;
+        current.emoji = result.emoji;
     }
 
     if (histEl) {
@@ -988,7 +989,7 @@ function updateTravelPatternUI() {
                 <span style="color:var(--text)">${p.emoji} ${p.label}</span>
                 <span style="color:var(--muted); font-family:var(--mono);">${p.tiradas}t</span>
             </div>`
-        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial todavía</div>`;
+        ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial todavia</div>`;
     }
 }
 
@@ -1177,6 +1178,10 @@ function renderTravelPanel() {
     const patEl   = document.getElementById('travel-pattern');
     const lastZEl = document.getElementById('travel-last-zone');
     if (!tbody) return;
+
+    if (history.length >= 3) {
+        updateTravelPatternUI();
+    }
 
     if (history.length < 2) {
         tbody.innerHTML = '<tr><td colspan="4" class="muted">Selecciona una mesa...</td></tr>';
@@ -1539,6 +1544,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 
 
