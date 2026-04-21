@@ -18,6 +18,7 @@
   --text2:    #7a9bb8;
   --font:     'Inter', sans-serif;
   --mono:     'JetBrains Mono', monospace;
+  --stack-width: 252px;
 }
 
 /* ── RESET ── */
@@ -34,7 +35,7 @@ html, body {
 
 /* ── APP SHELL ── */
 .app-shell {
-  width: 100%;
+  width: min(100%, var(--stack-width));
   height: 100%;
   margin: 0;
   max-width: 100%;
@@ -42,7 +43,7 @@ html, body {
 
 .three-col-body {
   display: grid;
-  grid-template-columns: minmax(170px, 200px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
   align-items: start;
@@ -55,7 +56,7 @@ html, body {
   flex-direction: column;
   gap: 12px;
 }
-.col-travel { width: 100%; max-width: none; min-width: 0; }
+.col-travel { width: 100%; max-width: 100%; min-width: 0; }
 
 .analyst-box[data-type="bullish"] { border-left: 4px solid var(--green); }
 .analyst-box[data-type="bearish"] { border-left: 4px solid var(--red); }
@@ -153,23 +154,6 @@ html, body {
     letter-spacing: 1px;
 }
 .master-stats { font-weight: bold; color: #777; }
-
-/* Responsive: keep same structure (no reflow) */
-@media (max-width: 1100px) {
-  .three-col-body {
-    grid-template-columns: minmax(170px, 200px) minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 1360px) {
-  .three-col-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .col-visual, .col-travel {
-    width: 100%;
-    max-width: 100% !important;
-  }
-}
 
 @media (max-width: 768px) {
   .app-shell {
