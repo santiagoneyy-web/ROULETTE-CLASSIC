@@ -322,10 +322,10 @@ function renderDozens() {
             // Esto evita que salte a otra docena solo por un reordenamiento interno de Javascript.
             const sorted = [1,2,3].sort((a,b) => {
                 if (counts[b] !== counts[a]) return counts[b] - counts[a];
-                const aIsDom. = cur.includes(a);
-                const bIsDom. = cur.includes(b);
-                if (aIsDom. && !bIsDom.) return -1;
-                if (!aIsDom. && bIsDom.) return 1;
+                const aIsDom = cur.includes(a);
+                const bIsDom = cur.includes(b);
+                if (aIsDom && !bIsDom) return -1;
+                if (!aIsDom && bIsDom) return 1;
                 // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido más recientemente
                 const lastIdxA = window.lastIndexOf(a);
                 const lastIdxB = window.lastIndexOf(b);
