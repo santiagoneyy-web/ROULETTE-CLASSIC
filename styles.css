@@ -469,13 +469,26 @@ html, body {
 .agent-footer-stats .st { color: var(--text); }
 .status-msg { color: var(--green); }
 .wl-hidden { display: none !important; }
-.compact-rate { font-weight: 800; letter-spacing: 0.3px; }
+.compact-rate {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-right: 2px;
+}
 .compact-perf {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  white-space: nowrap;
   font-family: var(--mono);
   font-size: 8px;
-  letter-spacing: 0.4px;
+  letter-spacing: 0;
   color: var(--text2);
   opacity: 0.95;
+}
+.compact-perf .perf-w,
+.compact-perf .perf-l {
+  font-size: 8px;
+  line-height: 1;
 }
 
 /* W/L Performance string */

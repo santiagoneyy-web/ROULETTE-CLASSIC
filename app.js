@@ -224,7 +224,7 @@ function renderShadowPanel() {
         document.getElementById('dir-cw-w').innerText = winsCW;
         document.getElementById('dir-cw-l').innerText = last10cw.length - winsCW;
         document.getElementById('dir-cw-rate').innerText = last10cw.length > 0 ? ((winsCW / last10cw.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('dir-cw-perf').innerText = last10cw.map(r => r === 'win' ? 'W' : 'L').join('') || '--';
+        document.getElementById('dir-cw-perf').innerHTML = last10cw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
 
         // CCW Stats
         const last10ccw = ccwHistory.slice(-10);
@@ -232,7 +232,7 @@ function renderShadowPanel() {
         document.getElementById('dir-ccw-w').innerText = winsCCW;
         document.getElementById('dir-ccw-l').innerText = last10ccw.length - winsCCW;
         document.getElementById('dir-ccw-rate').innerText = last10ccw.length > 0 ? ((winsCCW / last10ccw.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('dir-ccw-perf').innerText = last10ccw.map(r => r === 'win' ? 'W' : 'L').join('') || '--';
+        document.getElementById('dir-ccw-perf').innerHTML = last10ccw.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
 
         // --- NEIGHBOR BALLS: DISABLED (Per user request: remove "bolitas") ---
         document.getElementById('dir-cw-c-balls').innerHTML  = '';
@@ -268,7 +268,7 @@ function renderShadowPanel() {
         document.getElementById('sup-s-w').innerText = winsS;
         document.getElementById('sup-s-l').innerText = last10s.length - winsS;
         document.getElementById('sup-s-rate').innerText = last10s.length > 0 ? ((winsS / last10s.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-s-perf').innerText = last10s.map(r => r === 'win' ? 'W' : 'L').join('') || '--';
+        document.getElementById('sup-s-perf').innerHTML = last10s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
 
         // --- OVER BLOCK (Dynamic Logic) ---
         const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
@@ -281,7 +281,7 @@ function renderShadowPanel() {
         document.getElementById('sup-b-w').innerText = winsB;
         document.getElementById('sup-b-l').innerText = last10b.length - winsB;
         document.getElementById('sup-b-rate').innerText = last10b.length > 0 ? ((winsB / last10b.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-b-perf').innerText = last10b.map(r => r === 'win' ? 'W' : 'L').join('') || '--';
+        document.getElementById('sup-b-perf').innerHTML = last10b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
 
         // --- NEIGHBOR BALLS: DISABLED (Per user request) ---
         document.getElementById('sup-s-c-balls').innerHTML = '';
