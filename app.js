@@ -1298,7 +1298,8 @@ async function syncData() {
 
             // 3. Renderizar vista final una sola vez
             renderShadowPanel();
-            renderTravelPanel();
+    renderTravelPanel();
+    applyUniformScale();
             renderWheelAndHistory();
             renderMasterUI();
         }
@@ -1326,6 +1327,24 @@ function connectSSE(tId) {
     };
 }
 
+
+function applyUniformScale() {
+    const shell = document.querySelector('.app-shell');
+    if (!shell) return;
+
+    if (!shell.dataset.baseWidth) {
+        const prevZoom = shell.style.zoom;
+        shell.style.zoom = '1';
+        shell.dataset.baseWidth = String(shell.scrollWidth || shell.offsetWidth || 652);
+        shell.style.zoom = prevZoom;
+    }
+
+    const baseWidth = Number(shell.dataset.baseWidth) || 652;
+    const available = Math.max(220, window.innerWidth - 12);
+    const zoom = Math.min(1, available / baseWidth);
+    shell.style.zoom = zoom.toFixed(3);
+}
+
 // ——— INIT —————————————————————————————————————————————————
 document.addEventListener('DOMContentLoaded', async () => {
     // Neural Initialization V5
@@ -1335,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderShadowPanel();
     renderTravelPanel();
+    applyUniformScale();
 
     try {
         let ts = [];
@@ -1519,6 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', () => {
+        applyUniformScale();
         if (history.length >= 2) renderTravelChart();
     });
 
@@ -1557,6 +1578,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 
 
