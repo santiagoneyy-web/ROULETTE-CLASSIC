@@ -933,7 +933,7 @@ html, body {
   min-width: 0;
   min-height: 250px;
   width: 100%;
-  max-width: 420px;
+  max-width: var(--desktop-shell-width); /* Vuelve al tamaño original compacto */
   border: 1px solid var(--border);
   margin: 0 auto;
   border-radius: 12px;
