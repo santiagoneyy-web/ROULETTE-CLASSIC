@@ -932,9 +932,22 @@ html, body {
   overflow-y: auto;
   min-width: 0;
   min-height: 250px;
-  width: min(100%, var(--desktop-shell-width));
+  width: 100%;
+  max-width: 420px;
   border: 1px solid var(--border);
   margin: 0 auto;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  background: var(--bg);
+}
+
+@media (max-width: 768px) {
+  .resizable-wrapper {
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
 }
 
 .travel-history-toggle {
