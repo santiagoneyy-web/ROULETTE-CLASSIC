@@ -392,29 +392,22 @@ html, body {
 }
 .p-val {
   font-family: var(--mono);
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   color: var(--accent);
   line-height: 1;
   text-shadow: 0 0 12px rgba(0,229,200,0.4);
 }
-.p-sub {
+.p-power {
   font-family: var(--mono);
-  font-size: 6px;
+  font-size: 8px;
   color: var(--muted);
-  background: rgba(0,0,0,0.4);
-  padding: 1px 4px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
+  vertical-align: super;
+  margin-left: 2px;
 }
-.p-val-main {
-  font-family: var(--mono);
-  font-size: 32px;
-  font-weight: 900;
-  color: #fff;
-  line-height: 1;
-  text-shadow: 0 0 16px rgba(255,255,255,0.3);
-}
+.val-row { display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1; }
+.val-row-main { display: flex; align-items: baseline; justify-content: center; gap: 4px; line-height: 1; margin-bottom: 2px; }
+.p-val-main { font-size: 18px !important; }
 .p-sub-main {
   font-family: var(--mono);
   font-size: 8px;
@@ -454,11 +447,7 @@ html, body {
 .agent-footer-stats .st { color: var(--text); }
 .status-msg { color: var(--green); }
 .wl-hidden { display: none !important; }
-.compact-rate {
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  margin-right: 2px;
-}
+.compact-rate { font-size: 11px; font-weight: bold; }
 .compact-perf {
   display: inline-flex;
   align-items: center;
@@ -918,8 +907,8 @@ html, body {
 .fn-faded { opacity: 0.3; }
 
 /* Shrink p-val and p-val-main to make room for balls */
-.p-val      { font-size: 14px !important; }
-.p-val-main { font-size: 21px !important; }
+.p-val      { font-size: 12px !important; }
+.p-val-main { font-size: 18px !important; }
 
 .doc-memory { background: rgba(255,255,255,0.1); color: #aaa; font-size: 10px; }
 
