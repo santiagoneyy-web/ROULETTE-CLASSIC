@@ -879,6 +879,32 @@ function renderScatterChart() {
 // ——— TRAVEL PATTERN ANALYSIS (DOBLE EJE) —————————————————————————————————————
 const travelPatternHistory = []; // íšltimos 8 episodios
 
+// --- TRAVEL STABILITY COLORS ---
+function detectSolidBlocks(events) {
+    if (!events || events.length < 4) return false;
+    var recent = events.slice(-10); var runs = []; var count = 1;
+    for (var i = 1; i < recent.length; i++) {
+        if (recent[i].dir === recent[i-1].dir && recent[i].zone === recent[i-1].zone) { count++; }
+        else { runs.push(count); count = 1; }
+    }
+    runs.push(count);
+    return runs.filter(function(r){return r>=2;}).length >= 2;
+}
+function getStabilityLevel(result, events) {
+    var label = result.label; var tiradas = result.tiradas;
+    if (label.indexOf('Sin Patr') >= 0) return 'red';
+    var dd = label.indexOf('Tendencia') >= 0 || (label.indexOf('Dom:') >= 0 && label.indexOf('estable') >= 0);
+    if (tiradas >= 4 && dd) return 'green';
+    if (detectSolidBlocks(events)) return 'green';
+    return 'yellow';
+}
+function applyTravelStabilityColor(level) {
+    var s = document.querySelector('.col-travel'); if (!s) return;
+    var m = { green:['rgba(30,200,80,0.07)','rgba(30,200,80,0.5)'], yellow:['rgba(240,180,0,0.07)','rgba(240,180,0,0.5)'], red:['rgba(220,40,40,0.07)','rgba(220,40,40,0.5)'] };
+    var c = m[level] || m.red;
+    s.style.background = c[0]; s.style.borderLeft = '2px solid '+c[1]; s.style.transition = 'background 0.6s ease, border-left 0.6s ease';
+}
+
 function analyzeTravelPattern(hist) {
     if (hist.length < 3) return { label: '—', tiradas: 0, emoji: '' };
 
@@ -1003,6 +1029,14 @@ function updateTravelPatternUI() {
             </div>`
         ).join('') || `<div style="opacity:0.5; font-size:10px; text-align:center; padding:4px;">Sin historial todavia</div>`;
     }
+
+    // Aplicar fondo de color segun estabilidad del Travel
+    var evts = [];
+    for (var _i = 1; _i < history.length; _i++) {
+        var _d = calcDist(history[_i-1], history[_i]);
+        evts.push({dir: _d >= 0 ? 'DER' : 'IZQ', zone: Math.abs(_d) >= 9 ? 'BIG' : 'SMALL'});
+    }
+    applyTravelStabilityColor(getStabilityLevel(result, evts));
 }
 
 function renderTravelChart() {
