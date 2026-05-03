@@ -891,12 +891,22 @@ function detectSolidBlocks(events) {
     return runs.filter(function(r){return r>=2;}).length >= 2;
 }
 function getStabilityLevel(result, events) {
+    if (!events || events.length === 0) return 'red';
+    var n = Math.min(events.length, 12);
+    var recent = events.slice(-n);
+    var derCount = 0, izqCount = 0, bigCount = 0, smallCount = 0;
+    for (var i=0; i<n; i++) {
+        if (recent[i].dir === 'DER') derCount++; else if (recent[i].dir === 'IZQ') izqCount++;
+        if (recent[i].zone === 'BIG') bigCount++; else if (recent[i].zone === 'SMALL') smallCount++;
+    }
+    var domDir = Math.max(derCount, izqCount) / n >= 0.58;
+    var domZon = Math.max(bigCount, smallCount) / n >= 0.58;
     var label = result.label; var tiradas = result.tiradas;
-    if (label.indexOf('Sin Patr') >= 0) return 'red';
-    var dd = label.indexOf('Tendencia') >= 0 || (label.indexOf('Dom:') >= 0 && label.indexOf('estable') >= 0);
-    if (tiradas >= 4 && dd) return 'green';
+    var isDoubleDom = (domDir && domZon) || label.indexOf('Tendencia') >= 0 || (label.indexOf('Dom:') >= 0 && label.indexOf('estable') >= 0);
     if (detectSolidBlocks(events)) return 'green';
-    return 'yellow';
+    if (tiradas >= 4 && isDoubleDom) return 'green';
+    if (domDir || domZon || label.indexOf('ZZ') >= 0 || label.indexOf('Zigzag') >= 0) return 'yellow';
+    return 'red';
 }
 function applyTravelStabilityColor(level) {
     // Ya no pintamos la columna ni el borde, solo el canvas
@@ -1099,15 +1109,15 @@ function renderTravelChart() {
             var _zon = Math.abs(_cd) >= 9 ? 'BIG' : 'SMALL';
             _evts.push({dir: _dir, zone: _zon});
         }
-        var _pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'',tiradas:0};
-        var _lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(_pat, _evts) : 'red';
+        var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
+        var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
-            green:  'rgba(20, 160, 60, 0.35)',
-            yellow: 'rgba(210, 150, 0, 0.35)',
-            red:    'rgba(200, 30, 30, 0.35)'
+            green:  'rgba(20, 160, 60, 0.25)',
+            yellow: 'rgba(210, 150, 0, 0.25)',
+            red:    'rgba(200, 30, 30, 0.25)'
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
     })();
 
     // Averages
@@ -1179,7 +1189,7 @@ function renderTravelChart() {
 
     // Main line (SMOOTH WAVES V5)
     // Usamos curvas de Bézier cíºbicas con puntos de control suavizados
-    ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round';
     
     for(let i=0; i < numPoints - 1; i++){
         const x1 = scaleX(i), y1 = scaleY(data[i]);
@@ -1194,11 +1204,11 @@ function renderTravelChart() {
         
         // Color dinámico segíºn la zona y pérdida de rango
         const val = data[i+1];
-        if(val > upperRange || val < lowerRange) ctx.strokeStyle='#f5c842';
-        else ctx.strokeStyle = val >= 0 ? '#30e090' : '#f04060';
+        if(val > upperRange || val < lowerRange) ctx.strokeStyle='#ffe600';
+        else ctx.strokeStyle = val >= 0 ? '#00ffa2' : '#ff2a4b';
         
         // Sutil brillo en la lí­nea
-        ctx.shadowBlur = 4; ctx.shadowColor = ctx.strokeStyle;
+        ctx.shadowBlur = 10; ctx.shadowColor = ctx.strokeStyle;
         ctx.stroke();
         ctx.shadowBlur = 0;
     }
@@ -1215,7 +1225,7 @@ function renderTravelChart() {
         const lx=scaleX(numPoints-1),ly=scaleY(data[numPoints-1]);
         ctx.beginPath();ctx.arc(lx,ly,6,0,Math.PI*2);
         ctx.strokeStyle='#fff';ctx.lineWidth=2;
-        ctx.shadowBlur=8;ctx.shadowColor=data[numPoints-1]>=0?'#30e090':'#c090ff';
+        ctx.shadowBlur=8;ctx.shadowColor=data[numPoints-1]>=0?'#00ffa2':'#ff2a4b';
         ctx.stroke();ctx.shadowBlur=0;
         ctx.fillStyle='#fff';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';
         const v=data[numPoints-1];
