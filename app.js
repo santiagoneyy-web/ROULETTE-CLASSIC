@@ -1170,26 +1170,26 @@ function renderTravelChart() {
     ctx.textAlign='center';ctx.fillStyle='#3a5070';
     const step=Math.max(1,Math.floor(numPoints/8));
     for(let i=0;i<numPoints;i+=step){ctx.fillText(dataStart+i+1,scaleX(i),H-4);}
-
+// 
     // Range bands
-    ctx.setLineDash([4,4]);
-    ctx.strokeStyle='rgba(240,192,64,0.4)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(padL,scaleY(upperRange));ctx.lineTo(W-padR,scaleY(upperRange));ctx.stroke();
-    ctx.strokeStyle='rgba(100,180,255,0.4)';
-    ctx.beginPath();ctx.moveTo(padL,scaleY(lowerRange));ctx.lineTo(W-padR,scaleY(lowerRange));ctx.stroke();
-    ctx.setLineDash([]);
-
+//     ctx.setLineDash([4,4]);
+//     ctx.strokeStyle='rgba(240,192,64,0.4)';ctx.lineWidth=1;
+//     ctx.beginPath();ctx.moveTo(padL,scaleY(upperRange));ctx.lineTo(W-padR,scaleY(upperRange));ctx.stroke();
+//     ctx.strokeStyle='rgba(100,180,255,0.4)';
+//     ctx.beginPath();ctx.moveTo(padL,scaleY(lowerRange));ctx.lineTo(W-padR,scaleY(lowerRange));ctx.stroke();
+//     ctx.setLineDash([]);
+// 
     // AvgCW line (red)
-    ctx.strokeStyle='#f04060';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);
-    ctx.beginPath();ctx.moveTo(padL,scaleY(avgCW));ctx.lineTo(W-padR,scaleY(avgCW));ctx.stroke();
+//     ctx.strokeStyle='#f04060';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);
+//     ctx.beginPath();ctx.moveTo(padL,scaleY(avgCW));ctx.lineTo(W-padR,scaleY(avgCW));ctx.stroke();
     // AvgCCW line (orange)
-    ctx.strokeStyle='#ff8c40';
-    ctx.beginPath();ctx.moveTo(padL,scaleY(avgCCW));ctx.lineTo(W-padR,scaleY(avgCCW));ctx.stroke();
-    ctx.setLineDash([]);
-
+//     ctx.strokeStyle='#ff8c40';
+//     ctx.beginPath();ctx.moveTo(padL,scaleY(avgCCW));ctx.lineTo(W-padR,scaleY(avgCCW));ctx.stroke();
+//     ctx.setLineDash([]);
+// 
     // Fill zones
-    ctx.fillStyle='rgba(48,224,144,0.04)';ctx.fillRect(padL,padT,chartW,chartH/2);
-    ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
+//     ctx.fillStyle='rgba(48,224,144,0.04)';ctx.fillRect(padL,padT,chartW,chartH/2);
+//     ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
 
     // Main line (SMOOTH WAVES V5)
     // Usamos curvas de Bézier cíºbicas con puntos de control suavizados
