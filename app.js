@@ -1112,9 +1112,9 @@ function renderTravelChart() {
         var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
-            green:  'rgba(0, 255, 128, 0.08)',
-            yellow: 'rgba(255, 255, 0, 0.08)',
-            red:    'rgba(255, 50, 50, 0.08)'
+            green:  'rgba(0, 255, 128, 0.12)',
+            yellow: 'rgba(255, 140, 0, 0.15)', // Naranja mas vibrante
+            red:    'rgba(255, 40, 40, 0.12)'
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
         ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
@@ -1153,7 +1153,7 @@ function renderTravelChart() {
     if (badgeCalib) badgeCalib.innerText = `CALIB: ${manualAvgOffset >= 0 ? '+'+manualAvgOffset : manualAvgOffset}`;
 
     // Grid
-    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255, 100, 0, 0.4)'; ctx.lineWidth=1; // Lineas limite en naranja
     [18, 10, -10, -18].forEach(v => {
         ctx.beginPath();ctx.moveTo(padL,scaleY(v));ctx.lineTo(W-padR,scaleY(v));ctx.stroke();
     });
