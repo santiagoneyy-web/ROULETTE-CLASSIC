@@ -1154,13 +1154,17 @@ function renderTravelChart() {
 
     // Grid
     ctx.strokeStyle='#1a2a3d'; ctx.lineWidth=0.5;
-    for (let v=-15;v<=15;v+=5){ctx.beginPath();ctx.moveTo(padL,scaleY(v));ctx.lineTo(W-padR,scaleY(v));ctx.stroke();}
+    [18, 10, -10, -18].forEach(v => {
+        ctx.beginPath();ctx.moveTo(padL,scaleY(v));ctx.lineTo(W-padR,scaleY(v));ctx.stroke();
+    });
     ctx.strokeStyle='#2a3a5d'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(padL,midY); ctx.lineTo(W-padR,midY); ctx.stroke();
 
     // Y labels
     ctx.fillStyle='#4a6080';ctx.font='9px Inter';ctx.textAlign='right';
-    for(let v=-15;v<=15;v+=5){if(v===0)continue;ctx.fillText(v>0?`+${v}`:`${v}`,padL-4,scaleY(v)+3);}
+    [18, 10, -10, -18].forEach(v => {
+        ctx.fillText(v>0?`+${v}`:`${v}`,padL-4,scaleY(v)+3);
+    });
     ctx.fillText('0',padL-4,midY+3);
     // X labels
     ctx.textAlign='center';ctx.fillStyle='#3a5070';
