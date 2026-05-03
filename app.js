@@ -1112,9 +1112,9 @@ function renderTravelChart() {
         var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
-            green:  'rgba(0, 255, 128, 0.12)',
-            yellow: 'rgba(255, 140, 0, 0.15)', // Naranja mas vibrante
-            red:    'rgba(255, 40, 40, 0.12)'
+            green:  '#0C3824', // Puro verde atenuado (sin mezcla azul)
+            yellow: '#3C3010', // Puro oro/amarillo atenuado (como DOCENAS)
+            red:    '#3C1018'  // Puro rojo atenuado
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
         ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
