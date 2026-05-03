@@ -1112,12 +1112,12 @@ function renderTravelChart() {
         var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
-            green:  'rgba(30, 200, 80, 0.12)',
-            yellow: 'rgba(255, 180, 0, 0.12)',
-            red:    'rgba(240, 40, 40, 0.12)'
+            green:  'rgba(0, 255, 128, 0.08)',
+            yellow: 'rgba(255, 255, 0, 0.08)',
+            red:    'rgba(255, 50, 50, 0.08)'
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
     })();
 
     // Averages
@@ -1153,11 +1153,11 @@ function renderTravelChart() {
     if (badgeCalib) badgeCalib.innerText = `CALIB: ${manualAvgOffset >= 0 ? '+'+manualAvgOffset : manualAvgOffset}`;
 
     // Grid
-    ctx.strokeStyle='#1a2a3d'; ctx.lineWidth=0.5;
+    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
     [18, 10, -10, -18].forEach(v => {
         ctx.beginPath();ctx.moveTo(padL,scaleY(v));ctx.lineTo(W-padR,scaleY(v));ctx.stroke();
     });
-    ctx.strokeStyle='#2a3a5d'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(padL,midY); ctx.lineTo(W-padR,midY); ctx.stroke();
 
     // Y labels
