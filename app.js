@@ -899,20 +899,10 @@ function getStabilityLevel(result, events) {
     return 'yellow';
 }
 function applyTravelStabilityColor(level) {
+    // Ya no pintamos la columna ni el borde, solo el canvas
     var s = document.querySelector('.col-travel'); if (!s) return;
-    var gradients = {
-        green:  'linear-gradient(180deg, rgba(20,160,60,0.32) 0%, rgba(10,80,30,0.18) 100%)',
-        yellow: 'linear-gradient(180deg, rgba(210,150,0,0.32) 0%, rgba(120,80,0,0.18) 100%)',
-        red:    'linear-gradient(180deg, rgba(200,30,30,0.38) 0%, rgba(100,0,0,0.20) 100%)'
-    };
-    var borders = {
-        green:  'rgba(30,220,80,0.8)',
-        yellow: 'rgba(240,180,0,0.8)',
-        red:    'rgba(220,40,40,0.8)'
-    };
-    s.style.background   = gradients[level] || gradients.red;
-    s.style.borderLeft   = '3px solid ' + (borders[level] || borders.red);
-    s.style.transition   = 'background 0.6s ease, border-left 0.4s ease';
+    s.style.background = 'transparent';
+    s.style.borderLeft = 'none';
 }
 
 function analyzeTravelPattern(hist) {
@@ -1109,18 +1099,14 @@ function renderTravelChart() {
             var _zon = Math.abs(_cd) >= 9 ? 'BIG' : 'SMALL';
             _evts.push({dir: _dir, zone: _zon});
         }
-        var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
-        var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
+        var _pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'',tiradas:0};
+        var _lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(_pat, _evts) : 'red';
         var _bgMap = {
-            green:  ['rgba(15,140,50,0.28)',  'rgba(5,50,15,0.08)'],
-            yellow: ['rgba(180,130,0,0.28)',   'rgba(80,55,0,0.08)'],
-            red:    ['rgba(170,20,20,0.34)',   'rgba(70,0,0,0.10)']
+            green:  'rgba(20, 160, 60, 0.35)',
+            yellow: 'rgba(210, 150, 0, 0.35)',
+            red:    'rgba(200, 30, 30, 0.35)'
         };
-        var _bg = _bgMap[_lvl] || _bgMap.red;
-        var _grad = ctx.createLinearGradient(0, 0, 0, H);
-        _grad.addColorStop(0, _bg[0]);
-        _grad.addColorStop(1, _bg[1]);
-        ctx.fillStyle = _grad;
+        ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
         ctx.fillRect(0, 0, W, H);
     })();
 
