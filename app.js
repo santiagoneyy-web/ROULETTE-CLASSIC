@@ -900,9 +900,19 @@ function getStabilityLevel(result, events) {
 }
 function applyTravelStabilityColor(level) {
     var s = document.querySelector('.col-travel'); if (!s) return;
-    var m = { green:['rgba(30,200,80,0.07)','rgba(30,200,80,0.5)'], yellow:['rgba(240,180,0,0.07)','rgba(240,180,0,0.5)'], red:['rgba(220,40,40,0.07)','rgba(220,40,40,0.5)'] };
-    var c = m[level] || m.red;
-    s.style.background = c[0]; s.style.borderLeft = '2px solid '+c[1]; s.style.transition = 'background 0.6s ease, border-left 0.6s ease';
+    var gradients = {
+        green:  'linear-gradient(180deg, rgba(20,160,60,0.32) 0%, rgba(10,80,30,0.18) 100%)',
+        yellow: 'linear-gradient(180deg, rgba(210,150,0,0.32) 0%, rgba(120,80,0,0.18) 100%)',
+        red:    'linear-gradient(180deg, rgba(200,30,30,0.38) 0%, rgba(100,0,0,0.20) 100%)'
+    };
+    var borders = {
+        green:  'rgba(30,220,80,0.8)',
+        yellow: 'rgba(240,180,0,0.8)',
+        red:    'rgba(220,40,40,0.8)'
+    };
+    s.style.background   = gradients[level] || gradients.red;
+    s.style.borderLeft   = '3px solid ' + (borders[level] || borders.red);
+    s.style.transition   = 'background 0.6s ease, border-left 0.4s ease';
 }
 
 function analyzeTravelPattern(hist) {
