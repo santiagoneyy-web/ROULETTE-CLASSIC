@@ -1100,6 +1100,30 @@ function renderTravelChart() {
     const W = totalW;
     ctx.clearRect(0, 0, W, H);
 
+    // --- Fondo de color canvas segun estabilidad ---
+    (function paintBg() {
+        var _evts = [];
+        for (var _ci = 1; _ci < history.length; _ci++) {
+            var _cd = calcDist(history[_ci-1], history[_ci]);
+            var _dir = _cd >= 0 ? 'DER' : 'IZQ';
+            var _zon = Math.abs(_cd) >= 9 ? 'BIG' : 'SMALL';
+            _evts.push({dir: _dir, zone: _zon});
+        }
+        var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
+        var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
+        var _bgMap = {
+            green:  ['rgba(15,140,50,0.28)',  'rgba(5,50,15,0.08)'],
+            yellow: ['rgba(180,130,0,0.28)',   'rgba(80,55,0,0.08)'],
+            red:    ['rgba(170,20,20,0.34)',   'rgba(70,0,0,0.10)']
+        };
+        var _bg = _bgMap[_lvl] || _bgMap.red;
+        var _grad = ctx.createLinearGradient(0, 0, 0, H);
+        _grad.addColorStop(0, _bg[0]);
+        _grad.addColorStop(1, _bg[1]);
+        ctx.fillStyle = _grad;
+        ctx.fillRect(0, 0, W, H);
+    })();
+
     // Averages
     const cwVals = data.filter(d => d > 0);
     const ccwVals = data.filter(d => d < 0);
