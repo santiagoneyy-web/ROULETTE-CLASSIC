@@ -1055,7 +1055,7 @@ function renderTravelChart() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-    const padL = isMobile ? 24 : 30, padR = isMobile ? 34 : 50, padT = 14, padB = 20;
+    const padL = isMobile ? 24 : 30, padR = isMobile ? 34 : 50, padT = 20, padB = 20;
     const H = canvas.height || 120;
     const parentW = (canvas.parentElement && canvas.parentElement.offsetWidth) || canvas.clientWidth || 420;
     const baseW = Math.max(120, Math.floor(parentW));
@@ -1112,12 +1112,12 @@ function renderTravelChart() {
         var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
-            green:  'rgba(20, 160, 60, 0.25)',
-            yellow: 'rgba(210, 150, 0, 0.25)',
-            red:    'rgba(200, 30, 30, 0.25)'
+            green:  'rgba(30, 200, 80, 0.12)',
+            yellow: 'rgba(255, 180, 0, 0.12)',
+            red:    'rgba(240, 40, 40, 0.12)'
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
-        ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
+        ctx.fillRect(0, 0, W, H);
     })();
 
     // Averages
