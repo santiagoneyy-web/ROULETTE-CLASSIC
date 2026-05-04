@@ -894,18 +894,28 @@ function getStabilityLevel(result, events) {
     if (!events || events.length === 0) return 'red';
     var n = Math.min(events.length, 12);
     var recent = events.slice(-n);
+    
     var derCount = 0, izqCount = 0, bigCount = 0, smallCount = 0;
     for (var i=0; i<n; i++) {
         if (recent[i].dir === 'DER') derCount++; else if (recent[i].dir === 'IZQ') izqCount++;
         if (recent[i].zone === 'BIG') bigCount++; else if (recent[i].zone === 'SMALL') smallCount++;
     }
+    
     var domDir = Math.max(derCount, izqCount) / n >= 0.58;
     var domZon = Math.max(bigCount, smallCount) / n >= 0.58;
-    var label = result.label; var tiradas = result.tiradas;
-    var isDoubleDom = (domDir && domZon) || label.indexOf('Tendencia') >= 0 || (label.indexOf('Dom:') >= 0 && label.indexOf('estable') >= 0);
+    var label = result.label || '';
+    
+    var hasPattern = label.indexOf('Zigzag') >= 0 || label.indexOf('Pares') >= 0;
+    var isDoubleDom = (domDir && domZon) || label.indexOf('S\u00F3lida') >= 0;
+
+    // VERDE: Dominancia Doble O Patr\u00F3n S\u00F3lido + Dominancia
     if (detectSolidBlocks(events)) return 'green';
-    if (tiradas >= 4 && isDoubleDom) return 'green';
-    if (domDir || domZon || label.indexOf('ZZ') >= 0 || label.indexOf('Zigzag') >= 0) return 'yellow';
+    if (isDoubleDom) return 'green';
+    if (hasPattern && (domDir || domZon)) return 'green';
+
+    // AMARILLO: Patr\u00F3n form\u00E1ndose o una sola dominancia
+    if (hasPattern || domDir || domZon) return 'yellow';
+
     return 'red';
 }
 function applyTravelStabilityColor(level) {
@@ -916,9 +926,8 @@ function applyTravelStabilityColor(level) {
 }
 
 function analyzeTravelPattern(hist) {
-    if (hist.length < 3) return { label: '—', tiradas: 0, emoji: '' };
+    if (hist.length < 3) return { label: '-', tiradas: 0, emoji: '' };
 
-    // Build [{ dir, zone }] list from full history
     const events = [];
     for (let i = 1; i < hist.length; i++) {
         const d = calcDist(hist[i - 1], hist[i]);
@@ -928,82 +937,84 @@ function analyzeTravelPattern(hist) {
         });
     }
 
-    // —— Find the current streak (how many events from the end share ANY linkage) ——
-    // We measure the active window = last N events (use last 12, or fewer if not enough)
     const window = events.slice(-12);
     const N = window.length;
-    if (N < 2) return { label: '—', tiradas: N, emoji: '' };
+    if (N < 2) return { label: '-', tiradas: N, emoji: '' };
 
     const dirs  = window.map(e => e.dir);
     const zones = window.map(e => e.zone);
 
-    // —— EJE 1: DIRECCIÓN ——
-    // Solid: last 3+ all same
-    const dirSolid = N >= 3 && dirs.slice(-N).every(d => d === dirs[dirs.length - 1]);
-    const dirLast  = dirs[dirs.length - 1];
+    // Helpers
+    const getSolid = (arr) => N >= 3 && arr.slice(-N).every(x => x === arr[arr.length - 1]);
+    const getZigzag = (arr) => {
+        if (N < 4) return false;
+        for (let i = 1; i < N; i++) if (arr[i] === arr[i - 1]) return false;
+        return true;
+    };
+    const getPairs = (arr) => {
+        if (N < 4) return false;
+        let runs = [], c = 1;
+        for(let i=1; i<N; i++) { if(arr[i]===arr[i-1]) c++; else { runs.push(c); c=1; } }
+        runs.push(c);
+        if (runs.length < 2 || runs[runs.length-1] > 2) return false;
+        let prev = runs.slice(0, -1).slice(-3);
+        if (prev.length === 0) return false;
+        return prev.every(r => r === 2);
+    };
 
-    // Zigzag: perfect alternation
-    let dirZigzag = N >= 4;
-    for (let i = 1; i < N && dirZigzag; i++) {
-        if (dirs[i] === dirs[i - 1]) dirZigzag = false;
-    }
+    // DIR STATE
+    const dirLast = dirs[dirs.length - 1];
+    const derCount = dirs.filter(d => d === 'DER').length;
+    const domDer = derCount / N >= 0.58;
+    const domIzq = (N - derCount) / N >= 0.58;
+    
+    let dirState = 'INEST';
+    if (getSolid(dirs)) dirState = `S:${dirLast}`;
+    else if (getZigzag(dirs)) dirState = 'ZZ';
+    else if (getPairs(dirs)) dirState = 'PARES';
+    else if (domDer) dirState = 'DOM:DER';
+    else if (domIzq) dirState = 'DOM:IZQ';
 
-    const dirState = dirSolid ? `DER:${dirLast}` : (dirZigzag ? 'ZZ' : 'INEST');
-
-    // —— EJE 2: ZONA ——
-    const zoneSolid    = N >= 3 && zones.slice(-N).every(z => z === zones[zones.length - 1]);
-    const zoneLast     = zones[zones.length - 1];
-
-    let zoneZigzag = N >= 4;
-    for (let i = 1; i < N && zoneZigzag; i++) {
-        if (zones[i] === zones[i - 1]) zoneZigzag = false;
-    }
-
-    // Dom.inance: 60%+ of window is same zone
+    // ZONE STATE
+    const zoneLast = zones[zones.length - 1];
     const smallCount = zones.filter(z => z === 'SMALL').length;
-    const bigCount   = zones.length - smallCount;
-    const domSmall   = smallCount / N >= 0.6;
-    const domBig     = bigCount   / N >= 0.6;
+    const domSmall = smallCount / N >= 0.58;
+    const domBig = (N - smallCount) / N >= 0.58;
 
-    const zoneState = zoneSolid ? `ZS:${zoneLast}` : (zoneZigzag ? 'ZZ' : (domSmall ? 'DOM:SMALL' : (domBig ? 'DOM:BIG' : 'INEST')));
+    let zoneState = 'INEST';
+    if (getSolid(zones)) zoneState = `ZS:${zoneLast}`;
+    else if (getZigzag(zones)) zoneState = 'ZZ';
+    else if (getPairs(zones)) zoneState = 'PARES';
+    else if (domSmall) zoneState = 'DOM:SMALL';
+    else if (domBig) zoneState = 'DOM:BIG';
 
-    // —— COMBINED LABEL ——
+    // COMBINED LABEL
     let label = '';
-    let emoji = '';
+    let emoji = '\\uD83D\\uDD39'; // Small blue diamond
 
-    if (dirState.startsWith('DER:') && zoneState.startsWith('ZS:')) {
-        label = `Tendencia Sólida ${dirLast}-${zoneLast}`;
-        emoji = '\u{2705}';
-    } else if (dirState === 'ZZ' && zoneState === 'ZZ') {
-        label = 'Zigzag Doble';
-        emoji = '\u{2194}';
-    } else if (dirState.startsWith('DER:') && zoneState === 'ZZ') {
-        label = `Dir ${dirLast} estable, Zona Zigzag`;
-        emoji = '\u{2194}';
-    } else if (zoneState.startsWith('ZS:') && dirState === 'ZZ') {
-        label = `${zoneLast} sólida, Dir Zigzag`;
-        emoji = '\u{2199}';
-    } else if (zoneState.startsWith('ZS:') && dirState === 'INEST') {
-        label = `${zoneLast} sólida, Dir Inestable`;
-        emoji = '\u{2757}';
-    } else if (zoneState === 'DOM:SMALL' && dirState.startsWith('DER:')) {
-        label = `Dom: Small, ${dirLast} estable`;
-        emoji = '\u{1F539}';
-    } else if (zoneState === 'DOM:BIG' && dirState.startsWith('DER:')) {
-        label = `Dom: Big, ${dirLast} estable`;
-        emoji = '\u{1F538}';
-    } else if (zoneState === 'DOM:SMALL') {
-        label = 'Dom: Small, Dir Inestable';
-        emoji = '\u{1F539}';
-    } else if (zoneState === 'DOM:BIG') {
-        label = 'Dom: Big, Dir Inestable';
-        emoji = '\u{1F538}';
-    } else if (dirState.startsWith('DER:') && zoneState === 'INEST') {
-        label = `${dirLast} estable, Zona Inestable`;
-        emoji = '\u{2194}';
+    const getStr = (state, type) => {
+        if (state.startsWith('S:')) return type === 'dir' ? `Dir ${state.split(':')[1]} S\\u00F3lida` : `Zona ${state.split(':')[1]} S\\u00F3lida`;
+        if (state === 'ZZ') return 'Zigzag';
+        if (state === 'PARES') return 'Pares';
+        if (state.startsWith('DOM:')) return `Dom: ${state.split(':')[1]}`;
+        return 'Inestable';
+    };
+
+    let dirStr = getStr(dirState, 'dir');
+    let zonStr = getStr(zoneState, 'zon');
+
+    if (dirState !== 'INEST' && zoneState !== 'INEST') {
+        label = `${zonStr}, ${dirStr}`;
+        emoji = '\\u2705'; // Check mark
+    } else if (zoneState !== 'INEST') {
+        label = `${zonStr}, Dir Inest.`;
+        emoji = zoneState.includes('BIG') ? '\\uD83D\\uDD38' : '\\uD83D\\uDD39'; // Orange/Blue diamond
+    } else if (dirState !== 'INEST') {
+        label = `Zona Inest, ${dirStr}`;
+        emoji = '\\uD83D\\uDD04'; // Refresh
     } else {
-        label = 'Sin Patrón Claro';
-        emoji = '\u{26A0}';
+        label = 'Sin Patr\\u00F3n Claro';
+        emoji = '\\u26A0'; // Warning
     }
 
     return { label, tiradas: N, emoji };
