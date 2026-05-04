@@ -993,7 +993,7 @@ function analyzeTravelPattern(hist) {
     let emoji = '\\uD83D\\uDD39'; // Small blue diamond
 
     const getStr = (state, type) => {
-        if (state.startsWith('S:')) return type === 'dir' ? `Dir ${state.split(':')[1]} S\\u00F3lida` : `Zona ${state.split(':')[1]} S\\u00F3lida`;
+        if (state.startsWith('S:')) return type === 'dir' ? `Dir ${state.split(':')[1]} Sólida` : `Zona ${state.split(':')[1]} Sólida`;
         if (state === 'ZZ') return 'Zigzag';
         if (state === 'PARES') return 'Pares';
         if (state.startsWith('DOM:')) return `Dom: ${state.split(':')[1]}`;
@@ -1013,7 +1013,7 @@ function analyzeTravelPattern(hist) {
         label = `Zona Inest, ${dirStr}`;
         emoji = '\\uD83D\\uDD04'; // Refresh
     } else {
-        label = 'Sin Patr\\u00F3n Claro';
+        label = 'Sin Patrón Claro';
         emoji = '\\u26A0'; // Warning
     }
 

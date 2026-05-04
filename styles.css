@@ -461,7 +461,8 @@ html, body {
 }
 .compact-perf .perf-w,
 .compact-perf .perf-l {
-  font-size: 8px;
+  font-size: 13px;
+  font-weight: 900;
   line-height: 1;
 }
 
@@ -480,13 +481,13 @@ html, body {
 }
 .perf-w {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 900;
   color: var(--green);
 }
 .perf-l {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 900;
   color: var(--red);
 }
