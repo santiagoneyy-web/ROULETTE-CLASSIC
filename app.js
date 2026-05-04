@@ -892,29 +892,40 @@ function detectSolidBlocks(events) {
 }
 function getStabilityLevel(result, events) {
     if (!events || events.length === 0) return 'red';
-    var n = Math.min(events.length, 12);
-    var recent = events.slice(-n);
-    
+
+    // Usar las ultimas 8 tiradas para el color de fondo
+    var n8 = Math.min(events.length, 8);
+    var last8 = events.slice(-n8);
+
     var derCount = 0, izqCount = 0, bigCount = 0, smallCount = 0;
-    for (var i=0; i<n; i++) {
-        if (recent[i].dir === 'DER') derCount++; else if (recent[i].dir === 'IZQ') izqCount++;
-        if (recent[i].zone === 'BIG') bigCount++; else if (recent[i].zone === 'SMALL') smallCount++;
+    for (var i = 0; i < n8; i++) {
+        if (last8[i].dir === 'DER') derCount++; else izqCount++;
+        if (last8[i].zone === 'BIG') bigCount++; else smallCount++;
     }
-    
-    var domDir = Math.max(derCount, izqCount) / n >= 0.58;
-    var domZon = Math.max(bigCount, smallCount) / n >= 0.58;
-    var label = result.label || '';
-    
-    var hasPattern = label.indexOf('Zigzag') >= 0 || label.indexOf('Pares') >= 0;
-    var isDoubleDom = (domDir && domZon) || label.indexOf('S\u00F3lida') >= 0;
 
-    // VERDE: Dominancia Doble O Patr\u00F3n S\u00F3lido + Dominancia
-    if (detectSolidBlocks(events)) return 'green';
-    if (isDoubleDom) return 'green';
-    if (hasPattern && (domDir || domZon)) return 'green';
+    // Mayoria simple (mas de la mitad del total)
+    var majDir = Math.max(derCount, izqCount) > (n8 / 2);
+    var majZon = Math.max(bigCount, smallCount) > (n8 / 2);
+    var domDirName = derCount >= izqCount ? 'DER' : 'IZQ';
+    var domZonName = bigCount >= smallCount ? 'BIG' : 'SMALL';
 
-    // AMARILLO: Patr\u00F3n form\u00E1ndose o una sola dominancia
-    if (hasPattern || domDir || domZon) return 'yellow';
+    // Tendencia reciente: las ultimas 3 o 4 del mismo tipo
+    var trend4 = last8.slice(-4);
+    var trendDir = trend4.filter(function(e){ return e.dir === domDirName; }).length >= 3;
+    var trendZon = trend4.filter(function(e){ return e.zone === domZonName; }).length >= 3;
+
+    var doubleMaj = majDir && majZon;
+    var strongDir = majDir && trendDir;
+    var strongZon = majZon && trendZon;
+
+    // VERDE: doble mayoria, o un eje fuerte con al menos mayoria en el otro
+    if (doubleMaj) return 'green';
+    if (strongDir && majZon) return 'green';
+    if (strongZon && majDir) return 'green';
+    if (detectSolidBlocks(last8)) return 'green';
+
+    // AMARILLO: un eje con mayoria o tendencia emergente
+    if (majDir || majZon || strongDir || strongZon) return 'yellow';
 
     return 'red';
 }
