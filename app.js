@@ -1028,7 +1028,7 @@ function updateTravelPatternUI() {
     const tirasEl = document.getElementById('travel-pattern-count');
     const histEl  = document.getElementById('travel-pattern-hist');
 
-    if (labelEl) labelEl.innerText = `${result.emoji} ${result.label}`;
+    if (labelEl) labelEl.innerText = `· ${result.label}`;
     if (tirasEl) tirasEl.innerText = `${result.tiradas}t`;
 
     const current = travelPatternHistory[0];
@@ -1177,10 +1177,7 @@ function renderTravelChart() {
         ctx.fillText(v>0?`+${v}`:`${v}`,padL-4,scaleY(v)+3);
     });
     ctx.fillText('0',padL-4,midY+3);
-    // X labels
-    ctx.textAlign='center';ctx.fillStyle='#3a5070';
-    const step=Math.max(1,Math.floor(numPoints/8));
-    for(let i=0;i<numPoints;i+=step){ctx.fillText(dataStart+i+1,scaleX(i),H-4);}
+    // X labels removed per user request
 // 
     // Range bands
 //     ctx.setLineDash([4,4]);
