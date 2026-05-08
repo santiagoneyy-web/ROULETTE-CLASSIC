@@ -1667,3 +1667,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+
+// --- AUTO AI PREDICTORS VIA GROQ ---
+async function requestAIPrediction(type) {
+    const textEl = document.getElementById(`ai-pred-${type}-text`);
+    if (!textEl) return;
+    
+    if (history.length < 4) {
+        textEl.innerText = "Faltan datos (min 4)";
+        return;
+    }
+
+    const tableId = document.getElementById('table-select')?.value || 'default';
+    textEl.innerText = "Pensando...";
+    
+    try {
+        const resp = await fetch('/api/ai/groq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                prompt: `Analiza este historial y dame una prediccion MUY BREVE de maximo 4 palabras para jugadas ${type}. Formato: "JUGAR A ZONA X" o "ESPERAR". Historial: ${history.join(',')}`,
+                tableId, 
+                historyStr: history.join(',') 
+            })
+        });
+        const data = await resp.json();
+        
+        if (data.reply) {
+            // Limpiar saltos de linea y comillas
+            let cleanReply = data.reply.replace(/[\n\r"]/g, '').trim();
+            if (cleanReply.length > 25) {
+                cleanReply = cleanReply.substring(0, 22) + '...';
+            }
+            textEl.innerText = cleanReply;
+        } else {
+            textEl.innerText = "Error API";
+        }
+    } catch (e) {
+        console.error('Groq prediction error:', e);
+        textEl.innerText = "Error red";
+    }
+}
+
