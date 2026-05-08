@@ -215,7 +215,7 @@ app.post('/api/ai/groq', async (req, res) => {
         res.status(500).json({ error: 'Error contacting Groq API' });
     }
 });
-
+app.post('/api/ai/chat', async (req, res) => {
     const { text, tableId, historyStr } = req.body;
     let reply = "No estoy seguro de cómo procesar eso aún, Santi.";
     
