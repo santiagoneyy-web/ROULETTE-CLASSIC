@@ -1685,7 +1685,6 @@ window.toggleAIMode = function() {
     if (typeof requestAutoAI === 'function') requestAutoAI();
 };
 
-
 async function requestAutoAI() {
     const n9El = document.getElementById('ai-pred-n9-text');
     const n4El = document.getElementById('ai-pred-n4-text');
@@ -1707,11 +1706,22 @@ async function requestAutoAI() {
     try {
         const tableId = document.getElementById('table-select')?.value || 'default';
         
-        // --- EXTRAER MEDIDAS MATEMATICAS ---
+        let stabilityInfo = '';
+        try {
+            let evts = [];
+            for (let i = 1; i < history.length; i++) {
+                let d = calcDist(history[i-1], history[i]);
+                evts.push({dir: d >= 0 ? 'DER' : 'IZQ', zone: Math.abs(d) >= 9 ? 'BIG' : 'SMALL'});
+            }
+            let pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"Estándar",tiradas:0};
+            let lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(pat, evts) : "red";
+            const colorNames = { green: 'VERDE (Alta Estabilidad)', yellow: 'AMARILLO (Estabilidad Media)', red: 'ROJO (Inestabilidad/Caos)' };
+            stabilityInfo = `ESTADO DE LA MESA: ${colorNames[lvl]} | PATRÓN: ${pat.label}`;
+        } catch(e) { stabilityInfo = 'ESTADO: Analizando...'; }
+
         let mathContext = '';
         if (window.lastSignal) {
             const s = window.lastSignal;
-            // Calcular efectividad real de las rutas
             const last10cw = cwHistory.slice(-10);
             const last10ccw = ccwHistory.slice(-10);
             const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
@@ -1724,13 +1734,17 @@ MEDIDAS MATEMATICAS ACTUALES (Calculadas por el motor):
 `;
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay un patron matematico CLARO en la grafica travel, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. Elige los mejores numeros de las medidas proporcionadas.';
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si la mesa NO está en VERDE o no hay patrón claro, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. Elige los mejores numeros basandote en el momentum.';
         
-        const p = `Eres un analista experto de Ruleta Europea. Basate en las MEDIDAS MATEMATICAS calculadas por el sistema y el HISTORIAL de tiradas.
+        const p = `Eres un analista experto de Ruleta Europea. Basate en el COLOR DE ESTABILIDAD, las MEDIDAS MATEMATICAS y el HISTORIAL.
+
+${stabilityInfo}
+
 ${mathContext}
+
 HISTORIAL RECIENTE: ${history.slice(-15).join(',')}
 
-INSTRUCCION: Analiza la efectividad de las rutas y el momentum. Decide cual de los numeros de las medidas es mas probable que caiga a continuación.
+INSTRUCCION: Utiliza el COLOR de estabilidad para decidir el nivel de riesgo. Si es VERDE, confía más en las medidas. Si es ROJO, busca cambios de tendencia.
 Da EXACTAMENTE dos predicciones MUY BREVES (max 3 palabras c/u). 1) Jugada amplia (N9). 2) Jugada agresiva (N4). ${modeInstruction} 
 Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".`;
 
@@ -1742,15 +1756,13 @@ Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".
         const data = await resp.json();
         
         if (data.reply) {
-            let reply = data.reply.replace(/[
-
-"]/g, '').trim();
+            let reply = data.reply.replace(/[\\n\\r"]/g, '').trim();
             let pN9 = reply.includes('N9:') ? reply.split('N9:')[1].split('|')[0].trim() : reply.substring(0, 20);
             let pN4 = reply.includes('N4:') ? reply.split('N4:')[1].trim() : 'Esperar';
             
             n9El.innerText = pN9;
             n4El.innerText = pN4;
-            if (analysisEl) analysisEl.innerText = `Análisis basado en medidas: CW(${window.lastSignal?.targetCW}) vs CCW(${window.lastSignal?.targetCCW})`;
+            if (analysisEl) analysisEl.innerText = `Análisis [${stabilityInfo.split('|')[0]}]: CW vs CCW`;
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
             n9El.innerText = "Error API";
