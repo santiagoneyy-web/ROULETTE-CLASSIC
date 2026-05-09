@@ -1698,6 +1698,13 @@ async function requestAutoAI() {
         return;
     }
 
+    if (!lastSignal || lastSignal.targetCW === undefined || lastSignal.targetCCW === undefined) {
+        n9El.innerText = "Esperando DIR...";
+        n4El.innerText = "Esperando DIR...";
+        if (analysisEl) analysisEl.innerText = 'Analisis AI: esperando las 6 medidas reales del panel DIR.';
+        return;
+    }
+
     if (statusEl) statusEl.innerText = 'THINKING';
     
     let der=0, izq=0, big=0, small=0;
@@ -1740,8 +1747,8 @@ async function requestAutoAI() {
         let mathContext = '';
         let cwRate = 0;
         let ccwRate = 0;
-        if (window.lastSignal) {
-            const s = window.lastSignal;
+        if (lastSignal) {
+            const s = lastSignal;
             const last10cw = cwHistory.slice(-10);
             const last10ccw = ccwHistory.slice(-10);
             cwRate = last10cw.length > 0 ? Number((last10cw.filter(x=>x==='win').length / last10cw.length * 100).toFixed(0)) : 0;
@@ -1778,7 +1785,7 @@ async function requestAutoAI() {
         let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO ESPERAR. Elige obligatoriamente.';
         const p = stabilityInfo + '\n' + mathContext + '\n' + modeInstruction + '\nElige 1 para N9 y 1 para N4. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
 
-        const autoAiContext = window.lastSignal ? {
+        const autoAiContext = lastSignal ? {
             mode: window.currentAIMode,
             stabilityLevel: lvl,
             patternLabel: pat.label || 'Estandar',
@@ -1786,15 +1793,15 @@ async function requestAutoAI() {
             momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
             routes: {
                 cw: {
-                    n9: window.lastSignal.targetCW,
-                    n4Small: window.lastSignal.targetUnderCW,
-                    n4Big: window.lastSignal.targetOverCW,
+                    n9: lastSignal.targetCW,
+                    n4Small: lastSignal.targetUnderCW,
+                    n4Big: lastSignal.targetOverCW,
                     hitRate: Number(cwRate)
                 },
                 ccw: {
-                    n9: window.lastSignal.targetCCW,
-                    n4Small: window.lastSignal.targetOverCCW,
-                    n4Big: window.lastSignal.targetUnderCCW,
+                    n9: lastSignal.targetCCW,
+                    n4Small: lastSignal.targetOverCCW,
+                    n4Big: lastSignal.targetUnderCCW,
                     hitRate: Number(ccwRate)
                 }
             },
