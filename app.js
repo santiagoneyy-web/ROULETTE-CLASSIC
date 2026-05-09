@@ -1,6 +1,6 @@
 // Version bump 20240421
 
-// app.js â SHADOW ROULETTE UI ENGINE
+// app.js Ã¢ÂÂ SHADOW ROULETTE UI ENGINE
 // ============================================================
 
 const history = [];
@@ -15,7 +15,7 @@ let lastUnderHitCW = false;
 let lastOverHitCCW = false;
 let lastUnderHitCCW = false;
 
-// âââ ZONE STATE ââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ ZONE STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const zoneOverHistory = [];   
 const zoneUnderHistory = [];
 const zone26History = [];
@@ -29,25 +29,25 @@ let currentAvgCCW = -9;
 let predictorOffset = 0; // CALIBRACION MANUAL DEL PREDICTOR (+/- casillas)
 let manualAvgOffset = 0; // CALIBRACION MANUAL DEL TRAVEL CHART
 
-// âââ DOZENS STATE âââââââââââââââââââââââââââââââââââââââââââ
-// âââ DOZENS STATE âââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DOZENS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DOZENS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 let dzCurrent = [];
 let dzPrevious = [];
 let dzSpinsSinceChange = 0;
-const dzHistoryList = []; // Para almacenar las Ã­Âºltimas 8 situaciones
+const dzHistoryList = []; // Para almacenar las ÃÂ­ÃÂºltimas 8 situaciones
 
-// âââ JUGADAS STATE âââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ JUGADAS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 let jugView = { magnitude: 'UNDER', direction: 'CW', confidence: 0 };
 const jugHistory = [];
 let lastJugHit = false;
 let patternStatsCache = null;
 
-// âââ ANALYST STATE (V26) âââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ ANALYST STATE (V26) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const analystHistory = [];
 let analystView = { signal: 'ANALIZANDO...', targetDir: null, size: null, reason: '-', type: 'neutral' };
 let lastAnalystHit = false;
 
-// âââ MASTER SNIPER STATE (CONFLUENCE) âââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ MASTER SNIPER STATE (CONFLUENCE) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const masterHistory = [];
 let masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
 let lastMasterHit = false;
@@ -167,7 +167,7 @@ function toggleDzHistory(btn) {
 }
 
 
-/// âââ RENDER: UNIFIED PANEL ââââââââââââââââââââââââââââââââââ
+/// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ RENDER: UNIFIED PANEL Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 function getZoneTargets(lastNum) {
     const idx = WHEEL_NUMS.indexOf(lastNum);
@@ -200,20 +200,20 @@ function renderShadowPanel() {
         document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW;
         document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW;
         document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW;
-        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'â HIT' : '';
-        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'â HIT' : '';
+        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'Ã¢ÂÂ HIT' : '';
+        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'Ã¢ÂÂ HIT' : '';
 
         // --- CCW BLOCK ---
         document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW;
         document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW;
         document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW;
-        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'â HIT' : '';
-        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'â HIT' : '';
+        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'Ã¢ÂÂ HIT' : '';
+        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'Ã¢ÂÂ HIT' : '';
 
         // Shared Tendency
         if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            const trendTxt = `TEND: ${ d >= 0 ? 'DER âº' : 'IZQ â»'}`;
+            const trendTxt = `TEND: ${ d >= 0 ? 'DER Ã¢ÂÂº' : 'IZQ Ã¢ÂÂ»'}`;
             document.getElementById('dir-cw-trend').innerText = trendTxt;
             document.getElementById('dir-ccw-trend').innerText = trendTxt;
         }
@@ -260,7 +260,7 @@ function renderShadowPanel() {
         // --- UNDER BLOCK (Dynamic Logic) ---
         const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 4 + 37) % 37];
         document.getElementById('sup-s-c-val').innerText = underTarget;
-        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? 'â HIT' : '';
+        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? 'Ã¢ÂÂ HIT' : '';
         document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10s = zoneUnderHistory.slice(-10);
@@ -273,7 +273,7 @@ function renderShadowPanel() {
         // --- OVER BLOCK (Dynamic Logic) ---
         const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
         document.getElementById('sup-b-c-val').innerText = overTarget;
-        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? 'â HIT' : '';
+        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? 'Ã¢ÂÂ HIT' : '';
         document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
 
         const last10b = zoneOverHistory.slice(-10);
@@ -307,7 +307,7 @@ function renderShadowPanel() {
 function renderDozens() {
     try {
         if (history.length < 12) {
-            // Not enough data yet â refresh neighbor balls with unfiltered view
+            // Not enough data yet Ã¢ÂÂ refresh neighbor balls with unfiltered view
             renderShadowPanelNeighborsOnly();
             return;
         }
@@ -340,7 +340,7 @@ function renderDozens() {
                 const bIsDom = cur.includes(b);
                 if (aIsDom && !bIsDom) return -1;
                 if (!aIsDom && bIsDom) return 1;
-                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido mÃ¡s recientemente
+                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido mÃÂ¡s recientemente
                 const lastIdxA = window.lastIndexOf(a);
                 const lastIdxB = window.lastIndexOf(b);
                 return lastIdxB - lastIdxA;
@@ -409,7 +409,7 @@ function renderDozens() {
         const statusEl     = document.getElementById('doc-transition-status');
         const infoEl       = document.getElementById('doc-info');
 
-        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + 'Â°').join(' & ') : '--';
+        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + 'ÃÂ°').join(' & ') : '--';
 
         if (prevBadge) prevBadge.innerText = fmtDoz(prev);
         if (currBadge) currBadge.innerText = fmtDoz(cur);
@@ -418,25 +418,25 @@ function renderDozens() {
         if (statusEl) {
             statusEl.className = 'transition-status'; // reset
             if (spins <= 5 && prev.length > 0) {
-                statusEl.innerText = `â ï¸ TRANSICIÃN (+${spins}t)`;
+                statusEl.innerText = `Ã¢ÂÂ Ã¯Â¸Â TRANSICIÃÂN (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'â';
+                if (arrow) arrow.innerText = 'Ã¢ÂÂ';
             } else if (spins <= 10) {
                 statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
                 statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'â';
+                if (arrow) arrow.innerText = 'Ã¢ÂÂ';
             } else {
-                statusEl.innerText = `â ESTABLE (${spins}t)`;
+                statusEl.innerText = `Ã¢ÂÂ ESTABLE (${spins}t)`;
                 statusEl.classList.add('stable');
                 if (arrow) arrow.innerText = '\u{2022}';
             }
         }
 
         if (infoEl) {
-            infoEl.innerText = `Ventana 18: Dom.Â° ${fmtDoz(cur)}`;
+            infoEl.innerText = `Ventana 18: Dom.ÃÂ° ${fmtDoz(cur)}`;
         }
 
-        // DetecciÃ³n de debilitamiento: Revisamos las Ãºltimas 18 tiradas.
+        // DetecciÃÂ³n de debilitamiento: Revisamos las ÃÂºltimas 18 tiradas.
         let weakWarning = '';
         if (spins > 8 && cur.length === 2 && history.length >= 18) {
              const recentDozens = dozens.slice(-18).filter(d => d !== 0);
@@ -452,13 +452,13 @@ function renderDozens() {
                      if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
                  }
              }
-             // DÃ©bil si: aparece al menos 2 veces, y casi todas o todas sus apariciones estÃ¡n aisladas (separadas)
+             // DÃÂ©bil si: aparece al menos 2 veces, y casi todas o todas sus apariciones estÃÂ¡n aisladas (separadas)
              const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
              const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
              
-             if (weak1 && weak2) weakWarning = 'â ï¸ AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `â ${cur[0]}Âª DOCENA DEBILITADA (AISLADA)`;
-             else if (weak2) weakWarning = `â ${cur[1]}Âª DOCENA DEBILITADA (AISLADA)`;
+             if (weak1 && weak2) weakWarning = 'Ã¢ÂÂ Ã¯Â¸Â AMBAS DOCENAS DEBILITADAS';
+             else if (weak1) weakWarning = `Ã¢ÂÂ ${cur[0]}ÃÂª DOCENA DEBILITADA (AISLADA)`;
+             else if (weak2) weakWarning = `Ã¢ÂÂ ${cur[1]}ÃÂª DOCENA DEBILITADA (AISLADA)`;
         }
         
         const weakEl = document.getElementById('doc-weak-warning');
@@ -474,14 +474,14 @@ function renderDozens() {
         // Render history list
         if (histEl) {
              if (dzHistoryList.length === 0) {
-                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aÃºn</div>';
+                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aÃÂºn</div>';
              } else {
                  histEl.innerHTML = dzHistoryList.map(h => {
-                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}Â°</span>`).join('');
+                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}ÃÂ°</span>`).join('');
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">duró ${Number(h.duration || 0)}t</span>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">durÃ³ ${Number(h.duration || 0)}t</span>
                         </div>
                      `;
                  }).join('');
@@ -496,7 +496,7 @@ function renderDozens() {
     }
 }
 
-// âââ WHEEL DRAW ââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ WHEEL DRAW Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function drawWheel(highlightNum = null) {
     const canvas = document.getElementById('wheel-canvas');
     if (!canvas) return;
@@ -550,7 +550,7 @@ function renderWheelAndHistory() {
     // drawWheel removed
 }
 
-// âââ TAB LISTENERS âââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
     const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
     const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter', 'panel-auto', 'panel-chat'];
@@ -568,7 +568,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// âââ SUBMIT NUMBER âââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ SUBMIT NUMBER Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function submitNumber(val, silent = false, batch = false) {
     const raw = val !== undefined ? val : '';
     const n = parseInt(raw);
@@ -576,7 +576,7 @@ function submitNumber(val, silent = false, batch = false) {
     if (!isNaN(n) && n >= 0 && n <= 36) {
         // Evaluate previous predictions before pushing to history
         if (lastSignal && history.length > 0) {
-            // Main CW prediction â evaluated at N9 (win radius 9, under/over radius 4)
+            // Main CW prediction Ã¢ÂÂ evaluated at N9 (win radius 9, under/over radius 4)
             if (lastSignal.targetCW !== undefined) {
                 const distCW = Math.abs(calcDist(n, lastSignal.targetCW));
                 cwHistory.push(distCW <= 9 ? 'win' : 'loss');
@@ -585,7 +585,7 @@ function submitNumber(val, silent = false, batch = false) {
                 lastUnderHitCW = Math.abs(calcDist(n, lastSignal.targetUnderCW)) <= 4;
                 lastOverHitCW  = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
             }
-            // Main CCW prediction â evaluated at N9 (9-ball neighborhood = radius 4)
+            // Main CCW prediction Ã¢ÂÂ evaluated at N9 (9-ball neighborhood = radius 4)
             if (lastSignal.targetCCW !== undefined) {
                 const distCCW = Math.abs(calcDist(n, lastSignal.targetCCW));
                 ccwHistory.push(distCCW <= 9 ? 'win' : 'loss');
@@ -596,7 +596,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
         
-        // Evaluate ZONE OVER prediction â Offset 14
+        // Evaluate ZONE OVER prediction Ã¢ÂÂ Offset 14
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -608,7 +608,7 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate ZONE UNDER prediction â Offset 4
+        // Evaluate ZONE UNDER prediction Ã¢ÂÂ Offset 4
         if (history.length >= 1) {
             const prevForZone = history[history.length - 1];
             const idxZ = WHEEL_NUMS.indexOf(prevForZone);
@@ -625,7 +625,7 @@ function submitNumber(val, silent = false, batch = false) {
         lastZone26Hit = (d26 <= 9);
         zone26History.push(lastZone26Hit ? 'win' : 'loss');
 
-        // Evaluate JUGADAS prediction â only when ACTIVE (not charging)
+        // Evaluate JUGADAS prediction Ã¢ÂÂ only when ACTIVE (not charging)
         if (history.length >= 1 && jugView.isCharging === false) {
             const jump = calcDist(history[history.length - 1], n);
             const mag = Math.abs(jump);
@@ -690,7 +690,7 @@ function submitNumber(val, silent = false, batch = false) {
 
                     // V5 Neural Overlay: If Agent 5 has Expert knowledge, it overrides
                     if (jugView.agent5_top_new && jugView.agent5_top_new.dnaMatch) {
-                        masterView.signal = `ð§  NEURAL: ${jugView.agent5_top_new.direction}`;
+                        masterView.signal = `Ã°ÂÂ§Â  NEURAL: ${jugView.agent5_top_new.direction}`;
                         masterView.reasons = jugView.agent5_top_new.reason;
                         masterView.confidence = Math.max(masterView.confidence, 90);
                         masterView.target = jugView.agent5_top_new.direction;
@@ -723,7 +723,7 @@ function submitNumber(val, silent = false, batch = false) {
     }
 }
 
-// âââ SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) ââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ SCATTER CHART: DIRECTION DISPERSION (CUMULATIVE RANDOM WALK) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function renderScatterChart() {
     try {
         const canvas = document.getElementById('scatterChart');
@@ -777,7 +777,7 @@ function renderScatterChart() {
     ctx.fillText(`-${maxAbs}`, padL - 5, H - padB + 3);
         ctx.fillText('0', padL - 5, midY + 3);
         
-        // âââ Moving Average (window=5) âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Moving Average (window=5) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         const maWindow = 5;
         const ma = [];
         for (let i = 0; i < dirs.length; i++) {
@@ -786,7 +786,7 @@ function renderScatterChart() {
             ma.push(slice.reduce((a, b) => a + b, 0) / slice.length);
         }
         
-        // âââ Support / Resistance Detection âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Support / Resistance Detection Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         const maPeaks = [], maValleys = [];
         for (let i = 1; i < ma.length - 1; i++) {
             if (ma[i] > ma[i-1] && ma[i] > ma[i+1]) maPeaks.push(ma[i]);
@@ -811,7 +811,7 @@ function renderScatterChart() {
         }
         ctx.setLineDash([]);
         
-        // âââ Moving Average Line (SUBTLE REFERENCE) âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Moving Average Line (SUBTLE REFERENCE) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         ctx.strokeStyle = 'rgba(245, 200, 66, 0.25)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
         ctx.beginPath();
         for (let i = 0; i < ma.length; i++) {
@@ -820,7 +820,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.setLineDash([]);
         
-        // âââ SHARP PEAKS LINE (ZIG-ZAG) âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ SHARP PEAKS LINE (ZIG-ZAG) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         ctx.strokeStyle = '#30e090'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.6;
         ctx.beginPath();
         for (let i = 0; i < dirs.length; i++) {
@@ -834,7 +834,7 @@ function renderScatterChart() {
         }
         ctx.stroke(); ctx.globalAlpha = 1.0;
         
-        // âââ Scatter Points âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Scatter Points Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         for (let i = 0; i < numPoints; i++) {
             const x = scaleX(i), y = scaleY(dirs[i]);
             ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
@@ -856,15 +856,15 @@ function renderScatterChart() {
             ctx.fillText(dirs[numPoints - 1] > 0 ? `+${dirs[numPoints - 1]}` : dirs[numPoints - 1], lx + 10, ly + 3);
         }
         
-        // âââ Trend Detection âââ
+        // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Trend Detection Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ
         const recent10 = binaryDirs.slice(-10);
         const cwRatio = recent10.filter(d => d > 0).length / recent10.length;
         let trendLabel = 'NEUTRAL';
         let trendColor = '#6a8aa8';
-        if (cwRatio >= 0.7) { trendLabel = 'ð¼ TENDENCIA CW'; trendColor = '#30e090'; }
-        else if (cwRatio <= 0.3) { trendLabel = 'ð½ TENDENCIA CCW'; trendColor = '#f04060'; }
-        else if (cwRatio >= 0.55) { trendLabel = 'â SESGO CW LEVE'; trendColor = '#7ae0b0'; }
-        else if (cwRatio <= 0.45) { trendLabel = 'â SESGO CCW LEVE'; trendColor = '#e07a90'; }
+        if (cwRatio >= 0.7) { trendLabel = 'Ã°ÂÂÂ¼ TENDENCIA CW'; trendColor = '#30e090'; }
+        else if (cwRatio <= 0.3) { trendLabel = 'Ã°ÂÂÂ½ TENDENCIA CCW'; trendColor = '#f04060'; }
+        else if (cwRatio >= 0.55) { trendLabel = 'Ã¢ÂÂ SESGO CW LEVE'; trendColor = '#7ae0b0'; }
+        else if (cwRatio <= 0.45) { trendLabel = 'Ã¢ÂÂ SESGO CCW LEVE'; trendColor = '#e07a90'; }
         
         const trendEl = document.getElementById('scatter-trend-label');
         if (trendEl) { trendEl.innerText = trendLabel; trendEl.style.color = trendColor; }
@@ -878,8 +878,8 @@ function renderScatterChart() {
     } catch(err) { console.error('Scatter chart error:', err); }
 }
 
-// âââ TRAVEL PATTERN ANALYSIS (DOBLE EJE) âââââââââââââââââââââââââââââââââââââ
-const travelPatternHistory = []; // Ã­Å¡ltimos 8 episodios
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TRAVEL PATTERN ANALYSIS (DOBLE EJE) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+const travelPatternHistory = []; // ÃÂ­ÃÂ¡ltimos 8 episodios
 
 // --- TRAVEL STABILITY COLORS ---
 function detectSolidBlocks(events) {
@@ -1006,7 +1006,7 @@ function analyzeTravelPattern(hist) {
     let emoji = '\\uD83D\\uDD39'; // Small blue diamond
 
     const getStr = (state, type) => {
-        if (state.startsWith('S:')) return type === 'dir' ? `Dir ${state.split(':')[1]} Sólida` : `Zona ${state.split(':')[1]} Sólida`;
+        if (state.startsWith('S:')) return type === 'dir' ? `Dir ${state.split(':')[1]} SÃ³lida` : `Zona ${state.split(':')[1]} SÃ³lida`;
         if (state === 'ZZ') return 'Zigzag';
         if (state === 'PARES') return 'Pares';
         if (state.startsWith('DOM:')) return `Dom: ${state.split(':')[1]}`;
@@ -1026,7 +1026,7 @@ function analyzeTravelPattern(hist) {
         label = `Zona Inest, ${dirStr}`;
         emoji = '\\uD83D\\uDD04'; // Refresh
     } else {
-        label = 'Sin Patrón Claro';
+        label = 'Sin PatrÃ³n Claro';
         emoji = '\\u26A0'; // Warning
     }
 
@@ -1041,7 +1041,7 @@ function updateTravelPatternUI() {
     const tirasEl = document.getElementById('travel-pattern-count');
     const histEl  = document.getElementById('travel-pattern-hist');
 
-    if (labelEl) labelEl.innerText = `· ${result.label}`;
+    if (labelEl) labelEl.innerText = `Â· ${result.label}`;
     if (tirasEl) tirasEl.innerText = `${result.tiradas}t`;
 
     const current = travelPatternHistory[0];
@@ -1213,26 +1213,26 @@ function renderTravelChart() {
 //     ctx.fillStyle='rgba(192,144,255,0.04)';ctx.fillRect(padL,midY,chartW,chartH/2);
 
     // Main line (SMOOTH WAVES V5)
-    // Usamos curvas de BÃ©zier cÃ­Âºbicas con puntos de control suavizados
+    // Usamos curvas de BÃÂ©zier cÃÂ­ÃÂºbicas con puntos de control suavizados
     ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round';
     
     for(let i=0; i < numPoints - 1; i++){
         const x1 = scaleX(i), y1 = scaleY(data[i]);
         const x2 = scaleX(i+1), y2 = scaleY(data[i+1]);
         
-        // Puntos de control para suavizado (Curva de BÃ©zier)
+        // Puntos de control para suavizado (Curva de BÃÂ©zier)
         const cpX = (x1 + x2) / 2;
         
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
         
-        // Color dinÃ¡mico segÃ­Âºn la zona y pÃ©rdida de rango
+        // Color dinÃÂ¡mico segÃÂ­ÃÂºn la zona y pÃÂ©rdida de rango
         const val = data[i+1];
         if(val > upperRange || val < lowerRange) ctx.strokeStyle='#ffe600';
         else ctx.strokeStyle = val >= 0 ? '#00ffa2' : '#ff2a4b';
         
-        // Sutil brillo en la lÃ­Â­nea
+        // Sutil brillo en la lÃÂ­ÃÂ­nea
         ctx.shadowBlur = 10; ctx.shadowColor = ctx.strokeStyle;
         ctx.stroke();
         ctx.shadowBlur = 0;
@@ -1269,7 +1269,7 @@ function renderTravelChart() {
     } catch(err) { console.error(err); }
 }
 
-// âââ TRAVEL TABLE ââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TRAVEL TABLE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function renderTravelPanel() {
     try {
         const tbody   = document.getElementById('travel-tbody');
@@ -1293,7 +1293,7 @@ function renderTravelPanel() {
         let pat = dealerSig.directionState;
         let patClass = 'badge-stable';
         
-        if (pat === 'SÃ­âLIDA') patClass = 'badge-solid';
+        if (pat === 'SÃÂ­Ã¢ÂÂLIDA') patClass = 'badge-solid';
         else if (pat === 'ZIGZAG') patClass = 'badge-zigzag';
         else if (pat === 'CHAOS') patClass = 'badge-zone'; // Red color for chaos
         
@@ -1338,7 +1338,7 @@ function renderTravelPanel() {
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
             <td style="color:var(--text2)">${absDist}p</td>
-            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'âº' : 'â»'}</span></td>
+            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'Ã¢ÂÂº' : 'Ã¢ÂÂ»'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
@@ -1346,7 +1346,7 @@ function renderTravelPanel() {
     renderTravelChart(); } catch (err) { console.error(err); }
 }
 
-// âââ SYNC FROM SERVER ââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ SYNC FROM SERVER Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 async function syncData() {
     if (!currentTableId) return;
     try {
@@ -1488,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Boot error:', e);
     }
 });
-// âââ ANALYST UI RENDERER âââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ ANALYST UI RENDERER Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function renderAnalystUI() {
     const boxEl    = document.getElementById('analyst-panel');
     const signalEl = document.getElementById('analyst-signal');
@@ -1509,7 +1509,7 @@ function renderAnalystUI() {
     if (analystView.signal.includes('FRACTAL')) signalEl.classList.add('fractal');
     else if (analystView.signal.includes('CANAL')) signalEl.classList.add('channel');
     else if (analystView.signal.includes('RUPTURA')) signalEl.classList.add('breakout');
-    else if (analystView.signal.includes('COMPRESIÃ­âN')) signalEl.classList.add('compression');
+    else if (analystView.signal.includes('COMPRESIÃÂ­Ã¢ÂÂN')) signalEl.classList.add('compression');
 
     if (analystView.type === 'bullish') signalEl.style.color = 'var(--green)';
     else if (analystView.type === 'bearish') signalEl.style.color = 'var(--red)';
@@ -1545,7 +1545,7 @@ function renderAnalystUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// âââ MASTER UI RENDERER âââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ MASTER UI RENDERER Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function renderMasterUI() {
     const signalEl = document.getElementById('master-signal');
     const targetEl = document.getElementById('master-target');
@@ -1583,7 +1583,7 @@ function renderMasterUI() {
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
 
-// âââ TOGGLE TRAVEL TABLE âââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TOGGLE TRAVEL TABLE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('DOMContentLoaded', () => {
     const btnCollapse = document.getElementById('toggle-travel-table');
     if (btnCollapse) {
@@ -1591,10 +1591,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const wrap = document.getElementById('travel-table-wrap');
             if (wrap.style.display === 'none') {
                 wrap.style.display = 'block';
-                e.target.innerText = 'â² CERRAR HISTORIAL â²';
+                e.target.innerText = 'Ã¢ÂÂ² CERRAR HISTORIAL Ã¢ÂÂ²';
             } else {
                 wrap.style.display = 'none';
-                e.target.innerText = 'â¼ ABRIR HISTORIAL DE RUTAS â¼';
+                e.target.innerText = 'Ã¢ÂÂ¼ ABRIR HISTORIAL DE RUTAS Ã¢ÂÂ¼';
             }
         });
     }
@@ -1619,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (history.length >= 2) renderTravelChart();
     });
 
-    // âââ Botones de CalibraciÃ³n del PREDICTOR Â±1 casilla ââââ
+    // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Botones de CalibraciÃÂ³n del PREDICTOR ÃÂ±1 casilla Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     function updatePredBadge() {
         const badge = document.getElementById('pred-offset-badge');
         if (badge) {
@@ -1693,15 +1693,15 @@ async function requestAutoAI() {
     if (!n9El || !n4El) return;
 
     if (history.length < 2) {
-        n9El.innerText = "Esperando tiradas (min 2)...";
-        n4El.innerText = "Esperando tiradas (min 2)...";
+        n9El.innerText = "Esperando tiradas...";
+        n4El.innerText = "Esperando tiradas...";
         return;
     }
 
     if (statusEl) statusEl.innerText = 'THINKING';
     
     try {
-        const tableId = document.getElementById('table-select')?.value || 'default';
+        const tableId = document.getElementById('table-select')?.value || '1';
         let stabilityInfo = '';
         let lvl = 'red';
         let pat = {label:"Estándar"};
@@ -1719,7 +1719,7 @@ async function requestAutoAI() {
             }
             pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"Estándar",tiradas:0};
             lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(pat, evts) : "red";
-            const colorNames = { green: 'VERDE (Dominancia)', yellow: 'AMARILLO (Tendencia)', red: 'ROJO (Caos)' };
+            const colorNames = { green: 'VERDE (Dominante)', yellow: 'AMARILLO (Transición)', red: 'ROJO (Caos)' };
             stabilityInfo = `DOMINANCIA: DER(${der}) IZQ(${izq}) | ZONA: BIG(${big}) SMALL(${small}) | ESTADO: ${colorNames[lvl]}`;
         } catch(e) { stabilityInfo = 'ESTADO: Analizando...'; }
 
@@ -1730,20 +1730,19 @@ async function requestAutoAI() {
             const last10ccw = ccwHistory.slice(-10);
             const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
             const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
-            mathContext = `MEDIDAS (ELIGE DE AQUI):\n- CW (DERECHA): N9:${s.targetCW}, N4_SMALL:${s.targetUnderCW}, N4_BIG:${s.targetOverCW} (Eff:${cwRate}%)\n- CCW (IZQUIERDA): N9:${s.targetCCW}, N4_SMALL:${s.targetOverCCW}, N4_BIG:${s.targetUnderCCW} (Eff:${ccwRate}%)`;
+            mathContext = `MEDIDAS DISPONIBLES:\n- RUTA CW: N9=${s.targetCW}, N4_S=${s.targetUnderCW}, N4_B=${s.targetOverCW} (Eff:${cwRate}%)\n- RUTA CCW: N9=${s.targetCCW}, N4_S=${s.targetOverCCW}, N4_B=${s.targetUnderCCW} (Eff:${ccwRate}%)`;
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patrón claro, responde "ESPERAR".' : 'MODO FULL: PROHIBIDO decir ESPERAR. Elige los mejores numeros sí o sí basándote en la dominancia.';
-        const p = `Eres un analista experto. SISTEMA: SMALL(1-9), BIG(10-18).
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patrón claro, usa "ESPERAR".' : 'MODO FULL: PROHIBIDO decir ESPERAR. Elige los mejores de la lista.';
+        const p = `Analiza:
 ${stabilityInfo}
 ${mathContext}
-HISTORIAL: ${history.slice(-15).join(',')}
+Historial: ${history.slice(-15).join(',')}
 
-INSTRUCCION CRITICA:
-1. RESPONDE SOLO CON EL FORMATO: "N9: Jugar al X | N4: Jugar al Y".
-2. PROHIBIDO dar explicaciones, introducciones o textos largos.
-3. SOLO usa los números de las MEDIDAS arriba dadas.
-4. ${modeInstruction}`;
+REGLA CRITICA: 
+1. Elige un N9 y un N4 SOLO de la lista de medidas.
+2. ${modeInstruction}
+3. Responde en JSON: {"n9": "Numero", "n4": "Numero"}.`;
 
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
@@ -1753,14 +1752,10 @@ INSTRUCCION CRITICA:
         const data = await resp.json();
         
         if (data.reply) {
-            let reply = data.reply.replace(/[\\n\\r"]/g, '').trim();
-            // Si la IA dio una explicacion larga a pesar de la orden, intentamos extraer los numeros
-            let pN9 = "Esperar", pN4 = "Esperar";
-            if (reply.includes('N9:')) pN9 = reply.split('N9:')[1].split('|')[0].trim();
-            if (reply.includes('N4:')) pN4 = reply.split('N4:')[1].trim();
-            
-            n9El.innerText = pN9;
-            n4El.innerText = pN4;
+            // El backend ya devuelve formateado "N9: X | N4: Y" gracias al nuevo endpoint
+            let [p9, p4] = data.reply.split('|');
+            n9El.innerText = p9 ? p9.replace('N9:','').trim() : "Esperar";
+            n4El.innerText = p4 ? p4.replace('N4:','').trim() : "Esperar";
             if (analysisEl) analysisEl.innerText = `Análisis [${lvl.toUpperCase()}]: ${pat.label}`;
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
@@ -1768,8 +1763,8 @@ INSTRUCCION CRITICA:
             n4El.innerText = "Error API";
         }
     } catch(e) {
-        n9El.innerText = "Error de red";
-        n4El.innerText = "Error de red";
+        n9El.innerText = "Error";
+        n4El.innerText = "Error";
     }
 }
 
@@ -1802,7 +1797,7 @@ async function sendChatMessage() {
     const tableId = document.getElementById('table-select') ? document.getElementById('table-select').value : 'default';
 
     try {
-        const resp = await fetch('/api/ai/groq', {
+        const resp = await fetch('/api/ai/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: text, tableId, historyStr: history.join(',') })

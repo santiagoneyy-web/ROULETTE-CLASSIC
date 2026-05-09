@@ -193,9 +193,43 @@ const aiMemory = {};
 // ---------------------------------------------------
 app.post('/api/ai/groq', async (req, res) => {
     const { prompt, tableId, historyStr } = req.body;
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-        return res.json({ reply: "⚠️ API Key de Groq no configurada." });
+    try {
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) return res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
+
+        const requestBody = {
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                { 
+                    role: "system", 
+                    content: "Eres un motor de predicción matemático para ruleta. Tu ÚNICA respuesta debe ser un objeto JSON estrictamente formateado: {\"n9\": \"Número\", \"n4\": \"Número\"}. PROHIBIDO hablar o explicar. Si no hay datos suficientes, usa \"ESPERAR\" como valor." 
+                },
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.1,
+            max_completion_tokens: 50,
+            response_format: { type: "json_object" }
+        };
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+        });
+        const data = await response.json();
+        
+        let result = data.choices[0].message.content.trim();
+        try {
+            const parsed = JSON.parse(result);
+            res.json({ reply: `N9: ${parsed.n9} | N4: ${parsed.n4}` });
+        } catch(e) {
+            res.json({ reply: result }); // Fallback
+        }
+    } catch (error) {
+        res.json({ reply: 'Error' });
+    }
+});
+
     }
     try {
         const isPredictor = prompt.includes('Formato EXACTO');
