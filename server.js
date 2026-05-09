@@ -195,24 +195,30 @@ app.post('/api/ai/groq', async (req, res) => {
     const { prompt, tableId, historyStr } = req.body;
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: "Groq API key missing. Set GROQ_API_KEY in env." });
+        return res.json({ reply: "⚠️ API Key de Groq no configurada." });
     }
     try {
+        const isPredictor = prompt.includes('Formato EXACTO');
+        const sys = isPredictor 
+            ? "Eres un motor estadístico de ruleta." 
+            : `Eres el colega y compañero experto de análisis de ruleta europea de Santi. Tienes total libertad para conversar. Analiza el historial si te lo piden. Historial reciente: [${historyStr || 'Ninguno'}].`;
+            
         const response = await axios.post(
             'https://api.groq.com/openai/v1/chat/completions',
             {
-                model: 'llama3-70b-8192', // Llama 4 compatible (replace with correct model name if needed)
-                messages: [{ role: 'system', content: 'Eres un analista de ruleta experto, da predicciones concisas.' }, { role: 'user', content: prompt }],
-                temperature: 0.7,
+                model: 'llama3-70b-8192',
+                messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
+                temperature: isPredictor ? 0.2 : 0.7,
                 max_tokens: 300
             },
             { headers: { Authorization: `Bearer ${apiKey}` } }
         );
-        const reply = response.data?.choices?.[0]?.message?.content || '';
+        const reply = response.data?.choices?.[0]?.message?.content || 'Sin respuesta.';
         res.json({ reply });
     } catch (e) {
-        console.error('Groq error', e);
-        res.status(500).json({ error: 'Error contacting Groq API' });
+        console.error('Groq error', e.response?.data || e.message);
+        const errorMsg = e.response?.data?.error?.message || e.message;
+        res.json({ reply: 'Error en la IA: ' + errorMsg });
     }
 });
 app.post('/api/ai/chat', async (req, res) => {
