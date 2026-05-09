@@ -186,41 +186,162 @@ app.get('/api/patterns/:tableId', async (req, res) => {
 // ── Memoria local para el chat del usuario (Temporal por reinicio)
 const aiMemory = {};
 
+function cleanAutoNumber(value) {
+    return String(value ?? '').replace(/[^0-9]/g, '');
+}
+
+function formatAutoReply(n9, n4) {
+    return `N9: ${n9} | N4: ${n4}`;
+}
+
+function buildAutoAiFallback(context) {
+    if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
+        return {
+            n9: 'ESPERAR',
+            n4: 'ESPERAR',
+            analysis: 'Sin medidas matematicas activas para analizar.'
+        };
+    }
+
+    const dom8 = context.dominance8 || {};
+    const mom15 = context.momentum15 || {};
+    const cw = context.routes.cw;
+    const ccw = context.routes.ccw;
+
+    const scoreCW = (Number(cw.hitRate) || 0) + ((Number(mom15.cw) || 0) * 4) + ((Number(dom8.cw) || 0) * 2);
+    const scoreCCW = (Number(ccw.hitRate) || 0) + ((Number(mom15.ccw) || 0) * 4) + ((Number(dom8.ccw) || 0) * 2);
+    const zoneBigScore = ((Number(mom15.big) || 0) * 4) + ((Number(dom8.big) || 0) * 2);
+    const zoneSmallScore = ((Number(mom15.small) || 0) * 4) + ((Number(dom8.small) || 0) * 2);
+
+    const routeKey = scoreCW >= scoreCCW ? 'cw' : 'ccw';
+    const zoneKey = zoneBigScore > zoneSmallScore ? 'big' : 'small';
+    const route = context.routes[routeKey];
+    const routeLabel = routeKey.toUpperCase();
+    const zoneLabel = zoneKey.toUpperCase();
+    const stability = String(context.stabilityLevel || 'red').toLowerCase();
+    const safeMode = String(context.mode || 'SAFE').toUpperCase() === 'SAFE';
+
+    if (safeMode && stability === 'red' && Math.abs(scoreCW - scoreCCW) < 8) {
+        return {
+            n9: 'ESPERAR',
+            n4: 'ESPERAR',
+            analysis: `SAFE: mesa ${stability.toUpperCase()} sin ventaja tecnica clara.`
+        };
+    }
+
+    return {
+        n9: String(route.n9),
+        n4: zoneKey === 'big' ? String(route.n4Big) : String(route.n4Small),
+        analysis: `Ruta ${routeLabel} + zona ${zoneLabel}. HR CW ${cw.hitRate}% vs CCW ${ccw.hitRate}%. Momentum 15t CW ${mom15.cw || 0} / CCW ${mom15.ccw || 0}.`
+    };
+}
+
+function buildAutoAiUserPrompt(context) {
+    const dom8 = context.dominance8 || {};
+    const mom15 = context.momentum15 || {};
+    const cw = context.routes.cw;
+    const ccw = context.routes.ccw;
+
+    return [
+        `MODO: ${String(context.mode || 'SAFE').toUpperCase()}`,
+        `ESTABILIDAD: ${String(context.stabilityLevel || 'red').toUpperCase()}`,
+        `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
+        `DOMINANCIA 8T: CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
+        `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
+        `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
+        `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
+        `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
+        'Recuerda: SMALL es 1-9 y BIG es 10-18.',
+        'Recuerda: en CW el objetivo BIG es N4_BIG y en CCW el objetivo BIG es N4_BIG.',
+        'Elige SOLO entre estas 6 medidas. No inventes numeros.',
+        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 18 palabras"}.'
+    ].join('\n');
+}
+
+function normalizeAutoAiResponse(parsed, context, fallback) {
+    const cw = context.routes.cw;
+    const ccw = context.routes.ccw;
+    const allowedN9 = [String(cw.n9), String(ccw.n9)];
+    const allowedN4 = [String(cw.n4Small), String(cw.n4Big), String(ccw.n4Small), String(ccw.n4Big)];
+
+    let route = String(parsed.route || parsed.direccion || '').toUpperCase();
+    let zone = String(parsed.zone || parsed.zona || '').toUpperCase();
+    let n9 = cleanAutoNumber(parsed.n9);
+    let n4 = cleanAutoNumber(parsed.n4);
+    const analysis = String(parsed.analysis || parsed.reason || fallback.analysis || '').trim();
+
+    if (!allowedN9.includes(n9)) {
+        if (route === 'CW') n9 = String(cw.n9);
+        else if (route === 'CCW') n9 = String(ccw.n9);
+        else n9 = fallback.n9;
+    }
+
+    if (!allowedN4.includes(n4)) {
+        if (route === 'CW' && zone === 'SMALL') n4 = String(cw.n4Small);
+        else if (route === 'CW' && zone === 'BIG') n4 = String(cw.n4Big);
+        else if (route === 'CCW' && zone === 'SMALL') n4 = String(ccw.n4Small);
+        else if (route === 'CCW' && zone === 'BIG') n4 = String(ccw.n4Big);
+        else n4 = fallback.n4;
+    }
+
+    if (!allowedN9.includes(n9)) n9 = fallback.n9;
+    if (!allowedN4.includes(n4)) n4 = fallback.n4;
+
+    if (n9 === 'ESPERAR' || n4 === 'ESPERAR') {
+        return { reply: formatAutoReply('ESPERAR', 'ESPERAR'), analysis: analysis || fallback.analysis };
+    }
+
+    return {
+        reply: formatAutoReply(n9, n4),
+        analysis: analysis || fallback.analysis
+    };
+}
+
 // ─── AI COLLABORATION ENDPOINTS (V5 GEMINI) ────────────────────────
 
 // ---------------------------------------------------
 // Groq LLM endpoint (Llama 4 via Groq API)
 // ---------------------------------------------------
 app.post('/api/ai/groq', async (req, res) => {
-    const { prompt, tableId, historyStr } = req.body;
+    const { prompt, autoAiContext } = req.body;
     try {
+        const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
-        if (!groqKey) return res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
-
-        // Extraer los 6 números válidos del prompt
-        const validNums = [];
-        const n9cwMatch = prompt.match(/N9=(\d+)/);
-        const n4sCWMatch = prompt.match(/N4_S=(\d+)/);
-        const n4bCWMatch = prompt.match(/N4_B=(\d+)/);
-        const matches = prompt.match(/N9=(\d+)|N4_S=(\d+)|N4_B=(\d+)/g);
-        if (matches) {
-            matches.forEach(m => {
-                const num = m.split('=')[1];
-                if (num && !validNums.includes(num)) validNums.push(num);
+        if (!groqKey) {
+            return res.json({
+                reply: formatAutoReply(fallback.n9, fallback.n4),
+                analysis: fallback.analysis
             });
         }
+
+        const systemPrompt = autoAiContext
+            ? [
+                'Eres el motor AUTO AI de ROULETTE-CLASSIC.',
+                'Trabajas sobre travel, cuadro, grafica, color de estabilidad, hit rate y momentum.',
+                'Reglas tecnicas obligatorias:',
+                '- SMALL = 1-9 casillas.',
+                '- BIG = 10-18 casillas.',
+                '- En CW, el objetivo BIG corresponde al N4_BIG de CW.',
+                '- En CCW, el objetivo BIG corresponde al N4_BIG de CCW.',
+                '- Solo puedes elegir entre las 6 medidas calculadas por el motor.',
+                '- Debes comparar hit rate CW vs CCW y el momentum de los ultimos 15 tiros.',
+                '- El color verde es dominancia, amarillo es tendencia y rojo es caos.',
+                '- Si el modo es SAFE y la mesa esta roja sin ventaja clara, puedes responder ESPERAR.',
+                'Responde solo JSON valido.'
+            ].join('\n')
+            : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';
 
         const requestBody = {
             model: "llama-3.3-70b-versatile",
             messages: [
-                { 
-                    role: "system", 
-                    content: "Eres un motor de predicción. RESPONDE SOLO JSON. PROHIBIDO texto extra." 
+                {
+                    role: "system",
+                    content: systemPrompt
                 },
-                { role: "user", content: prompt }
+                { role: "user", content: autoAiContext ? buildAutoAiUserPrompt(autoAiContext) : prompt }
             ],
             temperature: 0.15,
-            max_tokens: 60,
+            max_tokens: autoAiContext ? 140 : 60,
             response_format: { type: "json_object" }
         };
 
@@ -231,27 +352,30 @@ app.post('/api/ai/groq', async (req, res) => {
         let result = response.data.choices[0].message.content.trim();
         try {
             const parsed = JSON.parse(result);
+            if (autoAiContext) {
+                return res.json(normalizeAutoAiResponse(parsed, autoAiContext, fallback));
+            }
+
             let n9 = String(parsed.n9 || '').replace(/[^0-9]/g, '');
             let n4 = String(parsed.n4 || '').replace(/[^0-9]/g, '');
-            
-            // VALIDACIÓN: Si el número NO está en la lista de 6 válidos, forzar uno válido
-            if (validNums.length > 0) {
-                if (!validNums.includes(n9)) n9 = validNums[0]; // Primer N9 disponible
-                if (!validNums.includes(n4)) n4 = validNums[Math.min(3, validNums.length - 1)]; // Primer N4
-            }
-            
-            res.json({ reply: `N9: ${n9} | N4: ${n4}` });
+            res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR') });
         } catch(e) {
-            // Fallback: si no parseó JSON, dar el primer válido
-            if (validNums.length >= 2) {
-                res.json({ reply: `N9: ${validNums[0]} | N4: ${validNums[1]}` });
-            } else {
-                res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
+            if (autoAiContext) {
+                return res.json({
+                    reply: formatAutoReply(fallback.n9, fallback.n4),
+                    analysis: fallback.analysis
+                });
             }
+
+            res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
         }
     } catch (error) {
         console.error('Groq predictor error:', error.message);
-        res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
+        const fallback = buildAutoAiFallback(req.body.autoAiContext);
+        res.json({
+            reply: formatAutoReply(fallback.n9, fallback.n4),
+            analysis: fallback.analysis
+        });
     }
 });
 

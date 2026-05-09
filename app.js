@@ -1701,6 +1701,7 @@ async function requestAutoAI() {
     if (statusEl) statusEl.innerText = 'THINKING';
     
     let der=0, izq=0, big=0, small=0;
+    let der15=0, izq15=0, big15=0, small15=0;
     let lvl = 'red';
     let pat = {label:'Estandar'};
     
@@ -1713,11 +1714,19 @@ async function requestAutoAI() {
             for (let i = history.length - nCount; i < history.length; i++) {
                 let d = calcDist(history[i-1], history[i]);
                 const dir = d >= 0 ? 'DER' : 'IZQ';
-                const zon = Math.abs(d) >= 9 ? 'BIG' : 'SMALL';
+                const zon = Math.abs(d) >= 10 ? 'BIG' : 'SMALL';
                 evts.push({dir, zone: zon});
                 if(dir==='DER') der++; else izq++;
                 if(zon==='BIG') big++; else small++;
             }
+
+            const nCount15 = Math.min(history.length - 1, 15);
+            for (let i = history.length - nCount15; i < history.length; i++) {
+                let d = calcDist(history[i-1], history[i]);
+                if (d >= 0) der15++; else izq15++;
+                if (Math.abs(d) >= 10) big15++; else small15++;
+            }
+
             pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'Estandar',tiradas:0};
             lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(pat, evts) : 'red';
             const colorNames = { green: 'VERDE', yellow: 'AMARILLO', red: 'ROJO' };
@@ -1727,12 +1736,14 @@ async function requestAutoAI() {
         // === CONSTRUIR PROMPT CON LAS 6 METRICAS ===
         let validMetrics = [];
         let mathContext = '';
+        let cwRate = 0;
+        let ccwRate = 0;
         if (window.lastSignal) {
             const s = window.lastSignal;
             const last10cw = cwHistory.slice(-10);
             const last10ccw = ccwHistory.slice(-10);
-            const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
-            const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
+            cwRate = last10cw.length > 0 ? Number((last10cw.filter(x=>x==='win').length / last10cw.length * 100).toFixed(0)) : 0;
+            ccwRate = last10ccw.length > 0 ? Number((last10ccw.filter(x=>x==='win').length / last10ccw.length * 100).toFixed(0)) : 0;
             
             validMetrics = [
                 {label:'CW_N9', num: s.targetCW},
@@ -1758,10 +1769,33 @@ async function requestAutoAI() {
         let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO ESPERAR. Elige obligatoriamente.';
         const p = stabilityInfo + '\n' + mathContext + '\n' + modeInstruction + '\nElige 1 para N9 y 1 para N4. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
 
+        const autoAiContext = window.lastSignal ? {
+            mode: window.currentAIMode,
+            stabilityLevel: lvl,
+            patternLabel: pat.label || 'Estandar',
+            dominance8: { cw: der, ccw: izq, big: big, small: small },
+            momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
+            routes: {
+                cw: {
+                    n9: window.lastSignal.targetCW,
+                    n4Small: window.lastSignal.targetUnderCW,
+                    n4Big: window.lastSignal.targetOverCW,
+                    hitRate: Number(cwRate)
+                },
+                ccw: {
+                    n9: window.lastSignal.targetCCW,
+                    n4Small: window.lastSignal.targetOverCCW,
+                    n4Big: window.lastSignal.targetUnderCCW,
+                    hitRate: Number(ccwRate)
+                }
+            },
+            recentNumbers: history.slice(-15)
+        } : null;
+
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: p, tableId, historyStr: history.join(',') })
+            body: JSON.stringify({ prompt: p, tableId, historyStr: history.join(','), autoAiContext })
         });
         const data = await resp.json();
         
@@ -1769,9 +1803,10 @@ async function requestAutoAI() {
             let parts = data.reply.split('|');
             let rawN9 = parts[0] ? parts[0].replace('N9:','').trim() : '';
             let rawN4 = parts[1] ? parts[1].replace('N4:','').trim() : '';
+            const isWaitReply = /ESPERAR/i.test(rawN9) || /ESPERAR/i.test(rawN4);
             
             // === VALIDACION FRONTEND: FORZAR numeros de las 6 metricas ===
-            if (validMetrics.length > 0) {
+            if (validMetrics.length > 0 && !isWaitReply) {
                 const validNums = validMetrics.map(m => String(m.num));
                 const n9Clean = rawN9.replace(/[^0-9]/g, '');
                 const n4Clean = rawN4.replace(/[^0-9]/g, '');
@@ -1791,13 +1826,18 @@ async function requestAutoAI() {
                     console.log('AI hallucinated N4, forced to:', rawN4);
                 }
             }
+
+            if (isWaitReply) {
+                rawN9 = 'ESPERAR';
+                rawN4 = 'ESPERAR';
+            }
             
             n9El.innerText = rawN9 || 'Esperar';
             n4El.innerText = rawN4 || 'Esperar';
             if (analysisEl) {
                 let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
                 let domZone = big > small ? 'BIG' : (small > big ? 'SMALL' : 'Mix');
-                analysisEl.innerText = 'Analisis [' + lvl.toUpperCase() + ']: ' + domDir + ', ' + domZone;
+                analysisEl.innerText = data.analysis || ('Analisis [' + lvl.toUpperCase() + ']: ' + domDir + ', ' + domZone);
             }
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
