@@ -194,6 +194,27 @@ function formatAutoReply(n9, n4) {
     return `N9: ${n9} | N4: ${n4}`;
 }
 
+function detectWlPattern(sequence) {
+    const s = String(sequence || '').replace(/[^WL]/g, '');
+    if (!s) return 'sin historial';
+    if (/WLWL$/.test(s) || /LWLW$/.test(s)) return 'zigzag/rodillo';
+    if (/WWLL$/.test(s) || /LLWW$/.test(s)) return 'ola 2-2';
+    if (/WWWLL$/.test(s) || /LLWWW$/.test(s)) return 'bambu/bloque';
+    if (/WLLWLL$/.test(s) || /LLWLL$/.test(s)) return 'trampa';
+    if (/WWL$/.test(s)) return 'doble victoria';
+    if (/WWWL$/.test(s)) return 'racha 3W antes de L';
+    if (/WWWWL$/.test(s)) return 'pico';
+    if (/WWW$/.test(s) || /LLLL$/.test(s)) return 'racha/bloque';
+    return 'patron mixto';
+}
+
+function summarizePatternContext(context, routeKey) {
+    const perf = context.performance8 || {};
+    const n9Seq = routeKey === 'cw' ? perf.cwN9 : perf.ccwN9;
+    const n4Seq = routeKey === 'cw' ? perf.cwN4 : perf.ccwN4;
+    return `Patron ${detectWlPattern(n9Seq)} en N9 y ${detectWlPattern(n4Seq)} en N4`;
+}
+
 function buildAutoAiFallback(context) {
     if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
         return {
@@ -220,19 +241,20 @@ function buildAutoAiFallback(context) {
     const zoneLabel = zoneKey.toUpperCase();
     const stability = String(context.stabilityLevel || 'red').toLowerCase();
     const safeMode = String(context.mode || 'SAFE').toUpperCase() === 'SAFE';
+    const patternText = summarizePatternContext(context, routeKey);
 
     if (safeMode && stability === 'red' && Math.abs(scoreCW - scoreCCW) < 8) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
-            analysis: `SAFE: mesa ${stability.toUpperCase()} sin ventaja tecnica clara.`
+            analysis: `SAFE: ${patternText}; mesa ${stability.toUpperCase()} sin ventaja clara.`
         };
     }
 
     return {
         n9: String(route.n9),
         n4: zoneKey === 'big' ? String(route.n4Big) : String(route.n4Small),
-        analysis: `Ruta ${routeLabel} + zona ${zoneLabel}. HR CW ${cw.hitRate}% vs CCW ${ccw.hitRate}%. Momentum 15t CW ${mom15.cw || 0} / CCW ${mom15.ccw || 0}.`
+        analysis: `${patternText}. Ruta ${routeLabel}, zona ${zoneLabel}.`
     };
 }
 
@@ -256,6 +278,12 @@ function buildAutoAiUserPrompt(context) {
         `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
         'Recuerda: SMALL es 1-9 y BIG es 10-18.',
         'Recuerda: en CW el objetivo BIG es N4_BIG y en CCW el objetivo BIG es N4_BIG.',
+        'FILOSOFIA DE LECTURA:',
+        '- Esto no es un codigo rigido; es una lectura probabilistica de una mesa con azar y fluctuaciones naturales.',
+        '- No asumas que un patron se cumple perfecto; evalua continuidad, desgaste, rebote, ruptura y falsa ruptura.',
+        '- Los colores no son decoracion: Verde = estructura confiable, Amarillo = transicion o duda, Rojo = caos o alta variacion.',
+        '- Si la mesa fluctua pero mantiene una estructura viva, aun puedes leer ventaja parcial.',
+        '- Piensa en escenarios como bloques, rebotes, zigzag, alternancia, rodillo, ola, bambu, trampa y compresion.',
         'GUIA DE PATRONES W/L:',
         '- Regla principal: los patrones se repiten; cambia o espera justo antes de una perdida esperada.',
         '- Patrones basicos: WWWL, WLWL, WWL, WWLWL y patron en grupo. Si se repiten, anticipa la L y protege la racha.',
@@ -263,6 +291,12 @@ function buildAutoAiUserPrompt(context) {
         '- Tendencia descendente: 3W-L, 2W-L, 1W-L. La estructura se agota; despues puede venir una racha de perdidas.',
         '- Otros patrones: rodillo, ola, bambu, pico y trampa. Si ves 2 perdidas juntas o una L despues de muchas W, baja confianza.',
         '- Usa estos patrones sobre los strings PERF 8T para decidir si sostener la ruta o esperar.',
+        '- Tu analysis debe mencionar el patron usado: zigzag, bloque, rebote, trampa, racha, ola, bambu, pico o mixto.',
+        'MODOS DE DECISION:',
+        '- SAFE: juega solo cuando la estructura este clara, estable o suficientemente confiable. Si la mesa esta dudosa, puedes responder ESPERAR.',
+        '- FULL: siempre debes elegir la mejor opcion disponible, incluso en caos o mezcla. No buscas certeza total; buscas la mejor lectura relativa del momento.',
+        '- En SAFE prioriza estabilidad, bloques limpios, dominancia clara y patrones repetitivos fuertes.',
+        '- En FULL puedes anticipar, seguir, romper o sostener segun la mejor lectura del flujo actual.',
         'Elige SOLO entre estas 6 medidas. No inventes numeros.',
         'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 18 palabras"}.'
     ].join('\n');
@@ -339,6 +373,10 @@ app.post('/api/ai/groq', async (req, res) => {
                 '- Si el modo es SAFE y la mesa esta roja sin ventaja clara, puedes responder ESPERAR.',
                 '- Sabes leer patrones W/L: WWWL, WLWL, WWL, tendencia ascendente, tendencia descendente, rodillo, ola, bambu, pico y trampa.',
                 '- Si el string W/L se acerca a una L esperada o a una trampa, reduce confianza o espera.',
+                '- Tu analysis debe explicar el patron usado, no solo hit rate o momentum.',
+                '- No trabajas con reglas mecanicas absolutas. Lees probabilidad, contexto, transicion, desgaste y fluctuacion natural.',
+                '- Puedes seguir un patron, anticipar una perdida, sostener una inercia o detectar un rebote.',
+                '- SAFE = conservador y selectivo. FULL = agresivo y siempre activo, pero aun asi tecnico.',
                 'Responde solo JSON valido.'
             ].join('\n')
             : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';

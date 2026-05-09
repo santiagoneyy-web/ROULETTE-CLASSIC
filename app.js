@@ -175,7 +175,8 @@ function toggleDirMetricHistory(metricId, btn) {
     panel.classList.toggle('show');
     const opened = panel.classList.contains('show');
     if (btn) {
-        btn.innerHTML = opened ? '&#9652;' : '&#9662;';
+        const label = metricId.endsWith('n9') ? 'N9' : 'N4';
+        btn.innerHTML = opened ? `${label} &#9652;` : `${label} &#9662;`;
         btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
     }
 }
