@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // server.js — Roulette Predictor API (Neural V5)
 // Optimización: Build sin Chromium para Render (10/04/2026)
 // ============================================================
@@ -615,26 +615,6 @@ app.use((req, res) => {
 // ============================================================
 app.post('/api/ai/predict-nx', async (req, res) => {
     const { type, tableId, historyStr } = req.body;
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "Groq API key missing" });
-    const sysPrompt = `Eres un motor de análisis estadístico y probabilidad balística especializado en ruleta europea. Genera EXACTAMENTE dos predicciones según el tipo solicitado (n9 o n4) usando la lógica descrita.`,
-          userPrompt = `Tipo: ${type}\nHistorial: ${historyStr}`;
-    try {
-        const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: 'llama3-70b-8192',
-            messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userPrompt }],
-            temperature: 0.7,
-            max_tokens: 300,
-            response_format: { type: 'json_object' }
-        }, { headers: { Authorization: `Bearer ${apiKey}` } });
-        const reply = response.data?.choices?.[0]?.message?.content || '';
-        res.json({ reply });
-    } catch (e) {
-        console.error('Groq predict-nx error', e);
-        res.status(500).json({ error: 'Error contacting Groq' });
-    }
-});
-    const { tableId, historyStr } = req.body;
     const groqKey = process.env.GROQ_API_KEY;
 
     if (!groqKey) {
