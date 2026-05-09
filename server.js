@@ -239,6 +239,7 @@ function buildAutoAiFallback(context) {
 function buildAutoAiUserPrompt(context) {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
+    const perf8 = context.performance8 || {};
     const cw = context.routes.cw;
     const ccw = context.routes.ccw;
 
@@ -248,11 +249,20 @@ function buildAutoAiUserPrompt(context) {
         `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
         `DOMINANCIA 8T: CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
         `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
+        `PERF 8T CW_N9=${perf8.cwN9 || 'Sin datos'} | CW_N4=${perf8.cwN4 || 'Sin datos'}`,
+        `PERF 8T CCW_N9=${perf8.ccwN9 || 'Sin datos'} | CCW_N4=${perf8.ccwN4 || 'Sin datos'}`,
         `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
         `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
         `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
         'Recuerda: SMALL es 1-9 y BIG es 10-18.',
         'Recuerda: en CW el objetivo BIG es N4_BIG y en CCW el objetivo BIG es N4_BIG.',
+        'GUIA DE PATRONES W/L:',
+        '- Regla principal: los patrones se repiten; cambia o espera justo antes de una perdida esperada.',
+        '- Patrones basicos: WWWL, WLWL, WWL, WWLWL y patron en grupo. Si se repiten, anticipa la L y protege la racha.',
+        '- Tendencia ascendente: 1W-L, 2W-L, 3W-L. La secuencia crece; cambia o espera antes de la L.',
+        '- Tendencia descendente: 3W-L, 2W-L, 1W-L. La estructura se agota; despues puede venir una racha de perdidas.',
+        '- Otros patrones: rodillo, ola, bambu, pico y trampa. Si ves 2 perdidas juntas o una L despues de muchas W, baja confianza.',
+        '- Usa estos patrones sobre los strings PERF 8T para decidir si sostener la ruta o esperar.',
         'Elige SOLO entre estas 6 medidas. No inventes numeros.',
         'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 18 palabras"}.'
     ].join('\n');
@@ -327,6 +337,8 @@ app.post('/api/ai/groq', async (req, res) => {
                 '- Debes comparar hit rate CW vs CCW y el momentum de los ultimos 15 tiros.',
                 '- El color verde es dominancia, amarillo es tendencia y rojo es caos.',
                 '- Si el modo es SAFE y la mesa esta roja sin ventaja clara, puedes responder ESPERAR.',
+                '- Sabes leer patrones W/L: WWWL, WLWL, WWL, tendencia ascendente, tendencia descendente, rodillo, ola, bambu, pico y trampa.',
+                '- Si el string W/L se acerca a una L esperada o a una trampa, reduce confianza o espera.',
                 'Responde solo JSON valido.'
             ].join('\n')
             : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';

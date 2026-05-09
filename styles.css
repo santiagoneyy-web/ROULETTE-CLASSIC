@@ -790,6 +790,28 @@ html, body {
 .dz-hist-item .dur {
     color: var(--gold);
 }
+.dir-hist-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dir-hist-item {
+  display: grid;
+  grid-template-columns: 78px 38px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--text1);
+}
+.dir-hist-label {
+  color: var(--text2);
+  font-size: 9px;
+}
+.dir-hist-rate {
+  color: var(--gold);
+  font-size: 9px;
+  text-align: right;
+}
 .dozens-info {
   text-align: center;
   font-size: 11px;

@@ -99,6 +99,14 @@
 
             <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
+                <div class="agent-strategy-label dir-hist-toggle-row">
+                    <span>HISTORIAL DIR</span>
+                    <button class="wipe-btn dz-mini-btn" id="dir-hist-btn" onclick="toggleDirHistory(this)" title="Historial de aciertos DIR" aria-expanded="false">&#9662;</button>
+                </div>
+                <div id="dir-hist-panel" class="dz-history-dropdown">
+                    <div class="dz-hist-header">N9 y N4 por ruta</div>
+                    <div id="dir-hist-list" class="dz-hist-list"></div>
+                </div>
                 <!-- CW BLOCK -->
                 <div class="dual-block" style="padding-top: 5px;">
                     <div class="prediction-grid-3">

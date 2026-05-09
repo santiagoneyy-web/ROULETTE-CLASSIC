@@ -6,6 +6,8 @@
 const history = [];
 const cwHistory = [];
 const ccwHistory = [];
+const cwN4History = [];
+const ccwN4History = [];
 
 let lastSignal  = null;
 let currentTableId = null;
@@ -148,11 +150,12 @@ function wipeData() {
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(() => {
             history.length=0; cwHistory.length=0; ccwHistory.length=0;
+            cwN4History.length=0; ccwN4History.length=0;
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Datos borrados.');
-        }).catch(() => { history.length=0; cwHistory.length=0; cwHistory.length=0; ccwHistory.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleDzHistory(btn) {
@@ -164,6 +167,46 @@ function toggleDzHistory(btn) {
         btn.innerHTML = opened ? '&#9652;' : '&#9662;';
         btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
     }
+}
+
+function toggleDirHistory(btn) {
+    const panel = document.getElementById('dir-hist-panel');
+    if (!panel) return;
+    panel.classList.toggle('show');
+    const opened = panel.classList.contains('show');
+    if (btn) {
+        btn.innerHTML = opened ? '&#9652;' : '&#9662;';
+        btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+    }
+}
+
+function getPerfHtml(items, limit = 12) {
+    const recent = items.slice(-limit);
+    if (!recent.length) return '<span style="opacity:0.5">Sin datos</span>';
+    return recent.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+}
+
+function getPerfText(items, limit = 8) {
+    const recent = items.slice(-limit);
+    if (!recent.length) return 'Sin datos';
+    return recent.map(r => r === 'win' ? 'W' : 'L').join('');
+}
+
+function renderDirHistoryDropdown() {
+    const list = document.getElementById('dir-hist-list');
+    if (!list) return;
+
+    const rows = [
+        { label: 'CW N9', html: getPerfHtml(cwHistory), wins: cwHistory.filter(x => x === 'win').length, total: cwHistory.length },
+        { label: 'CW N4', html: getPerfHtml(cwN4History), wins: cwN4History.filter(x => x === 'win').length, total: cwN4History.length },
+        { label: 'CCW N9', html: getPerfHtml(ccwHistory), wins: ccwHistory.filter(x => x === 'win').length, total: ccwHistory.length },
+        { label: 'CCW N4', html: getPerfHtml(ccwN4History), wins: ccwN4History.filter(x => x === 'win').length, total: ccwN4History.length }
+    ];
+
+    list.innerHTML = rows.map(row => {
+        const rate = row.total > 0 ? Math.round((row.wins / row.total) * 100) : 0;
+        return `<div class="dir-hist-item"><span class="dir-hist-label">${row.label}</span><span class="dir-hist-rate">${rate}%</span><span class="compact-perf">${row.html}</span></div>`;
+    }).join('');
 }
 
 
@@ -194,6 +237,7 @@ function getZoneTargets(lastNum) {
 
 function renderShadowPanel() {
     try {
+    renderDirHistoryDropdown();
     // 1. DIR (ANDROID 1717)
     if (lastSignal) {
         // --- CW BLOCK ---
@@ -584,6 +628,7 @@ function submitNumber(val, silent = false, batch = false) {
                 // Dynamically evaluate hits against under/over targets at radius 4
                 lastUnderHitCW = Math.abs(calcDist(n, lastSignal.targetUnderCW)) <= 4;
                 lastOverHitCW  = Math.abs(calcDist(n, lastSignal.targetOverCW)) <= 4;
+                cwN4History.push((lastUnderHitCW || lastOverHitCW) ? 'win' : 'loss');
             }
             // Main CCW prediction Ã¢ÂÂ evaluated at N9 (9-ball neighborhood = radius 4)
             if (lastSignal.targetCCW !== undefined) {
@@ -593,6 +638,7 @@ function submitNumber(val, silent = false, batch = false) {
                 // Dynamically evaluate hits against under/over targets at radius 4
                 lastUnderHitCCW = Math.abs(calcDist(n, lastSignal.targetUnderCCW)) <= 4;
                 lastOverHitCCW  = Math.abs(calcDist(n, lastSignal.targetOverCCW)) <= 4;
+                ccwN4History.push((lastUnderHitCCW || lastOverHitCCW) ? 'win' : 'loss');
             }
         }
         
@@ -1357,6 +1403,8 @@ async function syncData() {
             history.length = 0;
             cwHistory.length = 0;
             ccwHistory.length = 0;
+            cwN4History.length = 0;
+            ccwN4History.length = 0;
             lastSignal = null;
             
             // 1. Inyectar datos en lote
@@ -1464,6 +1512,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 history.length = 0;
                 cwHistory.length = 0;
                 ccwHistory.length = 0;
+                cwN4History.length = 0;
+                ccwN4History.length = 0;
                 lastSignal = null;
                 renderWheelAndHistory();
                 
@@ -1791,6 +1841,12 @@ async function requestAutoAI() {
             patternLabel: pat.label || 'Estandar',
             dominance8: { cw: der, ccw: izq, big: big, small: small },
             momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
+            performance8: {
+                cwN9: getPerfText(cwHistory),
+                cwN4: getPerfText(cwN4History),
+                ccwN9: getPerfText(ccwHistory),
+                ccwN4: getPerfText(ccwN4History)
+            },
             routes: {
                 cw: {
                     n9: lastSignal.targetCW,
