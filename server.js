@@ -202,7 +202,7 @@ app.post('/api/ai/groq', async (req, res) => {
             messages: [
                 { 
                     role: "system", 
-                    content: "Eres un motor de predicción matemático para ruleta. Tu ÚNICA respuesta debe ser un objeto JSON estrictamente formateado: {\"n9\": \"Número\", \"n4\": \"Número\"}. PROHIBIDO hablar o explicar. Si no hay datos suficientes, usa \"ESPERAR\" como valor." 
+                    content: "Eres un motor de predicción matemático para ruleta. Responde ÚNICAMENTE con un JSON: {\"n9\": \"Número\", \"n4\": \"Número\"}. PROHIBIDO hablar." 
                 },
                 { role: "user", content: prompt }
             ],
@@ -211,151 +211,59 @@ app.post('/api/ai/groq', async (req, res) => {
             response_format: { type: "json_object" }
         };
 
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify(requestBody)
+        const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
+            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" }
         });
-        const data = await response.json();
         
-        let result = data.choices[0].message.content.trim();
+        let result = response.data.choices[0].message.content.trim();
         try {
             const parsed = JSON.parse(result);
             res.json({ reply: `N9: ${parsed.n9} | N4: ${parsed.n4}` });
         } catch(e) {
-            res.json({ reply: result }); // Fallback
+            res.json({ reply: result });
         }
     } catch (error) {
         res.json({ reply: 'Error' });
     }
 });
 
-    }
-    try {
-        const isPredictor = prompt.includes('Formato EXACTO');
-        const sys = isPredictor 
-            ? "Eres un motor estadístico de ruleta." 
-            : `Eres el colega y compañero experto de análisis de ruleta europea de Santi. Tienes total libertad para conversar. Analiza el historial si te lo piden. Historial reciente: [${historyStr || 'Ninguno'}].`;
-            
-        const response = await axios.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            {
-                model: 'llama-3.3-70b-versatile',
-                messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
-                temperature: isPredictor ? 0.2 : 0.7,
-                max_tokens: 300
-            },
-            { headers: { Authorization: `Bearer ${apiKey}` } }
-        );
-        const reply = response.data?.choices?.[0]?.message?.content || 'Sin respuesta.';
-        res.json({ reply });
-    } catch (e) {
-        console.error('Groq error', e.response?.data || e.message);
-        const errorMsg = e.response?.data?.error?.message || e.message;
-        res.json({ reply: 'Error en la IA: ' + errorMsg });
-    }
-});
 app.post('/api/ai/chat', async (req, res) => {
     const { text, tableId, historyStr } = req.body;
-    let reply = "No estoy seguro de cómo procesar eso aún, Santi.";
-    
-    // Fallback: Si no hay llave, respondemos como antes
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return res.json({ reply: "⚠️ SANTI: Necesitas obtener tu 'GEMINI_API_KEY' de Google AI Studio y ponerla en tus variables de entorno en Render para que despierte mi cerebro completo. Mientras tanto, uso mis reglas básicas de supervivencia temporal." });
-    }
-
     try {
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) return res.json({ reply: 'IA Desconectada' });
+
         if (!aiMemory[tableId]) aiMemory[tableId] = [];
 
-        // ─── SYSTEM PROMPT EXPERTO (Edición Analista de Ruleta) ───
-        const nums = historyStr ? historyStr.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x)) : [];
-        const last = nums.slice(-1)[0];
-        const prev = nums.slice(-2)[0];
+        const sysPrompt = `Eres el colega analista experto del equipo de Santi en "ROULETTE CLASSIC". 
+No eres un asistente genérico. Hablas de forma técnica y profesional.
+SISTEMA: SMALL(1-9), BIG(10-18), CW(Derecha), CCW(Izquierda).
+COLORES: Verde(Dominancia), Amarillo(Tendencia), Rojo(Caos).
+Métricas N9/N4: Objetivos matemáticos.`;
 
-        // Cálculo inline de distancia en la rueda física
-        const WHEEL = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-        const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-        const getPos = n => WHEEL.indexOf(n);
-        const getDist = (a, b) => { const diff = getPos(b) - getPos(a); return diff > 18 ? diff - 37 : diff < -18 ? diff + 37 : diff; };
-        
-        let physicsContext = '';
-        if (!isNaN(last) && !isNaN(prev)) {
-            const dist = getDist(prev, last);
-            const dir = dist > 0 ? 'CW (derecha)' : 'CCW (izquierda)';
-            const mag = Math.abs(dist) >= 14 ? 'BIG' : Math.abs(dist) <= 5 ? 'SMALL' : 'MEDIUM';
-            physicsContext = `ÚLTIMO SALTO: Del ${prev} al ${last} = ${dist > 0 ? '+' : ''}${dist} posiciones en rueda FÍSICA, dirección ${dir}, magnitud ${mag}.`;
-        }
-
-        // Frecuencias básicas de los últimos números
-        const freq = {};
-        nums.forEach(n => freq[n] = (freq[n] || 0) + 1);
-        const hotNums = Object.entries(freq).filter(([,c]) => c > 1).sort((a,b) => b[1]-a[1]).slice(0,3).map(([n,c]) => `${n}(x${c})`).join(', ');
-
-                const sysPrompt = `INSTRUCCIONES SISTEMA (ESTRICTO):
-Eres el colega analista experto del equipo de Santi en la web "ROULETTE CLASSIC". 
-No eres un guía explorador, eres un experto en datos de ruleta en vivo.
-
-CONOCIMIENTO DEL ENTORNO WEB:
-- Estás integrado en una interfaz avanzada de análisis de ruleta europea.
-- El usuario utiliza el PANEL TRAVEL para medir la inercia del dealer.
-- MÉTRICAS DE DISTANCIA: SMALL (1-9 casillas), BIG (10-18 casillas).
-- DIRECCIONES: CW (Derecha/Horario) y CCW (Izquierda/Anti-horario).
-- ESTABILIDAD (COLORES): 
-  * VERDE: Dominancia total y bloques sólidos. Patrón muy confiable.
-  * AMARILLO: Tendencia emergente en un eje. Precaución.
-  * ROJO: Caos, dispersión y cambios constantes.
-- MEDIDAS N9/N4: Son los objetivos matemáticos calculados por el motor de física.
-
-TU PERSONA:
-- Eres un colega de análisis, técnico, preciso y directo.
-- No saludas como un guía turístico. Hablas de datos y tendencias.
-- Si ves una dominancia clara en el historial, menciónala (ej: "Veo dominancia CW en zona BIG").
-
-DATOS ACTUALES:
-Secuencia: [${historyStr}]
-${physicsContext}
-${hotNums ? `Calientes: ${hotNums}` : ''}
-
-Santi dice ahora: `;
-
-
-        // Clonamos la memoria
-        const conversationContext = [...aiMemory[tableId]];
-        conversationContext.push({ role: "user", parts: [{ text: sysPrompt + text }] });
-
-                const requestBody = {
-            system_instruction: {
-                parts: [{ text: sysPrompt }]
-            },
-            contents: aiMemory[tableId].concat([{ role: "user", parts: [{ text: text }] }]),
-            generationConfig: { maxOutputTokens: 500, temperature: 0.6 }
+        const requestBody = {
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                { role: "system", content: sysPrompt },
+                ...aiMemory[tableId].slice(-10),
+                { role: "user", content: `Historial: [${historyStr}]. Pregunta: ${text}` }
+            ],
+            temperature: 0.7,
+            max_tokens: 500
         };
 
-        const gRes = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, requestBody, {
-apiKey}`, requestBody, {
-            headers: { 'Content-Type': 'application/json' },
-            validateStatus: () => true // No lanzar excepción, manejar manual
+        const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
+            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" }
         });
-
-        if (gRes.status !== 200) {
-            throw new Error(`Gemini API Error: ${JSON.stringify(gRes.data)}`);
-        }
-        const gData = gRes.data;
         
-        reply = gData.candidates[0].content.parts[0].text;
-        
-        // Guardar la verdadera conversación sin el sysPrompt largo para ahorrar tokens
-        aiMemory[tableId].push({ role: "user", parts: [{ text }] });
-        aiMemory[tableId].push({ role: "model", parts: [{ text: reply }] });
-
-        // Mantener memoria amplia para contexto profundo (últimos 40 mensajes -> 20 pares)
-        if (aiMemory[tableId].length > 40) aiMemory[tableId] = aiMemory[tableId].slice(-40);
+        const reply = response.data.choices[0].message.content;
+        aiMemory[tableId].push({ role: "user", content: text });
+        aiMemory[tableId].push({ role: "assistant", content: reply });
+        if (aiMemory[tableId].length > 20) aiMemory[tableId] = aiMemory[tableId].slice(-20);
 
         res.json({ reply });
-    } catch(e) {
-        console.error("Gemini Error:", e);
-        res.json({ reply: "Lo siento, mi sinapsis con el cerebro de Google está fallando por un error de red temporal." });
+    } catch (error) {
+        res.json({ reply: 'Error en chat' });
     }
 });
 
