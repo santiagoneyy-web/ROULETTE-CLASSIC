@@ -1706,19 +1706,23 @@ async function requestAutoAI() {
     try {
         const tableId = document.getElementById('table-select')?.value || 'default';
         
+        // --- 1. CALCULAR ESTABILIDAD (COLORES) ---
         let stabilityInfo = '';
+        let lvl = 'red';
+        let pat = {label:"Estándar"};
         try {
             let evts = [];
             for (let i = 1; i < history.length; i++) {
                 let d = calcDist(history[i-1], history[i]);
                 evts.push({dir: d >= 0 ? 'DER' : 'IZQ', zone: Math.abs(d) >= 9 ? 'BIG' : 'SMALL'});
             }
-            let pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"Estándar",tiradas:0};
-            let lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(pat, evts) : "red";
-            const colorNames = { green: 'VERDE (Alta Estabilidad)', yellow: 'AMARILLO (Estabilidad Media)', red: 'ROJO (Inestabilidad/Caos)' };
-            stabilityInfo = `ESTADO DE LA MESA: ${colorNames[lvl]} | PATRÓN: ${pat.label}`;
+            pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"Estándar",tiradas:0};
+            lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(pat, evts) : "red";
+            const colorNames = { green: 'VERDE (Alta Estabilidad/Dominancia)', yellow: 'AMARILLO (Transición/Tendencia)', red: 'ROJO (Caos/Dispersión)' };
+            stabilityInfo = `${colorNames[lvl]} | PATRÓN: ${pat.label}`;
         } catch(e) { stabilityInfo = 'ESTADO: Analizando...'; }
 
+        // --- 2. EXTRAER MEDIDAS MATEMATICAS ---
         let mathContext = '';
         if (window.lastSignal) {
             const s = window.lastSignal;
@@ -1728,25 +1732,40 @@ async function requestAutoAI() {
             const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
             
             mathContext = `
-MEDIDAS MATEMATICAS ACTUALES (Calculadas por el motor):
-- RUTA DERECHA (CW): N9=${s.targetCW}, N4_Bajo=${s.targetUnderCW}, N4_Alto=${s.targetOverCW} (Efectividad actual: ${cwRate}%)
-- RUTA IZQUIERDA (CCW): N9=${s.targetCCW}, N4_Bajo=${s.targetUnderCCW}, N4_Alto=${s.targetOverCCW} (Efectividad actual: ${ccwRate}%)
+MEDIDAS MATEMATICAS CALCULADAS (ELIGE SOLO DE ESTOS VALORES):
+- RUTA DERECHA (CW):
+  * N9 (Principal): ${s.targetCW}
+  * N4 SMALL (Under): ${s.targetUnderCW}
+  * N4 BIG (Over): ${s.targetOverCW}
+  * Hit Rate CW: ${cwRate}% (${last10cw.join('')})
+
+- RUTA IZQUIERDA (CCW):
+  * N9 (Principal): ${s.targetCCW}
+  * N4 SMALL (Over): ${s.targetOverCCW}
+  * N4 BIG (Under): ${s.targetUnderCCW}
+  * Hit Rate CCW: ${ccwRate}% (${last10ccw.join('')})
 `;
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si la mesa NO está en VERDE o no hay patrón claro, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. Elige los mejores numeros basandote en el momentum.';
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si la mesa NO está en VERDE o no hay patrón claro, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. Elige los mejores numeros basandote en el momentum actual.';
         
-        const p = `Eres un analista experto de Ruleta Europea. Basate en el COLOR DE ESTABILIDAD, las MEDIDAS MATEMATICAS y el HISTORIAL.
+        const p = `Eres un experto analista de Ruleta Europea. Utilizas el sistema de Distancia de Salto (1-18).
+TEORIA: SMALL (1-9 casillas), BIG (10-18 casillas). 
 
-${stabilityInfo}
+ESTADO ACTUAL: ${stabilityInfo}
 
 ${mathContext}
 
 HISTORIAL RECIENTE: ${history.slice(-15).join(',')}
 
-INSTRUCCION: Utiliza el COLOR de estabilidad para decidir el nivel de riesgo. Si es VERDE, confía más en las medidas. Si es ROJO, busca cambios de tendencia.
-Da EXACTAMENTE dos predicciones MUY BREVES (max 3 palabras c/u). 1) Jugada amplia (N9). 2) Jugada agresiva (N4). ${modeInstruction} 
-Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".`;
+INSTRUCCION DE ANALISIS:
+1. Evalua que direccion (CW o CCW) tiene mejor inercia y efectividad (%).
+2. Evalua si la zona dominante es SMALL o BIG.
+3. Elige el MEJOR N9 y el MEJOR N4 basandote UNICAMENTE en los valores de las medidas de arriba.
+
+REGLA DE ORO: PROHIBIDO inventar numeros fuera de las medidas.
+Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".
+${modeInstruction}`;
 
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
@@ -1762,7 +1781,7 @@ Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".
             
             n9El.innerText = pN9;
             n4El.innerText = pN4;
-            if (analysisEl) analysisEl.innerText = `Análisis [${stabilityInfo.split('|')[0]}]: CW vs CCW`;
+            if (analysisEl) analysisEl.innerText = `Análisis [${lvl.toUpperCase()}]: ${pat.label}`;
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
             n9El.innerText = "Error API";
