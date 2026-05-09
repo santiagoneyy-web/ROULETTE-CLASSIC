@@ -1685,6 +1685,7 @@ window.toggleAIMode = function() {
     if (typeof requestAutoAI === 'function') requestAutoAI();
 };
 
+
 async function requestAutoAI() {
     const n9El = document.getElementById('ai-pred-n9-text');
     const n4El = document.getElementById('ai-pred-n4-text');
@@ -1700,13 +1701,38 @@ async function requestAutoAI() {
     }
 
     if (statusEl) statusEl.innerText = 'THINKING';
-    n9El.innerText = "Analizando N9...";
-    n4El.innerText = "Analizando N4...";
+    n9El.innerText = "Analizando flujos...";
+    n4El.innerText = "Analizando flujos...";
     
     try {
         const tableId = document.getElementById('table-select')?.value || 'default';
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patrón, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. MODO FULL: DEBES DAR PREDICCIÓN SIEMPRE OBLIGATORIAMENTE.';
-        const p = `Eres un motor estadístico de ruleta en vivo. Historial: ` + history.slice(-15).join(',') + `. Da EXACTAMENTE dos predicciones MUY BREVES (max 3 palabras c/u). 1) Jugada amplia (N9). 2) Jugada agresiva (N4). ` + modeInstruction + ` Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".`;
+        
+        // --- EXTRAER MEDIDAS MATEMATICAS ---
+        let mathContext = '';
+        if (window.lastSignal) {
+            const s = window.lastSignal;
+            // Calcular efectividad real de las rutas
+            const last10cw = cwHistory.slice(-10);
+            const last10ccw = ccwHistory.slice(-10);
+            const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
+            const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
+            
+            mathContext = `
+MEDIDAS MATEMATICAS ACTUALES (Calculadas por el motor):
+- RUTA DERECHA (CW): N9=${s.targetCW}, N4_Bajo=${s.targetUnderCW}, N4_Alto=${s.targetOverCW} (Efectividad actual: ${cwRate}%)
+- RUTA IZQUIERDA (CCW): N9=${s.targetCCW}, N4_Bajo=${s.targetUnderCCW}, N4_Alto=${s.targetOverCCW} (Efectividad actual: ${ccwRate}%)
+`;
+        }
+
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay un patron matematico CLARO en la grafica travel, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. Elige los mejores numeros de las medidas proporcionadas.';
+        
+        const p = `Eres un analista experto de Ruleta Europea. Basate en las MEDIDAS MATEMATICAS calculadas por el sistema y el HISTORIAL de tiradas.
+${mathContext}
+HISTORIAL RECIENTE: ${history.slice(-15).join(',')}
+
+INSTRUCCION: Analiza la efectividad de las rutas y el momentum. Decide cual de los numeros de las medidas es mas probable que caiga a continuación.
+Da EXACTAMENTE dos predicciones MUY BREVES (max 3 palabras c/u). 1) Jugada amplia (N9). 2) Jugada agresiva (N4). ${modeInstruction} 
+Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".`;
 
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
@@ -1716,13 +1742,14 @@ async function requestAutoAI() {
         const data = await resp.json();
         
         if (data.reply) {
-            let reply = data.reply.replace(/[\n\r"]/g, '').trim();
+            let reply = data.reply.replace(/[
+"]/g, '').trim();
             let pN9 = reply.includes('N9:') ? reply.split('N9:')[1].split('|')[0].trim() : reply.substring(0, 20);
             let pN4 = reply.includes('N4:') ? reply.split('N4:')[1].trim() : 'Esperar';
             
             n9El.innerText = pN9;
             n4El.innerText = pN4;
-            if (analysisEl) analysisEl.innerText = `Análisis completado para el último giro (` + history[history.length-1] + `).`;
+            if (analysisEl) analysisEl.innerText = `Análisis basado en medidas: CW(${window.lastSignal?.targetCW}) vs CCW(${window.lastSignal?.targetCCW})`;
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
             n9El.innerText = "Error API";
@@ -1733,6 +1760,7 @@ async function requestAutoAI() {
         n4El.innerText = "Error de red";
     }
 }
+
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
