@@ -552,9 +552,9 @@ function renderWheelAndHistory() {
 
 // ——— TAB LISTENERS —————————————————————————————————————
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter'];
+    const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
     const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-sup': 'panel-sup', 'tab-btn-scatter': 'panel-scatter' };
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-sup': 'panel-sup', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });

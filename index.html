@@ -277,42 +277,7 @@
                 </div>
             </section>
 
-            <!-- 4. AUTO AI PREDICTOR -->
-            <section class="shadow-panel" id="panel-auto" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">🤖</span>
-                    <span class="agent-card-name">AUTO AI PREDICTOR</span>
-                    <span class="side-badge" id="auto-ai-status" style="padding:1px 6px;">STANDBY</span>
-                </div>
-                <div style="padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-                    <div id="ai-pred-n9" style="background: rgba(255,255,255,0.06); border-radius: 20px; padding: 9px 14px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer; border: 1px solid rgba(255,255,255,0.12); transition: background 0.3s;" onclick="requestAIPrediction('n9')">
-                        <span style="margin-right: 8px;">🔍</span><span id="ai-pred-n9-text">Señal Jugadas N9...</span><span style="margin-left: 8px;">💰</span>
-                    </div>
-                    <div id="ai-pred-n4" style="background: rgba(255,255,255,0.06); border-radius: 20px; padding: 9px 14px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer; border: 1px solid rgba(255,255,255,0.12); transition: background 0.3s;" onclick="requestAIPrediction('n4')">
-                        <span style="margin-right: 8px;">🔍</span><span id="ai-pred-n4-text">Señal Jugadas N4...</span><span style="margin-left: 8px;">🔥</span>
-                    </div>
-                    <div style="margin-top: 4px; padding: 7px 10px; background: rgba(0,229,200,0.05); border-radius: 8px; border: 1px solid rgba(0,229,200,0.1);">
-                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">ANALISIS AI</div>
-                        <div id="auto-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">Toca una señal para que la IA analice el momentum actual de la mesa.</div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- 5. CHAT AI (Conversacion con Llama via Groq) -->
-            <section class="shadow-panel" id="panel-chat" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">💬</span>
-                    <span class="agent-card-name">CHAT AI · Llama</span>
-                    <span class="side-badge" id="chat-status" style="padding:1px 6px; background: rgba(0,200,80,0.15); color: #0c8; border: 1px solid rgba(0,200,80,0.3);">ONLINE</span>
-                </div>
-                <div id="chat-messages" style="padding: 8px; min-height: 190px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-                    <div style="background: rgba(0,229,200,0.08); border-radius: 10px; padding: 6px 10px; font-size: 10px; color: var(--accent); max-width: 85%; align-self: flex-start; line-height: 1.4;">Hola Santi 👋 Soy tu analista AI. Preguntame lo que quieras sobre la mesa actual.</div>
-                </div>
-                <div style="padding: 6px 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; align-items: center;">
-                    <input id="chat-input" type="text" placeholder="Escribe aqui..." style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-size: 10px; outline: none; font-family: var(--mono);" onkeydown="if(event.key==='Enter')sendChatMessage()">
-                    <button onclick="sendChatMessage()" style="background: var(--accent); border: none; border-radius: 8px; padding: 6px 12px; color: #000; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink:0;">⬆</button>
-                </div>
-            </section>
 
          </div><!-- /col-visual -->
  

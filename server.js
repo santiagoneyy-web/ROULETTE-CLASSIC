@@ -451,7 +451,17 @@ app.post('/api/spin', async (req, res) => {
                             distance: physics.distance, direction: direction || physics.direction, sector,
                             predictions: newPredictions
                         });
-                        savedSpin = await newSpin.save();
+                        async function requestAIPrediction(type) {
+    const historyStr = history.join(',');
+    const resp = await fetch('/api/ai/predict-nx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, tableId: currentTableId, historyStr })
+    });
+    const data = await resp.json();
+    const el = document.getElementById(`ai-pred-${type}-text`);
+    if (el) el.innerText = data.reply || 'Sin respuesta';
+}                       savedSpin = await newSpin.save();
                     } catch (err) {
                         if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
                         else throw err;
@@ -603,7 +613,27 @@ app.use((req, res) => {
 // ============================================================
 // /api/ai/groq-predict — Auto Prediccion con Llama 4 via Groq
 // ============================================================
-app.post('/api/ai/groq-predict', async (req, res) => {
+app.post('/api/ai/predict-nx', async (req, res) => {
+    const { type, tableId, historyStr } = req.body;
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Groq API key missing" });
+    const sysPrompt = `Eres un motor de análisis estadístico y probabilidad balística especializado en ruleta europea. Genera EXACTAMENTE dos predicciones según el tipo solicitado (n9 o n4) usando la lógica descrita.`,
+          userPrompt = `Tipo: ${type}\nHistorial: ${historyStr}`;
+    try {
+        const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+            model: 'llama3-70b-8192',
+            messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userPrompt }],
+            temperature: 0.7,
+            max_tokens: 300,
+            response_format: { type: 'json_object' }
+        }, { headers: { Authorization: `Bearer ${apiKey}` } });
+        const reply = response.data?.choices?.[0]?.message?.content || '';
+        res.json({ reply });
+    } catch (e) {
+        console.error('Groq predict-nx error', e);
+        res.status(500).json({ error: 'Error contacting Groq' });
+    }
+});
     const { tableId, historyStr } = req.body;
     const groqKey = process.env.GROQ_API_KEY;
 
