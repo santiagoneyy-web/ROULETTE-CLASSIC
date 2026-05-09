@@ -1124,6 +1124,7 @@ function renderTravelChart() {
     const W = totalW;
     ctx.clearRect(0, 0, W, H);
 
+    
     // --- Fondo de color canvas segun estabilidad ---
     (function paintBg() {
         var _evts = [];
@@ -1135,14 +1136,32 @@ function renderTravelChart() {
         }
         var _pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"",tiradas:0};
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
-        var _bgMap = {
-            green:  '#0C3824', // Puro verde atenuado (sin mezcla azul)
-            yellow: '#3C3010', // Puro oro/amarillo atenuado (como DOCENAS)
-            red:    '#3C1018'  // Puro rojo atenuado
-        };
-        ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
+        
+        // Colores premium con gradiente sutil
+        const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
+        if (_lvl === 'green') {
+            grad.addColorStop(0, '#062618');
+            grad.addColorStop(1, '#0c3824');
+        } else if (_lvl === 'yellow') {
+            grad.addColorStop(0, '#2b220a');
+            grad.addColorStop(1, '#3c3010');
+        } else {
+            grad.addColorStop(0, '#260a10');
+            grad.addColorStop(1, '#3c1018');
+        }
+        
+        ctx.fillStyle = grad;
         ctx.fillRect(padL, padT, W - padL - padR, H - padT - padB);
+        
+        // Añadir grid sutil vertical
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 0.5;
+        const xStep = pxPerPoint || 20;
+        for(let i=padL; i < W - padR; i += xStep) {
+            ctx.beginPath(); ctx.moveTo(i, padT); ctx.lineTo(i, H-padB); ctx.stroke();
+        }
     })();
+
 
     // Averages
     const cwVals = data.filter(d => d > 0);
@@ -1743,7 +1762,8 @@ Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".
         
         if (data.reply) {
             let reply = data.reply.replace(/[
-"]/g, '').trim();
+
+"]/g, '').trim();
             let pN9 = reply.includes('N9:') ? reply.split('N9:')[1].split('|')[0].trim() : reply.substring(0, 20);
             let pN4 = reply.includes('N4:') ? reply.split('N4:')[1].trim() : 'Esperar';
             
