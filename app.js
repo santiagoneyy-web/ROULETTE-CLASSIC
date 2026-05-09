@@ -1672,51 +1672,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- AUTO AI PREDICTORS VIA GROQ ---
-async function requestAIPrediction(type) {
-    const textEl = document.getElementById(`ai-pred-${type}-text`);
-    if (!textEl) return;
+window.currentAIMode = 'SAFE';
+window.toggleAIMode = function() {
+    const btn = document.getElementById('btn-ai-mode');
+    if (window.currentAIMode === 'SAFE') {
+        window.currentAIMode = 'FULL';
+        if(btn) { btn.innerText = 'MODO: FULL'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+    } else {
+        window.currentAIMode = 'SAFE';
+        if(btn) { btn.innerText = 'MODO: SAFE'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+    }
+    if (typeof requestAutoAI === 'function') requestAutoAI();
+};
+
+async function requestAutoAI() {
+    const n9El = document.getElementById('ai-pred-n9-text');
+    const n4El = document.getElementById('ai-pred-n4-text');
+    const statusEl = document.getElementById('auto-ai-status');
+    const analysisEl = document.getElementById('auto-ai-analysis');
+    
+    if (!n9El || !n4El) return;
     
     if (history.length < 4) {
-        textEl.innerText = "Faltan datos (min 4)";
+        n9El.innerText = "Faltan datos (min 4)...";
+        n4El.innerText = "Faltan datos (min 4)...";
         return;
     }
 
-    const tableId = document.getElementById('table-select')?.value || 'default';
-    textEl.innerText = "Pensando...";
+    if (statusEl) statusEl.innerText = 'THINKING';
+    n9El.innerText = "Analizando N9...";
+    n4El.innerText = "Analizando N4...";
     
     try {
+        const tableId = document.getElementById('table-select')?.value || 'default';
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patrón, responde "ESPERAR".' : 'PROHIBIDO decir ESPERAR. MODO FULL: DEBES DAR PREDICCIÓN SIEMPRE OBLIGATORIAMENTE.';
+        const p = `Eres un motor estadístico de ruleta en vivo. Historial: ` + history.slice(-15).join(',') + `. Da EXACTAMENTE dos predicciones MUY BREVES (max 3 palabras c/u). 1) Jugada amplia (N9). 2) Jugada agresiva (N4). ` + modeInstruction + ` Formato EXACTO: "N9: Jugar al X | N4: Jugar al Y" o "N9: ESPERAR | N4: ESPERAR".`;
+
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                prompt: `Analiza este historial y dame una prediccion MUY BREVE de maximo 4 palabras para jugadas ${type}. Formato: "JUGAR A ZONA X" o "ESPERAR". Historial: ${history.join(',')}`,
-                tableId, 
-                historyStr: history.join(',') 
-            })
+            body: JSON.stringify({ prompt: p, tableId, historyStr: history.join(',') })
         });
         const data = await resp.json();
         
         if (data.reply) {
-            // Limpiar saltos de linea y comillas
-            let cleanReply = data.reply.replace(/[\n\r"]/g, '').trim();
-            if (cleanReply.length > 25) {
-                cleanReply = cleanReply.substring(0, 22) + '...';
-            }
-            textEl.innerText = cleanReply;
-            const analysisEl = document.getElementById('auto-ai-analysis');
-            if (analysisEl) analysisEl.innerText = `Señal ${type.toUpperCase()}: ` + cleanReply;
-            const statusEl = document.getElementById('auto-ai-status');
-            if (statusEl) statusEl.innerText = 'READY';
+            let reply = data.reply.replace(/[\n\r"]/g, '').trim();
+            let pN9 = reply.includes('N9:') ? reply.split('N9:')[1].split('|')[0].trim() : reply.substring(0, 20);
+            let pN4 = reply.includes('N4:') ? reply.split('N4:')[1].trim() : 'Esperar';
+            
+            n9El.innerText = pN9;
+            n4El.innerText = pN4;
+            if (analysisEl) analysisEl.innerText = `Análisis completado para el último giro (` + history[history.length-1] + `).`;
+            if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
-            textEl.innerText = "Error API";
+            n9El.innerText = "Error API";
+            n4El.innerText = "Error API";
         }
-    } catch (e) {
-        console.error('Groq prediction error:', e);
-        textEl.innerText = "Error red";
+    } catch(e) {
+        n9El.innerText = "Error de red";
+        n4El.innerText = "Error de red";
     }
 }
-
-
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
