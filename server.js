@@ -234,6 +234,12 @@ app.post('/api/ai/chat', async (req, res) => {
         if (!groqKey) return res.json({ reply: 'IA Desconectada' });
 
         if (!aiMemory[tableId]) aiMemory[tableId] = [];
+        // --- SANITIZAR MEMORIA (De Gemini a Groq) ---
+        aiMemory[tableId] = aiMemory[tableId].map(m => {
+            if (m.parts && m.parts[0]) return { role: m.role === 'model' ? 'assistant' : m.role, content: m.parts[0].text };
+            if (!m.content && m.text) return { role: m.role, content: m.text };
+            return m;
+        }).filter(m => m.content && m.role);
 
         const sysPrompt = `Eres el colega analista experto del equipo de Santi en "ROULETTE CLASSIC". 
 No eres un asistente genérico. Hablas de forma técnica y profesional.
