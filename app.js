@@ -1701,6 +1701,10 @@ async function requestAIPrediction(type) {
                 cleanReply = cleanReply.substring(0, 22) + '...';
             }
             textEl.innerText = cleanReply;
+            const analysisEl = document.getElementById('auto-ai-analysis');
+            if (analysisEl) analysisEl.innerText = `Señal ${type.toUpperCase()}: ` + cleanReply;
+            const statusEl = document.getElementById('auto-ai-status');
+            if (statusEl) statusEl.innerText = 'READY';
         } else {
             textEl.innerText = "Error API";
         }
@@ -1708,5 +1712,51 @@ async function requestAIPrediction(type) {
         console.error('Groq prediction error:', e);
         textEl.innerText = "Error red";
     }
+}
+
+
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const msgsEl = document.getElementById('chat-messages');
+    const statusEl = document.getElementById('chat-status');
+    if (!input || !msgsEl) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    // Append user bubble
+    const userBubble = document.createElement('div');
+    userBubble.style.cssText = 'background:rgba(255,255,255,0.08);border-radius:10px;padding:6px 10px;font-size:10px;color:var(--text);max-width:85%;align-self:flex-end;line-height:1.4;';
+    userBubble.innerText = text;
+    msgsEl.appendChild(userBubble);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    // Thinking bubble
+    const thinking = document.createElement('div');
+    thinking.style.cssText = 'background:rgba(0,229,200,0.08);border-radius:10px;padding:6px 10px;font-size:10px;color:var(--accent);max-width:85%;align-self:flex-start;line-height:1.4;font-style:italic;';
+    thinking.innerText = 'Pensando...';
+    msgsEl.appendChild(thinking);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    if (statusEl) statusEl.innerText = 'THINKING';
+
+    const tableId = document.getElementById('table-select') ? document.getElementById('table-select').value : 'default';
+
+    try {
+        const resp = await fetch('/api/ai/groq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text, tableId, historyStr: history.join(',') })
+        });
+        const data = await resp.json();
+        thinking.innerText = data.reply || 'Sin respuesta.';
+        thinking.style.fontStyle = 'normal';
+    } catch(e) {
+        thinking.innerText = 'Error de conexion con la IA.';
+        thinking.style.color = '#f55';
+    }
+    if (statusEl) statusEl.innerText = 'ONLINE';
+    msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
