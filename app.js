@@ -1724,6 +1724,8 @@ async function requestAutoAI() {
             stabilityInfo = 'DOMINANCIA: DER(' + der + ') IZQ(' + izq + ') | ZONA: BIG(' + big + ') SMALL(' + small + ') | ESTADO: ' + colorNames[lvl];
         } catch(e) { stabilityInfo = 'ESTADO: Analizando...'; }
 
+        // === CONSTRUIR PROMPT CON LAS 6 METRICAS ===
+        let validMetrics = [];
         let mathContext = '';
         if (window.lastSignal) {
             const s = window.lastSignal;
@@ -1731,13 +1733,30 @@ async function requestAutoAI() {
             const last10ccw = ccwHistory.slice(-10);
             const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
             const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
-            mathContext = 'MEDIDAS DISPONIBLES:\n- RUTA CW: N9=' + s.targetCW + ', N4_S=' + s.targetUnderCW + ', N4_B=' + s.targetOverCW + ' (Eff:' + cwRate + '%)\n- RUTA CCW: N9=' + s.targetCCW + ', N4_S=' + s.targetOverCCW + ', N4_B=' + s.targetUnderCCW + ' (Eff:' + ccwRate + '%)';
+            
+            validMetrics = [
+                {label:'CW_N9', num: s.targetCW},
+                {label:'CW_N4S', num: s.targetUnderCW},
+                {label:'CW_N4B', num: s.targetOverCW},
+                {label:'CCW_N9', num: s.targetCCW},
+                {label:'CCW_N4S', num: s.targetOverCCW},
+                {label:'CCW_N4B', num: s.targetUnderCCW}
+            ];
+            
+            // Prompt SIN historial - solo opciones
+            mathContext = 'OPCIONES (elige SOLO de aqui):\n';
+            mathContext += 'A) ' + s.targetCW + ' (CW N9, Eff:' + cwRate + '%)\n';
+            mathContext += 'B) ' + s.targetUnderCW + ' (CW SMALL)\n';
+            mathContext += 'C) ' + s.targetOverCW + ' (CW BIG)\n';
+            mathContext += 'D) ' + s.targetCCW + ' (CCW N9, Eff:' + ccwRate + '%)\n';
+            mathContext += 'E) ' + s.targetOverCCW + ' (CCW SMALL)\n';
+            mathContext += 'F) ' + s.targetUnderCCW + ' (CCW BIG)';
         } else {
-            mathContext = 'SIN MEDIDAS AUN - Esperando mas datos del motor de fisica.';
+            mathContext = 'SIN MEDIDAS - Responde ESPERAR.';
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO decir ESPERAR. Elige obligatoriamente.';
-        const p = 'Analiza:\n' + stabilityInfo + '\n' + mathContext + '\nHistorial: ' + history.slice(-15).join(',') + '\nREGLA: Elige N9 y N4 SOLO de la lista. ' + modeInstruction + '\nJSON: {"n9":"Numero","n4":"Numero"}';
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO ESPERAR. Elige obligatoriamente.';
+        const p = stabilityInfo + '\n' + mathContext + '\n' + modeInstruction + '\nElige 1 para N9 y 1 para N4. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
 
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
@@ -1748,8 +1767,33 @@ async function requestAutoAI() {
         
         if (data.reply) {
             let parts = data.reply.split('|');
-            n9El.innerText = parts[0] ? parts[0].replace('N9:','').trim() : 'Esperar';
-            n4El.innerText = parts[1] ? parts[1].replace('N4:','').trim() : 'Esperar';
+            let rawN9 = parts[0] ? parts[0].replace('N9:','').trim() : '';
+            let rawN4 = parts[1] ? parts[1].replace('N4:','').trim() : '';
+            
+            // === VALIDACION FRONTEND: FORZAR numeros de las 6 metricas ===
+            if (validMetrics.length > 0) {
+                const validNums = validMetrics.map(m => String(m.num));
+                const n9Clean = rawN9.replace(/[^0-9]/g, '');
+                const n4Clean = rawN4.replace(/[^0-9]/g, '');
+                
+                if (!validNums.includes(n9Clean)) {
+                    // IA alucino -> elegir basado en dominancia
+                    rawN9 = String(der >= izq ? validMetrics[0].num : validMetrics[3].num);
+                    console.log('AI hallucinated N9, forced to:', rawN9);
+                }
+                if (!validNums.includes(n4Clean)) {
+                    // IA alucino -> elegir N4 basado en zona dominante
+                    if (big >= small) {
+                        rawN4 = String(der >= izq ? validMetrics[2].num : validMetrics[5].num);
+                    } else {
+                        rawN4 = String(der >= izq ? validMetrics[1].num : validMetrics[4].num);
+                    }
+                    console.log('AI hallucinated N4, forced to:', rawN4);
+                }
+            }
+            
+            n9El.innerText = rawN9 || 'Esperar';
+            n4El.innerText = rawN4 || 'Esperar';
             if (analysisEl) {
                 let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
                 let domZone = big > small ? 'BIG' : (small > big ? 'SMALL' : 'Mix');
