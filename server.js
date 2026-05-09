@@ -290,12 +290,16 @@ Santi dice ahora: `;
         const conversationContext = [...aiMemory[tableId]];
         conversationContext.push({ role: "user", parts: [{ text: sysPrompt + text }] });
 
-        const requestBody = {
-            contents: conversationContext,
-            generationConfig: { maxOutputTokens: 400, temperature: 0.55 }
+                const requestBody = {
+            system_instruction: {
+                parts: [{ text: sysPrompt }]
+            },
+            contents: aiMemory[tableId].concat([{ role: "user", parts: [{ text: text }] }]),
+            generationConfig: { maxOutputTokens: 500, temperature: 0.6 }
         };
 
         const gRes = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, requestBody, {
+apiKey}`, requestBody, {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true // No lanzar excepción, manejar manual
         });
