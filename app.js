@@ -1337,7 +1337,7 @@ function renderTravelPanel() {
         const isLast = (i === 0);
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
-            <td style="color:var(--text2)">${absDist}p</td>
+            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? "&#8635;" : "&#8634;"}</span></td>
             <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'Ã¢ÂÂº' : 'Ã¢ÂÂ»'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
