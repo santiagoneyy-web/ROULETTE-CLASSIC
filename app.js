@@ -1338,7 +1338,6 @@ function renderTravelPanel() {
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
             <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? "&#8635;" : "&#8634;"}</span></td>
-            <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? 'Ã¢ÂÂº' : 'Ã¢ÂÂ»'}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
     }).join('');
@@ -1804,7 +1803,7 @@ async function sendChatMessage() {
         const resp = await fetch('/api/ai/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: text, tableId, historyStr: history.join(',') })
+            body: JSON.stringify({ text: text, tableId, historyStr: history.join(',') })
         });
         const data = await resp.json();
         thinking.innerText = data.reply || 'Sin respuesta.';
