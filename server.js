@@ -206,7 +206,7 @@ app.post('/api/ai/groq', async (req, res) => {
         const response = await axios.post(
             'https://api.groq.com/openai/v1/chat/completions',
             {
-                model: 'llama3-70b-8192',
+                model: 'llama-3.3-70b-versatile',
                 messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
                 temperature: isPredictor ? 0.2 : 0.7,
                 max_tokens: 300
