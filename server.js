@@ -197,17 +197,30 @@ app.post('/api/ai/groq', async (req, res) => {
         const groqKey = process.env.GROQ_API_KEY;
         if (!groqKey) return res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
 
+        // Extraer los 6 números válidos del prompt
+        const validNums = [];
+        const n9cwMatch = prompt.match(/N9=(\d+)/);
+        const n4sCWMatch = prompt.match(/N4_S=(\d+)/);
+        const n4bCWMatch = prompt.match(/N4_B=(\d+)/);
+        const matches = prompt.match(/N9=(\d+)|N4_S=(\d+)|N4_B=(\d+)/g);
+        if (matches) {
+            matches.forEach(m => {
+                const num = m.split('=')[1];
+                if (num && !validNums.includes(num)) validNums.push(num);
+            });
+        }
+
         const requestBody = {
             model: "llama-3.3-70b-versatile",
             messages: [
                 { 
                     role: "system", 
-                    content: "Eres un motor de predicción matemático para ruleta. Responde ÚNICAMENTE con un JSON: {\"n9\": \"Número\", \"n4\": \"Número\"}. PROHIBIDO hablar." 
+                    content: "Eres un motor de predicción. RESPONDE SOLO JSON. PROHIBIDO texto extra." 
                 },
                 { role: "user", content: prompt }
             ],
-            temperature: 0.1,
-            max_completion_tokens: 50,
+            temperature: 0.15,
+            max_completion_tokens: 60,
             response_format: { type: "json_object" }
         };
 
@@ -218,12 +231,27 @@ app.post('/api/ai/groq', async (req, res) => {
         let result = response.data.choices[0].message.content.trim();
         try {
             const parsed = JSON.parse(result);
-            res.json({ reply: `N9: ${parsed.n9} | N4: ${parsed.n4}` });
+            let n9 = String(parsed.n9 || '').replace(/[^0-9]/g, '');
+            let n4 = String(parsed.n4 || '').replace(/[^0-9]/g, '');
+            
+            // VALIDACIÓN: Si el número NO está en la lista de 6 válidos, forzar uno válido
+            if (validNums.length > 0) {
+                if (!validNums.includes(n9)) n9 = validNums[0]; // Primer N9 disponible
+                if (!validNums.includes(n4)) n4 = validNums[Math.min(3, validNums.length - 1)]; // Primer N4
+            }
+            
+            res.json({ reply: `N9: ${n9} | N4: ${n4}` });
         } catch(e) {
-            res.json({ reply: result });
+            // Fallback: si no parseó JSON, dar el primer válido
+            if (validNums.length >= 2) {
+                res.json({ reply: `N9: ${validNums[0]} | N4: ${validNums[1]}` });
+            } else {
+                res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
+            }
         }
     } catch (error) {
-        res.json({ reply: 'Error' });
+        console.error('Groq predictor error:', error.message);
+        res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
     }
 });
 
@@ -231,31 +259,36 @@ app.post('/api/ai/chat', async (req, res) => {
     const { text, tableId, historyStr } = req.body;
     try {
         const groqKey = process.env.GROQ_API_KEY;
-        if (!groqKey) return res.json({ reply: 'IA Desconectada' });
+        if (!groqKey) return res.json({ reply: 'IA Desconectada - Falta GROQ_API_KEY' });
 
         if (!aiMemory[tableId]) aiMemory[tableId] = [];
-        // --- SANITIZAR MEMORIA (De Gemini a Groq) ---
+        // Sanitizar memoria vieja (formato Gemini -> Groq)
         aiMemory[tableId] = aiMemory[tableId].map(m => {
             if (m.parts && m.parts[0]) return { role: m.role === 'model' ? 'assistant' : m.role, content: m.parts[0].text };
             if (!m.content && m.text) return { role: m.role, content: m.text };
             return m;
         }).filter(m => m.content && m.role);
 
-        const sysPrompt = `Eres el colega analista experto del equipo de Santi en "ROULETTE CLASSIC". 
-No eres un asistente genérico. Hablas de forma técnica y profesional.
-SISTEMA: SMALL(1-9), BIG(10-18), CW(Derecha), CCW(Izquierda).
-COLORES: Verde(Dominancia), Amarillo(Tendencia), Rojo(Caos).
-Métricas N9/N4: Objetivos matemáticos.`;
+        const sysPrompt = `Eres el colega analista de Santi en "ROULETTE CLASSIC".
+REGLAS ESTRICTAS:
+- Responde CORTO, maximo 3 oraciones. PROHIBIDO dar listas largas o explicaciones academicas.
+- Hablas casual y tecnico, como un compañero de equipo.
+- Conoces la web: Panel Travel mide distancia del dealer (SMALL 1-9, BIG 10-18).
+- Direcciones: CW(Derecha), CCW(Izquierda).
+- Colores de estabilidad: Verde(Dominancia fuerte), Amarillo(Tendencia), Rojo(Caos).
+- Metricas N9/N4: Objetivos matematicos calculados por el motor de fisica.
+- Si te preguntan algo, responde DIRECTO. Nada de "es una buena pregunta" ni introducciones.
+- Si te dicen "no escribas tanto", responde en 1 oracion.`;
 
         const requestBody = {
             model: "llama-3.3-70b-versatile",
             messages: [
                 { role: "system", content: sysPrompt },
                 ...aiMemory[tableId].slice(-10),
-                { role: "user", content: `Historial: [${historyStr}]. Pregunta: ${text}` }
+                { role: "user", content: text + (historyStr ? ` [Historial mesa: ${historyStr}]` : '') }
             ],
-            temperature: 0.7,
-            max_tokens: 500
+            temperature: 0.6,
+            max_tokens: 150
         };
 
         const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
@@ -269,7 +302,8 @@ Métricas N9/N4: Objetivos matemáticos.`;
 
         res.json({ reply });
     } catch (error) {
-        res.json({ reply: 'Error en chat' });
+        console.error('Chat error:', error.response?.data || error.message);
+        res.json({ reply: 'Error de conexion con Ollama. Verifica GROQ_API_KEY.' });
     }
 });
 

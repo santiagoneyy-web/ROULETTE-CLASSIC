@@ -481,7 +481,7 @@ function renderDozens() {
                      return `
                         <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">durÃ³ ${Number(h.duration || 0)}t</span>
+                            <span class="dur" style="font-size:9px; color:var(--muted)">duro ${Number(h.duration || 0)}t</span>
                         </div>
                      `;
                  }).join('');
@@ -1756,7 +1756,11 @@ REGLA CRITICA:
             let [p9, p4] = data.reply.split('|');
             n9El.innerText = p9 ? p9.replace('N9:','').trim() : "Esperar";
             n4El.innerText = p4 ? p4.replace('N4:','').trim() : "Esperar";
-            if (analysisEl) analysisEl.innerText = `Análisis [${lvl.toUpperCase()}]: ${pat.label}`;
+            if (analysisEl) {
+                let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
+                let domZone = big > small ? 'BIG' : (small > big ? 'SMALL' : 'Mix');
+                analysisEl.innerText = `Analisis [${lvl.toUpperCase()}]: ${domDir}, ${domZone}`;
+            }
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
             n9El.innerText = "Error API";
