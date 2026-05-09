@@ -1735,6 +1735,8 @@ async function requestAutoAI() {
 
         // === CONSTRUIR PROMPT CON LAS 6 METRICAS ===
         let validMetrics = [];
+        let validN9Nums = [];
+        let validN4Nums = [];
         let mathContext = '';
         let cwRate = 0;
         let ccwRate = 0;
@@ -1752,6 +1754,13 @@ async function requestAutoAI() {
                 {label:'CCW_N9', num: s.targetCCW},
                 {label:'CCW_N4S', num: s.targetOverCCW},
                 {label:'CCW_N4B', num: s.targetUnderCCW}
+            ];
+            validN9Nums = [String(s.targetCW), String(s.targetCCW)];
+            validN4Nums = [
+                String(s.targetUnderCW),
+                String(s.targetOverCW),
+                String(s.targetOverCCW),
+                String(s.targetUnderCCW)
             ];
             
             // Prompt SIN historial - solo opciones
@@ -1807,16 +1816,15 @@ async function requestAutoAI() {
             
             // === VALIDACION FRONTEND: FORZAR numeros de las 6 metricas ===
             if (validMetrics.length > 0 && !isWaitReply) {
-                const validNums = validMetrics.map(m => String(m.num));
                 const n9Clean = rawN9.replace(/[^0-9]/g, '');
                 const n4Clean = rawN4.replace(/[^0-9]/g, '');
                 
-                if (!validNums.includes(n9Clean)) {
+                if (!validN9Nums.includes(n9Clean)) {
                     // IA alucino -> elegir basado en dominancia
                     rawN9 = String(der >= izq ? validMetrics[0].num : validMetrics[3].num);
                     console.log('AI hallucinated N9, forced to:', rawN9);
                 }
-                if (!validNums.includes(n4Clean)) {
+                if (!validN4Nums.includes(n4Clean)) {
                     // IA alucino -> elegir N4 basado en zona dominante
                     if (big >= small) {
                         rawN4 = String(der >= izq ? validMetrics[2].num : validMetrics[5].num);

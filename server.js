@@ -565,17 +565,7 @@ app.post('/api/spin', async (req, res) => {
                             distance: physics.distance, direction: direction || physics.direction, sector,
                             predictions: newPredictions
                         });
-                        async function requestAIPrediction(type) {
-    const historyStr = history.join(',');
-    const resp = await fetch('/api/ai/predict-nx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, tableId: currentTableId, historyStr })
-    });
-    const data = await resp.json();
-    const el = document.getElementById(`ai-pred-${type}-text`);
-    if (el) el.innerText = data.reply || 'Sin respuesta';
-}                       savedSpin = await newSpin.save();
+                        savedSpin = await newSpin.save();
                     } catch (err) {
                         if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
                         else throw err;
@@ -723,87 +713,6 @@ app.use((req, res) => {
 });
 
 // ---- Start ----
-
-// ============================================================
-// /api/ai/groq-predict — Auto Prediccion con Llama 4 via Groq
-// ============================================================
-app.post('/api/ai/predict-nx', async (req, res) => {
-    const { type, tableId, historyStr } = req.body;
-    const groqKey = process.env.GROQ_API_KEY;
-
-    if (!groqKey) {
-        return res.status(503).json({ error: 'GROQ_API_KEY no configurada en el .env del servidor.' });
-    }
-
-    const WHEEL = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-    const getPos = n => WHEEL.indexOf(n);
-    const getDist = (a, b) => { const diff = getPos(b) - getPos(a); return diff > 18 ? diff - 37 : diff < -18 ? diff + 37 : diff; };
-
-    const nums = historyStr ? historyStr.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x)) : [];
-    if (nums.length < 4) {
-        return res.json({ prediction: null, reason: 'Se necesitan al menos 4 tiradas para analizar.' });
-    }
-
-    // Build last 12 events
-    const events = [];
-    for (let i = 1; i < nums.length && events.length < 12; i++) {
-        const idx = nums.length - i;
-        if (idx > 0) {
-            const dist = getDist(nums[idx - 1], nums[idx]);
-            events.unshift({ from: nums[idx-1], to: nums[idx], dist, dir: dist >= 0 ? 'DER' : 'IZQ', zone: Math.abs(dist) >= 9 ? 'BIG' : 'SMALL' });
-        }
-    }
-
-    const last8 = events.slice(-8);
-    const derC = last8.filter(e => e.dir === 'DER').length;
-    const bigC = last8.filter(e => e.zone === 'BIG').length;
-    const eventsStr = events.map(e => `${e.from}->${e.to} dist:${e.dist>0?'+':''}${e.dist} ${e.dir} ${e.zone}`).join('\n');
-
-    const sysPrompt = `Eres un analizador experto de ruleta europea. Responde SIEMPRE en JSON valido con este formato exacto:
-{"color":"verde","confianza":8,"direccion":"DER","zona":"BIG","prediccion":"Inercia CW dominante","razon":"5 de 8 ultimas en DER con tendencia BIG"}
-
-Reglas de color:
-- verde: mayoria en DIR y ZONA en ultimas 8
-- amarillo: mayoria en solo un eje
-- rojo: sin patron claro o caos
-
-Confianza 1-10 segun claridad del patron.`;
-
-    const userMsg = `HISTORIAL (${events.length} tiradas, antiguo a reciente):
-${eventsStr}
-
-RESUMEN ULTIMAS 8:
-DER:${derC} IZQ:${8-derC} | BIG:${bigC} SMALL:${8-bigC}
-Ultimas 3: ${events.slice(-3).map(e => e.dir+'/'+e.zone).join(', ')}
-
-Responde solo JSON.`;
-
-    try {
-        const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-            messages: [
-                { role: 'system', content: sysPrompt },
-                { role: 'user', content: userMsg }
-            ],
-            max_tokens: 250,
-            temperature: 0.2,
-            response_format: { type: 'json_object' }
-        }, {
-            headers: {
-                'Authorization': `Bearer ${groqKey}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 8000
-        });
-
-        const raw = response.data.choices[0].message.content;
-        const parsed = JSON.parse(raw);
-        return res.json(parsed);
-    } catch (err) {
-        console.error('Groq API error:', err.response?.data || err.message);
-        return res.status(500).json({ error: 'Error al contactar Groq API', detail: err.message });
-    }
-});
 
 const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n🎰 Roulette Predictor Server running at http://0.0.0.0:${PORT}`);
