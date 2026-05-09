@@ -99,14 +99,6 @@
 
             <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
-                <div class="agent-strategy-label dir-hist-toggle-row">
-                    <span>HISTORIAL DIR</span>
-                    <button class="wipe-btn dz-mini-btn" id="dir-hist-btn" onclick="toggleDirHistory(this)" title="Historial de aciertos DIR" aria-expanded="false">&#9662;</button>
-                </div>
-                <div id="dir-hist-panel" class="dz-history-dropdown">
-                    <div class="dz-hist-header">N9 y N4 por ruta</div>
-                    <div id="dir-hist-list" class="dz-hist-list"></div>
-                </div>
                 <!-- CW BLOCK -->
                 <div class="dual-block" style="padding-top: 5px;">
                     <div class="prediction-grid-3">
@@ -137,7 +129,11 @@
                         <span class="st wl-hidden">W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
                         <span class="status-msg compact-rate"><span id="dir-cw-rate">0.0%</span></span>
                         <span class="compact-perf" id="dir-cw-perf">--</span>
+                        <button class="dir-mini-toggle" id="dir-cw-n9-hist-btn" onclick="toggleDirMetricHistory('cw-n9', this)" title="Historial CW N9" aria-expanded="false">N9 &#9662;</button>
+                        <button class="dir-mini-toggle" id="dir-cw-n4-hist-btn" onclick="toggleDirMetricHistory('cw-n4', this)" title="Historial CW N4" aria-expanded="false">N4 &#9662;</button>
                     </div>
+                    <div id="dir-cw-n9-hist-panel" class="dir-metric-history"><div id="dir-cw-n9-hist-list"></div></div>
+                    <div id="dir-cw-n4-hist-panel" class="dir-metric-history"><div id="dir-cw-n4-hist-list"></div></div>
                 </div>
 
                 <!-- CCW BLOCK -->
@@ -170,7 +166,11 @@
                         <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
                         <span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
                         <span class="compact-perf" id="dir-ccw-perf">--</span>
+                        <button class="dir-mini-toggle" id="dir-ccw-n9-hist-btn" onclick="toggleDirMetricHistory('ccw-n9', this)" title="Historial CCW N9" aria-expanded="false">N9 &#9662;</button>
+                        <button class="dir-mini-toggle" id="dir-ccw-n4-hist-btn" onclick="toggleDirMetricHistory('ccw-n4', this)" title="Historial CCW N4" aria-expanded="false">N4 &#9662;</button>
                     </div>
+                    <div id="dir-ccw-n9-hist-panel" class="dir-metric-history"><div id="dir-ccw-n9-hist-list"></div></div>
+                    <div id="dir-ccw-n4-hist-panel" class="dir-metric-history"><div id="dir-ccw-n4-hist-list"></div></div>
                 </div>
             </section>
 

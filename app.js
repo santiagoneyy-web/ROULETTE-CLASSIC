@@ -169,8 +169,8 @@ function toggleDzHistory(btn) {
     }
 }
 
-function toggleDirHistory(btn) {
-    const panel = document.getElementById('dir-hist-panel');
+function toggleDirMetricHistory(metricId, btn) {
+    const panel = document.getElementById(`dir-${metricId}-hist-panel`);
     if (!panel) return;
     panel.classList.toggle('show');
     const opened = panel.classList.contains('show');
@@ -192,21 +192,22 @@ function getPerfText(items, limit = 8) {
     return recent.map(r => r === 'win' ? 'W' : 'L').join('');
 }
 
-function renderDirHistoryDropdown() {
-    const list = document.getElementById('dir-hist-list');
-    if (!list) return;
-
-    const rows = [
-        { label: 'CW N9', html: getPerfHtml(cwHistory), wins: cwHistory.filter(x => x === 'win').length, total: cwHistory.length },
-        { label: 'CW N4', html: getPerfHtml(cwN4History), wins: cwN4History.filter(x => x === 'win').length, total: cwN4History.length },
-        { label: 'CCW N9', html: getPerfHtml(ccwHistory), wins: ccwHistory.filter(x => x === 'win').length, total: ccwHistory.length },
-        { label: 'CCW N4', html: getPerfHtml(ccwN4History), wins: ccwN4History.filter(x => x === 'win').length, total: ccwN4History.length }
+function renderDirMetricHistories() {
+    const metrics = [
+        { id: 'cw-n9', label: 'CW N9', items: cwHistory },
+        { id: 'cw-n4', label: 'CW N4', items: cwN4History },
+        { id: 'ccw-n9', label: 'CCW N9', items: ccwHistory },
+        { id: 'ccw-n4', label: 'CCW N4', items: ccwN4History }
     ];
 
-    list.innerHTML = rows.map(row => {
-        const rate = row.total > 0 ? Math.round((row.wins / row.total) * 100) : 0;
-        return `<div class="dir-hist-item"><span class="dir-hist-label">${row.label}</span><span class="dir-hist-rate">${rate}%</span><span class="compact-perf">${row.html}</span></div>`;
-    }).join('');
+    metrics.forEach(metric => {
+        const list = document.getElementById(`dir-${metric.id}-hist-list`);
+        if (!list) return;
+        const wins = metric.items.filter(x => x === 'win').length;
+        const total = metric.items.length;
+        const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
+        list.innerHTML = `<div class="dir-hist-item"><span class="dir-hist-label">${metric.label}</span><span class="dir-hist-rate">${rate}%</span><span class="compact-perf">${getPerfHtml(metric.items)}</span></div>`;
+    });
 }
 
 
@@ -237,7 +238,7 @@ function getZoneTargets(lastNum) {
 
 function renderShadowPanel() {
     try {
-    renderDirHistoryDropdown();
+    renderDirMetricHistories();
     // 1. DIR (ANDROID 1717)
     if (lastSignal) {
         // --- CW BLOCK ---

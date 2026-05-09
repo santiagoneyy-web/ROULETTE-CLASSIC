@@ -790,11 +790,6 @@ html, body {
 .dz-hist-item .dur {
     color: var(--gold);
 }
-.dir-hist-toggle-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 .dir-hist-item {
   display: grid;
   grid-template-columns: 78px 38px 1fr;
@@ -811,6 +806,26 @@ html, body {
   color: var(--gold);
   font-size: 9px;
   text-align: right;
+}
+.dir-mini-toggle {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 9px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.dir-metric-history {
+  display: none;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.35);
+}
+.dir-metric-history.show {
+  display: block;
 }
 .dozens-info {
   text-align: center;
