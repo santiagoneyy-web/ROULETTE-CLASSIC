@@ -564,6 +564,7 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
+        if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
     }
 });
 
@@ -717,6 +718,7 @@ function submitNumber(val, silent = false, batch = false) {
             renderAnalystUI();
             renderMasterUI();
             if (history.length > 0) fetchPatternMemory(history);
+            if (document.getElementById('panel-auto') && document.getElementById('panel-auto').style.display !== 'none') { setTimeout(requestAutoAI, 800); }
         }
     }
 }
