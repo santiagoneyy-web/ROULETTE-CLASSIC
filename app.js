@@ -1337,6 +1337,7 @@ function renderTravelPanel() {
         const isLast = (i === 0);
         return `<tr${isLast ? ' class="last-row"' : ''}>
             <td class="${numClass}">${n}</td>
+            <td style="color:var(--text2)">${absDist}p</td>
             <td class="${dirClass}">${dir} <span style="font-size:9px;opacity:0.5">${dist >= 0 ? "&#8635;" : "&#8634;"}</span></td>
             <td>${phaseHtml}</td>
         </tr>`;
@@ -1699,14 +1700,15 @@ async function requestAutoAI() {
 
     if (statusEl) statusEl.innerText = 'THINKING';
     
+    let der=0, izq=0, big=0, small=0;
+    let lvl = 'red';
+    let pat = {label:'Estandar'};
+    
     try {
         const tableId = document.getElementById('table-select')?.value || '1';
         let stabilityInfo = '';
-        let lvl = 'red';
-        let pat = {label:"Estándar"};
         try {
             let evts = [];
-            let der=0, izq=0, big=0, small=0;
             const nCount = Math.min(history.length - 1, 8);
             for (let i = history.length - nCount; i < history.length; i++) {
                 let d = calcDist(history[i-1], history[i]);
@@ -1716,10 +1718,10 @@ async function requestAutoAI() {
                 if(dir==='DER') der++; else izq++;
                 if(zon==='BIG') big++; else small++;
             }
-            pat = (typeof analyzeTravelPattern === "function") ? analyzeTravelPattern(history) : {label:"Estándar",tiradas:0};
-            lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(pat, evts) : "red";
-            const colorNames = { green: 'VERDE (Dominante)', yellow: 'AMARILLO (Transición)', red: 'ROJO (Caos)' };
-            stabilityInfo = `DOMINANCIA: DER(${der}) IZQ(${izq}) | ZONA: BIG(${big}) SMALL(${small}) | ESTADO: ${colorNames[lvl]}`;
+            pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'Estandar',tiradas:0};
+            lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(pat, evts) : 'red';
+            const colorNames = { green: 'VERDE', yellow: 'AMARILLO', red: 'ROJO' };
+            stabilityInfo = 'DOMINANCIA: DER(' + der + ') IZQ(' + izq + ') | ZONA: BIG(' + big + ') SMALL(' + small + ') | ESTADO: ' + colorNames[lvl];
         } catch(e) { stabilityInfo = 'ESTADO: Analizando...'; }
 
         let mathContext = '';
@@ -1729,19 +1731,13 @@ async function requestAutoAI() {
             const last10ccw = ccwHistory.slice(-10);
             const cwRate = last10cw.length > 0 ? (last10cw.filter(x=>x==='W').length / last10cw.length * 100).toFixed(0) : 0;
             const ccwRate = last10ccw.length > 0 ? (last10ccw.filter(x=>x==='W').length / last10ccw.length * 100).toFixed(0) : 0;
-            mathContext = `MEDIDAS DISPONIBLES:\n- RUTA CW: N9=${s.targetCW}, N4_S=${s.targetUnderCW}, N4_B=${s.targetOverCW} (Eff:${cwRate}%)\n- RUTA CCW: N9=${s.targetCCW}, N4_S=${s.targetOverCCW}, N4_B=${s.targetUnderCCW} (Eff:${ccwRate}%)`;
+            mathContext = 'MEDIDAS DISPONIBLES:\n- RUTA CW: N9=' + s.targetCW + ', N4_S=' + s.targetUnderCW + ', N4_B=' + s.targetOverCW + ' (Eff:' + cwRate + '%)\n- RUTA CCW: N9=' + s.targetCCW + ', N4_S=' + s.targetOverCCW + ', N4_B=' + s.targetUnderCCW + ' (Eff:' + ccwRate + '%)';
+        } else {
+            mathContext = 'SIN MEDIDAS AUN - Esperando mas datos del motor de fisica.';
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patrón claro, usa "ESPERAR".' : 'MODO FULL: PROHIBIDO decir ESPERAR. Elige los mejores de la lista.';
-        const p = `Analiza:
-${stabilityInfo}
-${mathContext}
-Historial: ${history.slice(-15).join(',')}
-
-REGLA CRITICA: 
-1. Elige un N9 y un N4 SOLO de la lista de medidas.
-2. ${modeInstruction}
-3. Responde en JSON: {"n9": "Numero", "n4": "Numero"}.`;
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO decir ESPERAR. Elige obligatoriamente.';
+        const p = 'Analiza:\n' + stabilityInfo + '\n' + mathContext + '\nHistorial: ' + history.slice(-15).join(',') + '\nREGLA: Elige N9 y N4 SOLO de la lista. ' + modeInstruction + '\nJSON: {"n9":"Numero","n4":"Numero"}';
 
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
@@ -1751,23 +1747,23 @@ REGLA CRITICA:
         const data = await resp.json();
         
         if (data.reply) {
-            // El backend ya devuelve formateado "N9: X | N4: Y" gracias al nuevo endpoint
-            let [p9, p4] = data.reply.split('|');
-            n9El.innerText = p9 ? p9.replace('N9:','').trim() : "Esperar";
-            n4El.innerText = p4 ? p4.replace('N4:','').trim() : "Esperar";
+            let parts = data.reply.split('|');
+            n9El.innerText = parts[0] ? parts[0].replace('N9:','').trim() : 'Esperar';
+            n4El.innerText = parts[1] ? parts[1].replace('N4:','').trim() : 'Esperar';
             if (analysisEl) {
                 let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
                 let domZone = big > small ? 'BIG' : (small > big ? 'SMALL' : 'Mix');
-                analysisEl.innerText = `Analisis [${lvl.toUpperCase()}]: ${domDir}, ${domZone}`;
+                analysisEl.innerText = 'Analisis [' + lvl.toUpperCase() + ']: ' + domDir + ', ' + domZone;
             }
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {
-            n9El.innerText = "Error API";
-            n4El.innerText = "Error API";
+            n9El.innerText = 'Error API';
+            n4El.innerText = 'Error API';
         }
     } catch(e) {
-        n9El.innerText = "Error";
-        n4El.innerText = "Error";
+        console.error('Predictor error:', e);
+        n9El.innerText = 'Error';
+        n4El.innerText = 'Error';
     }
 }
 
