@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
@@ -261,15 +261,8 @@
         <div><strong style="color:var(--accent);">🎯 N9:</strong>&nbsp;<span id="ai-pred-n9-text">Analizando mesa en vivo...</span></div>
         <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
     </div>
-    <div id="ai-hist-n9" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(0,229,200,0.1); padding-top: 6px; display: none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:9px;">
-            <span style="color:var(--muted);">CW:</span>
-            <div id="ai-hist-cw-n9" style="display:flex; gap:2px;"><span style="opacity:0.5">Sin datos</span></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:9px;">
-            <span style="color:var(--muted);">CCW:</span>
-            <div id="ai-hist-ccw-n9" style="display:flex; gap:2px;"><span style="opacity:0.5">Sin datos</span></div>
-        </div>
+    <div id="ai-hist-n9" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(0,229,200,0.1); padding-top: 6px; display: none; text-align: center;">
+        <div id="ai-hist-list-n9" style="display:flex; gap:2px;/justify-content: center;"><span style="opacity:0.5">Sin datos</span></div>
     </div>
 </div>
                     <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text); border: 1px solid rgba(255,100,100,0.2); position: relative;">
@@ -277,17 +270,16 @@
         <div><strong style="color:#f55;">🔥 N4:</strong>&nbsp;<span id="ai-pred-n4-text">Esperando momentum...</span></div>
         <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
     </div>
-    <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:9px;">
-            <span style="color:var(--muted);">CW:</span>
-            <div id="ai-hist-cw-n4" style="display:flex; gap:2px;"><span style="opacity:0.5">Sin datos</span></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:9px;">
-            <span style="color:var(--muted);">CCW:</span>
-            <div id="ai-hist-ccw-n4" style="display:flex; gap:2px;"><span style="opacity:0.5">Sin datos</span></div>
-        </div>
+    <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none; text-align: center;">
+        <div id="ai-hist-list-n4" style="display:flex; gap:2px; justify-content: center;"><span style="opacity:0.5">Sin datos</span></div>
     </div>
 </div>
+                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                        </div>
+                        <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none; text-align: center;">
+                            <div id="ai-hist-list-n4" style="display:flex; gap:2px; justify-content: center;"><span style="opacity:0.5">Sin datos</span></div>
+                        </div>
+                    </div>
                     <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,229,200,0.04); border-radius: 8px; border: 1px solid rgba(0,229,200,0.1);">
                         <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">ANALISIS AI</div>
                         <div id="auto-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA generará señales automáticamente cada giro.</div>

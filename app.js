@@ -8,6 +8,11 @@ const cwHistory = [];
 const ccwHistory = [];
 const cwN4History = [];
 const ccwN4History = [];
+const aiN9History = [];
+const aiN4History = [];
+
+let lastAiPredN9 = null;
+let lastAiPredN4 = null;
 
 let lastSignal  = null;
 let currentTableId = null;
@@ -722,6 +727,23 @@ function submitNumber(val, silent = false, batch = false) {
             masterHistory.push(lastMasterHit ? 'win' : 'loss');
         }
 
+                // Evaluate AUTO AI predictions
+        if (history.length >= 1) {
+            if (lastAiPredN9 && lastAiPredN9 !== 'Esperar' && lastAiPredN9 !== 'Error API') {
+                const n9Num = Number(lastAiPredN9);
+                if (!isNaN(n9Num)) {
+                    const hit = getNeighbors(n9Num, 4).includes(n);
+                    aiN9History.push(hit ? 'win' : 'loss');
+                }
+            }
+            if (lastAiPredN4 && lastAiPredN4 !== 'Esperar' && lastAiPredN4 !== 'Error API') {
+                const n4Num = Number(lastAiPredN4);
+                if (!isNaN(n4Num)) {
+                    const hit = getNeighbors(n4Num, 4).includes(n);
+                    aiN4History.push(hit ? 'win' : 'loss');
+                }
+            }
+        }
         history.push(n);
 
         // Compute new predictions (Se calculan siempre para que la historia de W/L se llene, incluso en lote)
