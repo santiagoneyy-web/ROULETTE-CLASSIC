@@ -169,6 +169,16 @@ function toggleDzHistory(btn) {
     }
 }
 
+function toggleAiHist(metricId, btn) {
+    const panel = document.getElementById('ai-hist-' + metricId);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const opened = panel.style.display === 'block';
+    if (btn) {
+        btn.innerHTML = opened ? '&#9652;' : '&#9662;';
+    }
+}
+
 function toggleDirMetricHistory(metricId, btn) {
     const panel = document.getElementById(`dir-${metricId}-hist-panel`);
     if (!panel) return;
@@ -200,6 +210,15 @@ function renderDirMetricHistories() {
         { id: 'ccw-n9', label: 'CCW N9', items: ccwHistory },
         { id: 'ccw-n4', label: 'CCW N4', items: ccwN4History }
     ];
+
+    const cwN9List = document.getElementById('ai-hist-cw-n9');
+    if (cwN9List) cwN9List.innerHTML = getPerfHtml(cwHistory, 8);
+    const ccwN9List = document.getElementById('ai-hist-ccw-n9');
+    if (ccwN9List) ccwN9List.innerHTML = getPerfHtml(ccwHistory, 8);
+    const cwN4List = document.getElementById('ai-hist-cw-n4');
+    if (cwN4List) cwN4List.innerHTML = getPerfHtml(cwN4History, 8);
+    const ccwN4List = document.getElementById('ai-hist-ccw-n4');
+    if (ccwN4List) ccwN4List.innerHTML = getPerfHtml(ccwN4History, 8);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
