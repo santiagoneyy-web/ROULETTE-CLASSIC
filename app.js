@@ -1942,7 +1942,9 @@ async function requestAutoAI() {
                 rawN4 = 'ESPERAR';
             }
             
-            n9El.innerText = rawN9 || 'Esperar';
+            lastAiPredN9 = rawN9;
+lastAiPredN4 = rawN4;
+n9El.innerText = rawN9 || 'Esperar';
             n4El.innerText = rawN4 || 'Esperar';
             if (analysisEl) {
                 let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
