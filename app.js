@@ -216,14 +216,10 @@ function renderDirMetricHistories() {
         { id: 'ccw-n4', label: 'CCW N4', items: ccwN4History }
     ];
 
-    const cwN9List = document.getElementById('ai-hist-cw-n9');
-    if (cwN9List) cwN9List.innerHTML = getPerfHtml(cwHistory, 8);
-    const ccwN9List = document.getElementById('ai-hist-ccw-n9');
-    if (ccwN9List) ccwN9List.innerHTML = getPerfHtml(ccwHistory, 8);
-    const cwN4List = document.getElementById('ai-hist-cw-n4');
-    if (cwN4List) cwN4List.innerHTML = getPerfHtml(cwN4History, 8);
-    const ccwN4List = document.getElementById('ai-hist-ccw-n4');
-    if (ccwN4List) ccwN4List.innerHTML = getPerfHtml(ccwN4History, 8);
+        const aiNQList = document.getElementById('ai-hist-list-n9');
+    if (aiN9List) aiN9List.innerHTML = getPerfHtml(aiN9History, 100);
+    const aiN4List = document.getElementById('ai-hist-list-n4');
+    if (aiN4List) ain4List.innerHTML = getPerfHtml(aiN4History, 100);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
