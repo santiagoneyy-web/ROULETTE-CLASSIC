@@ -129,11 +129,7 @@
                         <span class="st wl-hidden">W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
                         <span class="status-msg compact-rate"><span id="dir-cw-rate">0.0%</span></span>
                         <span class="compact-perf" id="dir-cw-perf">--</span>
-                        <button class="dir-mini-toggle" id="dir-cw-n9-hist-btn" onclick="toggleDirMetricHistory('cw-n9', this)" title="Historial CW N9" aria-expanded="false">N9 &#9662;</button>
-                        <button class="dir-mini-toggle" id="dir-cw-n4-hist-btn" onclick="toggleDirMetricHistory('cw-n4', this)" title="Historial CW N4" aria-expanded="false">N4 &#9662;</button>
                     </div>
-                    <div id="dir-cw-n9-hist-panel" class="dir-metric-history"><div id="dir-cw-n9-hist-list"></div></div>
-                    <div id="dir-cw-n4-hist-panel" class="dir-metric-history"><div id="dir-cw-n4-hist-list"></div></div>
                 </div>
 
                 <!-- CCW BLOCK -->
@@ -166,11 +162,7 @@
                         <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
                         <span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
                         <span class="compact-perf" id="dir-ccw-perf">--</span>
-                        <button class="dir-mini-toggle" id="dir-ccw-n9-hist-btn" onclick="toggleDirMetricHistory('ccw-n9', this)" title="Historial CCW N9" aria-expanded="false">N9 &#9662;</button>
-                        <button class="dir-mini-toggle" id="dir-ccw-n4-hist-btn" onclick="toggleDirMetricHistory('ccw-n4', this)" title="Historial CCW N4" aria-expanded="false">N4 &#9662;</button>
                     </div>
-                    <div id="dir-ccw-n9-hist-panel" class="dir-metric-history"><div id="dir-ccw-n9-hist-list"></div></div>
-                    <div id="dir-ccw-n4-hist-panel" class="dir-metric-history"><div id="dir-ccw-n4-hist-list"></div></div>
                 </div>
             </section>
 
@@ -255,11 +247,11 @@
                         <div class="bot-icon">🤅</div>
                         <h2 class="main-title">AUTO AI PREDICTOR</h2>
                     </div>
-                    <button id="ai-mode-btn" style="background: none; border: 1px solid var(--accent); color: var(--accent); font-size: 9px; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-family: var(--mono); text-transform: uppercase;">MODO: SAFE</button>
+                    <button id="btn-ai-mode" onclick="toggleAIMode()" style="background: rgba(240,192,64,0.15); border: 1px solid #f0c040; color: #f0c040; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">MODO: SAFE</button>
                     <span id="ai-status" style="padding:1px 6px;">STANDBY</span>
                 </div>
-                <div style="padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-                    <div id="ai-pred-n9" style="background: rgba(0,229,200,0.05); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text); border: 1px solid rgba(0,229,200,0.2); position: relative;">
+                <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">
+                    <div id="ai-pred-n9" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(0,229,200,0.2); position: relative;">
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
                             <div><strong style="color:var(--accent);">🎯 N9:</strong>&nbsp;<span id="ai-pred-n9-text">Analizando mesa en vivo...</span></div>
                             <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
@@ -268,7 +260,7 @@
                             <div id="ai-hist-list-n9" style="display:flex; gap:2px; justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
                         </div>
                     </div>
-                    <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text); border: 10x solid rgba(255,100,100,0.2); position: relative;">
+                    <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(255,100,100,0.2); position: relative;">
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
                             <div><strong style="color:#f55;">🔥 N4:</strong>&nbsp;<span id="ai-pred-n4-text">Esperando momentum...</span></div>
                             <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>

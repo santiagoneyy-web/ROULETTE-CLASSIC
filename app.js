@@ -14,6 +14,18 @@ const aiN4History = [];
 let lastAiPredN9 = null;
 let lastAiPredN4 = null;
 
+window.currentAIMode = 'SAFE';
+window.toggleAIMode = function() {
+    const btn = document.getElementById('btn-ai-mode');
+    if (window.currentAIMode === 'SAFE') {
+        window.currentAIMode = 'FULL';
+        if(btn) { btn.innerText = 'MODO: FULL'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+    } else {
+        window.currentAIMode = 'SAFE';
+        if(btn) { btn.innerText = 'MODO: SAFE'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+    }
+};
+
 let lastSignal  = null;
 let currentTableId = null;
 
@@ -728,7 +740,7 @@ function submitNumber(val, silent = false, batch = false) {
             if (lastAiPredN9 && lastAiPredN9 !== 'Esperar' && lastAiPredN9 !== 'Error API') {
                 const n9Num = Number(lastAiPredN9);
                 if (!isNaN(n9Num)) {
-                    const hit = getNeighbors(n9Num, 4).includes(n);
+                    const hit = getNeighbors(n9Num, 9).includes(n);
                     aiN9History.push(hit ? 'win' : 'loss');
                 }
             }
