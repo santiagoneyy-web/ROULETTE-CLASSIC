@@ -16,8 +16,16 @@ let useMongo = false;
 // Memory cache for fallback
 let fallbackData = {
     tables: [
-        { id: 1, name: 'Auto Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/auto-roulette/' },
-        { id: 2, name: 'Inmersive Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
+        {
+            schema_version: 2,
+            id: 1,
+            code: 'AUTO',
+            name: 'Auto Roulette',
+            provider: 'Evolution',
+            url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+            source_type: 'casino_org',
+            status: 'active'
+        }
     ],
     spins: [],
     expertRules: [],
@@ -82,6 +90,24 @@ async function initDB() {
             if (tableCount === 0 && fallbackData.tables.length > 0) {
                 console.log('[DB] Seeding default tables in MongoDB...');
                 await Table.insertMany(fallbackData.tables);
+            } else {
+                await Table.updateOne(
+                    { id: 1 },
+                    {
+                        $setOnInsert: fallbackData.tables[0],
+                        $set: {
+                            schema_version: 2,
+                            code: 'AUTO',
+                            name: 'Auto Roulette',
+                            provider: 'Evolution',
+                            url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+                            source_type: 'casino_org',
+                            status: 'active'
+                        }
+                    },
+                    { upsert: true }
+                );
+                await Table.updateOne({ id: 2 }, { $set: { status: 'inactive' } });
             }
             console.log('✅ [DB] Fresh Session: Local JSON sync disabled.');
         } catch (err) {
@@ -104,6 +130,11 @@ async function getTables(cb) {
             // Aggregate spins count
             const tables = await Table.aggregate([
                 {
+                    $match: {
+                        status: { $ne: 'inactive' }
+                    }
+                },
+                {
                     $lookup: {
                         from: 'spins',
                         localField: 'id',
@@ -125,7 +156,7 @@ async function getTables(cb) {
         const results = fallbackData.tables.map(t => {
             const spins = fallbackData.spins.filter(s => s.table_id == t.id);
             return { ...t, spin_count: spins.length };
-        });
+        }).filter(t => t.status !== 'inactive');
         cb(null, results);
     }
 }
@@ -135,13 +166,31 @@ async function addTable(name, provider, url, cb) {
         try {
             const maxTable = await Table.findOne().sort('-id').exec();
             const id = maxTable ? maxTable.id + 1 : 1;
-            const newTable = new Table({ id, name, provider, url });
+            const newTable = new Table({
+                schema_version: 2,
+                id,
+                code: String(name || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, ''),
+                name,
+                provider,
+                url,
+                source_type: 'manual',
+                status: 'active'
+            });
             await newTable.save();
             cb(null, id);
         } catch (e) { cb(e); }
     } else {
         const id = fallbackData.tables.length > 0 ? Math.max(...fallbackData.tables.map(t => t.id)) + 1 : 1;
-        fallbackData.tables.push({ id, name, provider, url });
+        fallbackData.tables.push({
+            schema_version: 2,
+            id,
+            code: String(name || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, ''),
+            name,
+            provider,
+            url,
+            source_type: 'manual',
+            status: 'active'
+        });
         saveFallback();
         cb(null, id);
     }
@@ -208,17 +257,25 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
             if ([1, 20, 14, 31, 9].includes(num)) sector = 'Orphelins'; // Simplified
             
             const newSpin = new Spin({
+                schema_version: 2,
                 id,
                 table_id: parseInt(tableId),
+                table_code: extra.table_code || 'AUTO',
                 number: num,
                 source: source || 'bot',
+                source_quality: extra.source_quality || (source === 'casino_org_live' ? 'live' : 'manual'),
+                session_id: extra.session_id || '',
+                round_key: extra.round_key || extra.event_id || '',
                 event_id: extra.event_id || null,
                 speed_rpm: extra.speed_rpm || Number((21 + Math.random()).toFixed(1)),
                 timestamp_str: extra.timestamp_str || new Date().toLocaleTimeString(),
                 angle: extra.angle || Math.floor(Math.random() * 360),
+                raw_history: Array.isArray(extra.raw_history) ? extra.raw_history : [],
                 distance: extra.distance || (num > 18 ? 'Big' : 'Small'),
                 direction: extra.direction || (Math.random() > 0.5 ? 'CW' : 'CCW'),
-                sector: sector
+                sector: sector,
+                observed_at: extra.observed_at || new Date(),
+                ingested_at: new Date()
             });
             await newSpin.save();
             if (typeof cb === 'function') cb(null, id);
@@ -233,11 +290,19 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
         }
         const id = fallbackData.spins.length > 0 ? Math.max(...fallbackData.spins.map(s => s.id)) + 1 : 1;
         const newSpin = {
+            schema_version: 2,
             id,
             table_id: parseInt(tableId),
+            table_code: extra?.table_code || 'AUTO',
             number: parseInt(number),
             source: source || 'manual',
+            source_quality: extra?.source_quality || (source === 'casino_org_live' ? 'live' : 'manual'),
+            session_id: extra?.session_id || '',
+            round_key: extra?.round_key || extra?.event_id || '',
             event_id: extra ? extra.event_id : null,
+            raw_history: Array.isArray(extra?.raw_history) ? extra.raw_history : [],
+            observed_at: extra?.observed_at || new Date().toISOString(),
+            ingested_at: new Date().toISOString(),
             timestamp: new Date().toISOString()
         };
         fallbackData.spins.push(newSpin);
@@ -430,8 +495,10 @@ async function saveStrategyRecord(data, cb) {
         }
 
         const record = {
+            schema_version: 2,
             id: data.id || nextFallbackId(fallbackData.strategies),
             table_id: data.table_id || 'global',
+            table_code: data.table_code || (data.table_id && data.table_id !== 'global' ? 'AUTO' : 'GLOBAL'),
             name: data.name || 'Strategy',
             summary: data.summary || '',
             source: data.source || 'human',
@@ -441,9 +508,13 @@ async function saveStrategyRecord(data, cb) {
             trigger: data.trigger || '',
             action: data.action || '',
             tags: Array.isArray(data.tags) ? data.tags : [],
+            priority: data.priority || 'suggestion',
             confidence_weight: Number(data.confidence_weight || 1),
             success_hits: Number(data.success_hits || 0),
             fail_hits: Number(data.fail_hits || 0),
+            sample_size: Number(data.sample_size || 0),
+            effectiveness: data.effectiveness || { direct_rate: 0, neighbor_rate: 0, loss_rate: 0 },
+            last_context: data.last_context || '',
             last_used_at: data.last_used_at || null,
             created_at: now,
             updated_at: now
@@ -465,14 +536,20 @@ async function addMetricSnapshot(data, cb) {
         const record = {
             id: data.id || nextFallbackId(fallbackData.metricSnapshots),
             table_id: Number(data.table_id),
+            table_code: data.table_code || 'AUTO',
             spin_id: data.spin_id ?? null,
+            window_size: Number(data.window_size || 15),
             recent_numbers: Array.isArray(data.recent_numbers) ? data.recent_numbers : [],
             stability_level: data.stability_level || 'red',
             pattern_label: data.pattern_label || '',
+            dominant_axis: data.dominant_axis || 'none',
+            dominant_signal: data.dominant_signal || '',
+            dominance_score: Number(data.dominance_score || 0),
             dominance8: data.dominance8 || { cw: 0, ccw: 0, big: 0, small: 0 },
             momentum15: data.momentum15 || { cw: 0, ccw: 0, big: 0, small: 0 },
             performance8: data.performance8 || { cwN9: '', cwN4: '', ccwN9: '', ccwN4: '' },
             routes: data.routes || {},
+            context: data.context || { source: 'auto', notes: '' },
             captured_at: data.captured_at || new Date().toISOString()
         };
         fallbackData.metricSnapshots.push(record);
@@ -512,7 +589,10 @@ async function addAiPrediction(data, cb) {
         const record = {
             id: data.id || nextFallbackId(fallbackData.aiPredictions),
             table_id: Number(data.table_id),
+            table_code: data.table_code || 'AUTO',
             spin_id: data.spin_id ?? null,
+            basis: data.basis || 'dominance',
+            dominance_priority: data.dominance_priority !== false,
             mode: data.mode || 'SAFE',
             route: data.route || 'ESPERAR',
             zone: data.zone || 'ESPERAR',
@@ -520,6 +600,8 @@ async function addAiPrediction(data, cb) {
             n4: data.n4 || 'ESPERAR',
             analysis: data.analysis || '',
             strategy_refs: Array.isArray(data.strategy_refs) ? data.strategy_refs : [],
+            confidence: Number(data.confidence || 0),
+            context_hash: data.context_hash || '',
             result: data.result || 'pending',
             resolved_number: data.resolved_number ?? null,
             created_at: data.created_at || new Date().toISOString(),

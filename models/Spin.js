@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 
 const SpinSchema = new mongoose.Schema({
+    schema_version: { type: Number, default: 2 },
     id: { type: Number, required: true, unique: true },
     table_id: { type: Number, required: true, ref: 'Table' },
+    table_code: { type: String, default: 'AUTO', index: true },
     number: { type: Number, required: true, min: 0, max: 36 },
     source: { type: String, default: 'bot' },
+    source_quality: { type: String, enum: ['live', 'manual', 'batch', 'import'], default: 'live' },
+    session_id: { type: String, default: '' },
+    round_key: { type: String, default: '', index: true },
     
     // Physical characteristics (calculated on ingest)
     distance: { type: String, default: null }, 
@@ -16,6 +21,7 @@ const SpinSchema = new mongoose.Schema({
     speed_rpm: { type: Number, default: null },
     timestamp_str: { type: String, default: null },
     angle: { type: Number, default: null },
+    raw_history: [{ type: Number }],
 
     // Predictions from Agents (snapshots)
     predictions: {
@@ -33,7 +39,13 @@ const SpinSchema = new mongoose.Schema({
         agent4_result: { type: String, enum: ['Direct', 'Neighbor', 'Loss', null], default: null }
     },
 
+    observed_at: { type: Date, default: Date.now, index: true },
+    ingested_at: { type: Date, default: Date.now, index: true },
     timestamp: { type: Date, default: Date.now }
 });
+
+SpinSchema.index({ table_id: 1, id: -1 });
+SpinSchema.index({ table_id: 1, observed_at: -1 });
+SpinSchema.index({ table_id: 1, round_key: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Spin', SpinSchema);

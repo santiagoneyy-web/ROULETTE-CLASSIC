@@ -47,7 +47,7 @@ Una web que:
 - llenar historial real en `spins`
 - verificar duplicados, reloads y continuidad
 
-2. Lock the database schema
+2. Lock the database schema [DONE: schema v2]
 - cerrar entidades y campos finales
 - mantener compatibilidad `JSON + Mongo`
 
@@ -89,7 +89,6 @@ Una web que:
 
 El siguiente paso recomendado es:
 
-- llenar datos reales con el crawler
 - guardar snapshots de metricas por giro
 - guardar predicciones IA por giro
 

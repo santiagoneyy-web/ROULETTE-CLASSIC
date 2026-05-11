@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 
 const AiPredictionSchema = new mongoose.Schema({
+    schema_version: { type: Number, default: 2 },
     id: { type: Number, required: true, unique: true },
     table_id: { type: Number, required: true, index: true },
+    table_code: { type: String, default: 'AUTO', index: true },
     spin_id: { type: Number, default: null, index: true },
+    basis: { type: String, enum: ['dominance', 'ai_analysis', 'strategy', 'hybrid'], default: 'dominance' },
+    dominance_priority: { type: Boolean, default: true },
     mode: { type: String, enum: ['SAFE', 'FULL'], default: 'SAFE' },
     route: { type: String, enum: ['CW', 'CCW', 'ESPERAR'], default: 'ESPERAR' },
     zone: { type: String, enum: ['SMALL', 'BIG', 'ESPERAR'], default: 'ESPERAR' },
@@ -11,6 +15,8 @@ const AiPredictionSchema = new mongoose.Schema({
     n4: { type: String, default: 'ESPERAR' },
     analysis: { type: String, default: '' },
     strategy_refs: [{ type: String }],
+    confidence: { type: Number, default: 0 },
+    context_hash: { type: String, default: '' },
     result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending', index: true },
     resolved_number: { type: Number, default: null },
     created_at: { type: Date, default: Date.now, index: true },

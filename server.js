@@ -34,8 +34,16 @@ app.get('/api/tables', (req, res) => {
         if (err || !tables || tables.length === 0) {
             // Hard fallback in case database.js logic fails
             return res.json([
-                { id: 1, name: 'Auto Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/auto-roulette/' },
-                { id: 2, name: 'Inmersive Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
+                {
+                    schema_version: 2,
+                    id: 1,
+                    code: 'AUTO',
+                    name: 'Auto Roulette',
+                    provider: 'Evolution',
+                    url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+                    source_type: 'casino_org',
+                    status: 'active'
+                }
             ]);
         }
         res.json(tables);
@@ -839,11 +847,21 @@ app.post('/api/spin', async (req, res) => {
                         const maxSpin = await Spin.findOne().sort('-id').exec();
                         const newId = maxSpin ? maxSpin.id + 1 : 1;
                         const newSpin = new Spin({
+                            schema_version: 2,
                             id: newId,
-                            table_id, number, source: source || 'bot',
+                            table_id,
+                            table_code: 'AUTO',
+                            number,
+                            source: source || 'bot',
+                            source_quality: source === 'casino_org_live' ? 'live' : 'manual',
+                            session_id: req.body.session_id || '',
+                            round_key: req.body.round_key || req.body.event_id || '',
                             event_id: req.body.event_id || null,
+                            raw_history: Array.isArray(req.body.raw_history) ? req.body.raw_history : [],
                             distance: physics.distance, direction: direction || physics.direction, sector,
-                            predictions: newPredictions
+                            predictions: newPredictions,
+                            observed_at: req.body.observed_at || new Date(),
+                            ingested_at: new Date()
                         });
                         savedSpin = await newSpin.save();
                     } catch (err) {
