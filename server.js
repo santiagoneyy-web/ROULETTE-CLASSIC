@@ -15,60 +15,7 @@ const strategyStore = require('./strategy_store');
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 
-const app  = express();
-
-// Batch import (for initial sync from Bot over missing history)
-app.post('/api/spin/batch', async (req, res) => {
-    const { table_id, numbers, source } = req.body;
-    if (!table_id || !Array.isArray(numbers) || numbers.length === 0) {
-        return res.status(400).json({ error: 'table_id and numbers array required' });
-    }
-    
-    // Proceso el array y lo guardo localmente en el DB (como sync mode)
-    try {
-        // Obtenemos historial db
-        await new Promise((resolveDB) => {
-            db.getHistory(table_id, 20, (err, rows) => {
-                const existing = rows ? rows.map(r => r.number) : [];
-                
-                // Procesar evitando el solapamiento o bucles en recargas de bot
-                const doWork = async () => {
-                    // Validar primero si el array entrante (numbers) es EXACTAMENTE igual al final del historial existente (existing)
-                    if (existing && existing.length >= numbers.length) {
-                        const tail = existing.slice(-numbers.length);
-                        let isIdentical = true;
-                        for(let k=0; k < numbers.length; k++) {
-                            if (tail[k] !== numbers[k]) isIdentical = false;
-                        }
-                        if (isIdentical) {
-                            console.log(`[BATCH] Solapamiento detectado. Ignorando lote duplicado.`);
-                            return resolveDB(); // Terminamos sin añadir basura 
-                        }
-                    }
-
-                    // Sino es idéntico, o es parcial, barremos y forzamos adición.
-                    // Para ser seguros en escenarios complejos, simplemente insertamos asumiendo que el lote es fresco.
-                    for(let i=0; i < numbers.length; i++){
-                        const n = numbers[i];
-                        await new Promise((cb) => db.addSpin(table_id, n, source || 'batch', {}, cb));
-                    }
-                    resolveDB();
-                };
-                doWork();
-            });
-        });
-
-        // Hacemos ping a la UI
-        if (sseClients[table_id]) {
-            sseClients[table_id].forEach(client => {
-                client.write(`data: ${JSON.stringify({ type: 'batch_load' })}\n\n`);
-            });
-        }
-        res.json({ success: true, inserted: numbers.length });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+const app = express();
 
 // START
 const PORT = process.env.PORT || 3000;
@@ -773,7 +720,7 @@ app.post('/api/ai/teach', async (req, res) => {
 
 app.post('/api/spin', async (req, res) => {
     // ── NODO 1: INGESTA SÚPER RÁPIDA ──
-    const { table_id, number, source, direction } = req.body;
+    const { table_id, number, source, direction } = req.body || {};
     if (table_id == null || number == null) return res.status(400).json({ error: 'table_id and number required' });
     if (number < 0 || number > 36) return res.status(400).json({ error: 'number must be 0-36' });
 
@@ -814,7 +761,7 @@ app.post('/api/spin', async (req, res) => {
             if (req.body.event_id) {
                 const isDuplicate = currentHistory.some(s => s.event_id === req.body.event_id);
                 if (isDuplicate) return console.log(`[IGNORE DB] Event ${req.body.event_id}`);
-            } else if (number === lastNumber && source === 'public_scraper') {
+            } else if (number === lastNumber && ['public_scraper', 'casino_org_live'].includes(source)) {
                 return console.log(`[IGNORE DB] Duplicate ${number}`);
             }
 
@@ -912,25 +859,41 @@ app.post('/api/spin', async (req, res) => {
     })();
 });
 
-// Batch import (for OCR auto-capture)
-app.post('/api/spin/batch', (req, res) => {
-    const { table_id, numbers, source } = req.body;
-    if (!table_id || !Array.isArray(numbers)) return res.status(400).json({ error: 'table_id and numbers[] required' });
+// Batch import (for manual/automatic history sync)
+app.post('/api/spin/batch', async (req, res) => {
+    const { table_id, numbers, source } = req.body || {};
+    if (!table_id || !Array.isArray(numbers)) {
+        return res.status(400).json({ error: 'table_id and numbers[] required' });
+    }
+
     let inserted = 0;
     const errors = [];
-    const done = () => {
-        if (inserted + errors.length === numbers.length) {
-            res.json({ inserted, errors });
+    const cleanNumbers = numbers
+        .map(n => Number(n))
+        .filter(n => Number.isInteger(n));
+
+    for (const n of cleanNumbers) {
+        if (n < 0 || n > 36) {
+            errors.push(n);
+            continue;
         }
-    };
-    if (numbers.length === 0) return res.json({ inserted: 0, errors: [] });
-    numbers.forEach(n => {
-        if (n < 0 || n > 36) { errors.push(n); return done(); }
-        db.addSpin(table_id, n, source || 'ocr', (err) => {
-            if (err) errors.push(n); else inserted++;
-            done();
+
+        await new Promise(resolve => {
+            db.addSpin(table_id, n, source || 'batch', {}, (err) => {
+                if (err) errors.push({ number: n, error: err.message });
+                else inserted++;
+                resolve();
+            });
         });
-    });
+    }
+
+    if (sseClients[table_id]) {
+        sseClients[table_id].forEach(client => {
+            client.write(`data: ${JSON.stringify({ type: 'batch_load', inserted })}\n\n`);
+        });
+    }
+
+    res.json({ inserted, errors });
 });
 
 app.delete('/api/history/:tableId', (req, res) => {
