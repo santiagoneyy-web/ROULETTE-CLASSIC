@@ -1385,16 +1385,12 @@ app.get('/api/predict/:tableId', async (req, res) => {
 // Admin endpoint to wipe DB without shell (Free tier Render doesn't have shell)
 app.get('/api/admin/wipe-all-spins-securely', async (req, res) => {
     try {
-        if (db.getUseMongo()) {
-            const result = await Spin.deleteMany({});
-            res.send(`✅ [ADMIN] MongoDB: Historial borrado. Se eliminaron ${result.deletedCount} registros.`);
-        } else {
-            // Wipe local JSON too
-            db.wipeAllSpins(() => {});
-            res.send('✅ [ADMIN] Local JSON: Historial borrado.');
-        }
+        db.wipeAllSpins((err) => {
+            if (err) return res.status(500).send('Error en el wipe: ' + err.message);
+            res.send('Base operativa borrada: spins, patterns, metric snapshots, AI predictions y table states.');
+        });
     } catch (e) {
-        res.status(500).send(`❌ Error en el wipe: ${e.message}`);
+        res.status(500).send('Error en el wipe: ' + e.message);
     }
 });
 
@@ -1402,15 +1398,10 @@ app.get('/api/admin/wipe-all-spins-securely', async (req, res) => {
 app.delete('/api/wipe-all', async (req, res) => {
     try {
         console.log('🧹 [Wipe All] Triggering full database cleaning...');
-        if (db.getUseMongo()) {
-            const result = await Spin.deleteMany({});
-            res.json({ success: true, deleted: result.deletedCount, message: `Borrados ${result.deletedCount} registros de MongoDB.` });
-        } else {
-            db.wipeAllSpins((err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, message: 'Historial local vaciado.' });
-            });
-        }
+        db.wipeAllSpins((err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: 'Base operativa vaciada por completo.' });
+        });
     } catch (e) {
         console.error('Wipe failed:', e);
         res.status(500).json({ error: e.message });
@@ -1461,3 +1452,4 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
         }
     }
 });
+
