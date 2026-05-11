@@ -10,9 +10,12 @@ const cwN4History = [];
 const ccwN4History = [];
 const aiN9History = [];
 const aiN4History = [];
+let aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
+let aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
 
 let lastAiPredN9 = null;
 let lastAiPredN4 = null;
+let lastAiPredMode = 'SAFE';
 
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
@@ -27,6 +30,7 @@ window.toggleAIMode = function() {
         if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
         if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
+    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
 };
 
 let lastSignal  = null;
@@ -170,12 +174,14 @@ function wipeData() {
             history.length=0; cwHistory.length=0; ccwHistory.length=0;
             cwN4History.length=0; ccwN4History.length=0;
             aiN9History.length=0; aiN4History.length=0;
+            aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
+            aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
             lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleDzHistory(btn) {
@@ -216,6 +222,22 @@ function getPerfHtml(items, limit = 12) {
     if (!recent.length) return '<span style="opacity:0.5">Sin datos</span>';
     return recent.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
 }
+function getAiModeStats(rows, metricKey) {
+    const resolved = rows
+        .map(item => item[metricKey] || ((item.result === 'win' || item.result === 'loss') ? item.result : null))
+        .filter(item => item === 'win' || item === 'loss');
+    const wins = resolved.filter(item => item === 'win').length;
+    const losses = resolved.length - wins;
+    const rate = resolved.length ? Math.round((wins / resolved.length) * 100) : 0;
+    return { wins, losses, total: resolved.length, rate };
+}
+function getAiPerfHtml(items, stats, limit = 50) {
+    const marks = getPerfHtml(items, limit);
+    const summary = stats && stats.total > 0
+        ? `<span style="margin-left:8px; color:var(--accent); font-weight:700;">${stats.rate}%</span><span style="margin-left:4px; color:var(--muted);">(${stats.wins}W/${stats.losses}L)</span>`
+        : '<span style="margin-left:8px; color:var(--muted);">0%</span>';
+    return marks + summary;
+}
 
 function getPerfText(items, limit = 8) {
     const recent = items.slice(-limit);
@@ -226,13 +248,16 @@ function getPerfText(items, limit = 8) {
 async function syncAiPredictionState() {
     if (!currentTableId) return;
     try {
-        const resp = await fetch(`/api/ai/predictions/${currentTableId}?limit=250`);
+        const mode = String(window.currentAIMode || 'SAFE').toUpperCase();
+        const resp = await fetch(`/api/ai/predictions/${currentTableId}?limit=5000&mode=${mode}&basis=ai_analysis`);
         if (!resp.ok) return;
         const rows = await resp.json();
         const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
 
         aiN9History.length = 0;
         aiN4History.length = 0;
+        aiN9Stats = getAiModeStats(predictions, 'n9_result');
+        aiN4Stats = getAiModeStats(predictions, 'n4_result');
         lastAiPredN9 = null;
         lastAiPredN4 = null;
 
@@ -242,6 +267,8 @@ async function syncAiPredictionState() {
             if (n9Result === 'win' || n9Result === 'loss') aiN9History.push(n9Result);
             if (n4Result === 'win' || n4Result === 'loss') aiN4History.push(n4Result);
         });
+        if (aiN9History.length > 50) aiN9History.splice(0, aiN9History.length - 50);
+        if (aiN4History.length > 50) aiN4History.splice(0, aiN4History.length - 50);
 
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
@@ -255,10 +282,16 @@ async function syncAiPredictionState() {
         if (current) {
             lastAiPredN9 = current.n9 || null;
             lastAiPredN4 = current.n4 || null;
+            lastAiPredMode = mode;
             if (n9El) n9El.innerText = current.n9 || 'Esperar';
             if (n4El) n4El.innerText = current.n4 || 'Esperar';
             if (analysisEl) analysisEl.innerText = current.analysis || 'Analisis AI sincronizado desde la base.';
             if (statusEl) statusEl.innerText = latestPending ? 'ONLINE' : 'STANDBY';
+        } else {
+            if (n9El) n9El.innerText = 'Sin datos';
+            if (n4El) n4El.innerText = 'Sin datos';
+            if (analysisEl) analysisEl.innerText = `${mode}: sin historial de aciertos todavia.`;
+            if (statusEl) statusEl.innerText = 'STANDBY';
         }
 
         renderDirMetricHistories();
@@ -275,10 +308,10 @@ function renderDirMetricHistories() {
         { id: 'ccw-n4', label: 'CCW N4', items: ccwN4History }
     ];
 
-        const aiN9List = document.getElementById('ai-hist-list-n9');
-    if (aiN9List) aiN9List.innerHTML = getPerfHtml(aiN9History, 100);
+    const aiN9List = document.getElementById('ai-hist-list-n9');
+    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 50);
     const aiN4List = document.getElementById('ai-hist-list-n4');
-    if (aiN4List) aiN4List.innerHTML = getPerfHtml(aiN4History, 100);
+    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 50);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
@@ -782,23 +815,6 @@ function submitNumber(val, silent = false, batch = false) {
             masterHistory.push(lastMasterHit ? 'win' : 'loss');
         }
 
-                // Evaluate AUTO AI predictions
-        if (history.length >= 1) {
-            if (lastAiPredN9 && lastAiPredN9 !== 'Esperar' && lastAiPredN9 !== 'Error API') {
-                const n9Num = Number(lastAiPredN9);
-                if (!isNaN(n9Num)) {
-                    const hit = getNeighbors(n9Num, 9).includes(n);
-                    aiN9History.push(hit ? 'win' : 'loss');
-                }
-            }
-            if (lastAiPredN4 && lastAiPredN4 !== 'Esperar' && lastAiPredN4 !== 'Error API') {
-                const n4Num = Number(lastAiPredN4);
-                if (!isNaN(n4Num)) {
-                    const hit = getNeighbors(n4Num, 4).includes(n);
-                    aiN4History.push(hit ? 'win' : 'loss');
-                }
-            }
-        }
         history.push(n);
 
         // Compute new predictions (Se calculan siempre para que la historia de W/L se llene, incluso en lote)
@@ -1842,6 +1858,7 @@ window.toggleAIMode = function() {
         if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
         if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
+    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
     if (typeof requestAutoAI === 'function') requestAutoAI();
 };
 
@@ -2021,6 +2038,7 @@ async function requestAutoAI() {
             
             lastAiPredN9 = rawN9;
 lastAiPredN4 = rawN4;
+lastAiPredMode = String(window.currentAIMode || 'SAFE').toUpperCase();
 n9El.innerText = rawN9 || 'Esperar';
             n4El.innerText = rawN4 || 'Esperar';
             if (analysisEl) {

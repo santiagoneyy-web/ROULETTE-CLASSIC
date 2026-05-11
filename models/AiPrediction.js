@@ -26,5 +26,7 @@ const AiPredictionSchema = new mongoose.Schema({
 });
 
 AiPredictionSchema.index({ table_id: 1, created_at: -1 });
+AiPredictionSchema.index({ table_id: 1, mode: 1, basis: 1, created_at: -1 });
+AiPredictionSchema.index({ table_id: 1, mode: 1, context_hash: 1 });
 
 module.exports = mongoose.model('AiPrediction', AiPredictionSchema);

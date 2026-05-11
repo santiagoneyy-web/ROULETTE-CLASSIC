@@ -109,7 +109,9 @@ app.get('/api/table-state/:tableId', (req, res) => {
 app.get('/api/ai/predictions/:tableId', (req, res) => {
     const tableId = req.params.tableId;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
-    db.getAiPredictions(tableId, limit, (err, rows) => {
+    const mode = req.query.mode ? String(req.query.mode).toUpperCase() : null;
+    const basis = req.query.basis ? String(req.query.basis) : null;
+    db.getAiPredictions(tableId, limit, { mode, basis }, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
     });
@@ -554,16 +556,22 @@ function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
     const parts = String(normalizedReply).split('|');
     const n9 = parts[0] ? parts[0].replace('N9:', '').trim() : 'ESPERAR';
     const n4 = parts[1] ? parts[1].replace('N4:', '').trim() : 'ESPERAR';
+    const mode = String(context.mode || 'SAFE').toUpperCase();
+    const recentKey = Array.isArray(context.recentNumbers) ? context.recentNumbers.slice(-15).join('-') : '';
+    const contextHash = ['AI', mode, recentKey, n9, n4].join('|');
 
     db.addAiPrediction({
         table_id: Number(tableId) || 0,
-        mode: String(context.mode || 'SAFE').toUpperCase(),
+        basis: 'ai_analysis',
+        dominance_priority: false,
+        mode,
         route: String(parsed?.route || parsed?.direccion || (n9 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
         zone: String(parsed?.zone || parsed?.zona || (n4 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
         n9,
         n4,
         analysis: String(parsed?.analysis || parsed?.reason || '').trim(),
         strategy_refs: parsed?.strategy_name ? [String(parsed.strategy_name)] : [],
+        context_hash: contextHash,
         result: n9 === 'ESPERAR' || n4 === 'ESPERAR' ? 'skip' : 'pending',
         n9_result: n9 === 'ESPERAR' ? 'skip' : 'pending',
         n4_result: n4 === 'ESPERAR' ? 'skip' : 'pending',
@@ -1039,6 +1047,7 @@ app.post('/api/ai/groq', async (req, res) => {
             if (autoAiContext) {
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized.reply, parsed);
                 return res.json({ ...normalized, provider: llm.provider });
             }
 

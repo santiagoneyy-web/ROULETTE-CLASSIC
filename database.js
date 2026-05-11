@@ -647,6 +647,16 @@ async function getMetricSnapshots(tableId, limit, cb) {
 async function addAiPrediction(data, cb) {
     if (useMongo) {
         try {
+            if (data.context_hash && data.basis === 'ai_analysis') {
+                const existing = await AiPrediction.findOne({
+                    table_id: Number(data.table_id),
+                    mode: String(data.mode || 'SAFE').toUpperCase(),
+                    basis: 'ai_analysis',
+                    context_hash: data.context_hash
+                }).lean().exec();
+                if (existing) return cb(null, existing);
+            }
+
             let created = null;
             let attempts = 0;
             while (!created && attempts < 5) {
@@ -661,6 +671,16 @@ async function addAiPrediction(data, cb) {
             cb(null, created);
         } catch (e) { cb(e); }
     } else {
+        if (data.context_hash && data.basis === 'ai_analysis') {
+            const existing = fallbackData.aiPredictions.find(item =>
+                item.table_id == data.table_id &&
+                String(item.mode || 'SAFE').toUpperCase() === String(data.mode || 'SAFE').toUpperCase() &&
+                item.basis === 'ai_analysis' &&
+                item.context_hash === data.context_hash
+            );
+            if (existing) return cb(null, existing);
+        }
+
         const record = {
             schema_version: 2,
             id: data.id || nextFallbackId(fallbackData.aiPredictions),
@@ -747,10 +767,24 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
     }
 }
 
-async function getAiPredictions(tableId, limit, cb) {
+async function getAiPredictions(tableId, limit, modeOrCb, cb) {
+    let mode = null;
+    let basis = null;
+    if (typeof modeOrCb === 'function') {
+        cb = modeOrCb;
+    } else if (modeOrCb && typeof modeOrCb === 'object') {
+        mode = modeOrCb.mode ? String(modeOrCb.mode).toUpperCase() : null;
+        basis = modeOrCb.basis ? String(modeOrCb.basis) : null;
+    } else if (modeOrCb) {
+        mode = String(modeOrCb).toUpperCase();
+    }
+
     if (useMongo) {
         try {
-            const rows = await AiPrediction.find({ table_id: Number(tableId) })
+            const query = { table_id: Number(tableId) };
+            if (['SAFE', 'FULL'].includes(mode)) query.mode = mode;
+            if (basis) query.basis = basis;
+            const rows = await AiPrediction.find(query)
                 .sort({ created_at: -1 })
                 .limit(limit || 100)
                 .lean()
@@ -760,6 +794,8 @@ async function getAiPredictions(tableId, limit, cb) {
     } else {
         const rows = fallbackData.aiPredictions
             .filter(item => item.table_id == tableId)
+            .filter(item => !['SAFE', 'FULL'].includes(mode) || String(item.mode || 'SAFE').toUpperCase() === mode)
+            .filter(item => !basis || item.basis === basis)
             .slice(-(limit || 100))
             .reverse();
         cb(null, rows);
