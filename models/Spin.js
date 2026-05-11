@@ -47,5 +47,6 @@ const SpinSchema = new mongoose.Schema({
 SpinSchema.index({ table_id: 1, id: -1 });
 SpinSchema.index({ table_id: 1, observed_at: -1 });
 SpinSchema.index({ table_id: 1, round_key: 1 }, { sparse: true });
+SpinSchema.index({ table_id: 1, event_id: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Spin', SpinSchema);

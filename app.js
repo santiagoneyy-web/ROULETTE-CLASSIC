@@ -17,12 +17,15 @@ let lastAiPredN4 = null;
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
+    const note = document.getElementById('auto-ai-mode-note');
     if (window.currentAIMode === 'SAFE') {
         window.currentAIMode = 'FULL';
-        if(btn) { btn.innerText = 'MODO: FULL'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+        if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+        if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
     } else {
         window.currentAIMode = 'SAFE';
-        if(btn) { btn.innerText = 'MODO: SAFE'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+        if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+        if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
 };
 
@@ -248,7 +251,7 @@ async function syncAiPredictionState() {
 
         const n9El = document.getElementById('ai-pred-n9-text');
         const n4El = document.getElementById('ai-pred-n4-text');
-        const statusEl = document.getElementById('auto-ai-status');
+        const statusEl = document.getElementById('ai-status');
         const analysisEl = document.getElementById('auto-ai-analysis');
 
         if (current) {
@@ -1831,12 +1834,15 @@ document.addEventListener('DOMContentLoaded', () => {
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
+    const note = document.getElementById('auto-ai-mode-note');
     if (window.currentAIMode === 'SAFE') {
         window.currentAIMode = 'FULL';
-        if(btn) { btn.innerText = 'MODO: FULL'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+        if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+        if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
     } else {
         window.currentAIMode = 'SAFE';
-        if(btn) { btn.innerText = 'MODO: SAFE'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+        if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+        if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
     if (typeof requestAutoAI === 'function') requestAutoAI();
 };
@@ -1844,7 +1850,7 @@ window.toggleAIMode = function() {
 async function requestAutoAI() {
     const n9El = document.getElementById('ai-pred-n9-text');
     const n4El = document.getElementById('ai-pred-n4-text');
-    const statusEl = document.getElementById('auto-ai-status');
+    const statusEl = document.getElementById('ai-status');
     const analysisEl = document.getElementById('auto-ai-analysis');
     if (!n9El || !n4El) return;
 
@@ -1857,7 +1863,7 @@ async function requestAutoAI() {
     if (!lastSignal || lastSignal.targetCW === undefined || lastSignal.targetCCW === undefined) {
         n9El.innerText = "Esperando DIR...";
         n4El.innerText = "Esperando DIR...";
-        if (analysisEl) analysisEl.innerText = 'Analisis AI: esperando las 6 medidas reales del panel DIR.';
+        if (analysisEl) analysisEl.innerText = 'Esperando las 6 medidas del panel DIR para decidir ruta y zona.';
         return;
     }
 
@@ -1940,7 +1946,7 @@ async function requestAutoAI() {
             mathContext = 'SIN MEDIDAS - Responde ESPERAR.';
         }
 
-        let modeInstruction = window.currentAIMode === 'SAFE' ? 'Si no hay patron claro, responde ESPERAR.' : 'MODO FULL: PROHIBIDO ESPERAR. Elige obligatoriamente.';
+        let modeInstruction = window.currentAIMode === 'SAFE' ? 'SAFE: si no hay ventaja clara, responde ESPERAR.' : 'FULL: elige la mejor jugada disponible aunque la ventaja sea corta.';
         const p = stabilityInfo + '\n' + mathContext + '\n' + modeInstruction + '\nElige 1 para N9 y 1 para N4. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
 
         const autoAiContext = lastSignal ? {
@@ -2020,9 +2026,7 @@ lastAiPredN4 = rawN4;
 n9El.innerText = rawN9 || 'Esperar';
             n4El.innerText = rawN4 || 'Esperar';
             if (analysisEl) {
-                let domDir = der > izq ? 'Dom: DER' : (izq > der ? 'Dom: IZQ' : 'Equilibrio');
-                let domZone = big > small ? 'BIG' : (small > big ? 'SMALL' : 'Mix');
-                analysisEl.innerText = data.analysis || ('Analisis [' + lvl.toUpperCase() + ']: ' + domDir + ', ' + domZone);
+                analysisEl.innerText = data.analysis || ('Mesa ' + lvl.toUpperCase() + ': sin lectura explicada todavia.');
             }
             if (statusEl) statusEl.innerText = 'ONLINE';
         } else {

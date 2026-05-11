@@ -364,6 +364,78 @@ function summarizePatternContext(context, routeKey) {
     return `Patron ${detectWlPattern(n9Seq)} en N9 y ${detectWlPattern(n4Seq)} en N4`;
 }
 
+function extractAutoPatternName(rawAnalysis, context, routeKey) {
+    const source = `${rawAnalysis || ''} ${summarizePatternContext(context, routeKey)}`.toLowerCase();
+    if (source.includes('rodillo') || source.includes('zigzag')) return 'rodillo';
+    if (source.includes('ola')) return 'ola';
+    if (source.includes('bambu')) return 'bambu';
+    if (source.includes('trampa')) return 'trampa';
+    if (source.includes('pico')) return 'pico';
+    if (source.includes('farol')) return 'farol';
+    if (source.includes('turbulencia')) return 'turbulencia';
+    if (source.includes('bloque') || String(context?.stabilityLevel || '').toLowerCase() === 'green') return 'bloques';
+    if (source.includes('racha')) return 'racha';
+    if (source.includes('mixto')) return 'mixto';
+    return 'flujo mixto';
+}
+
+function buildHumanAutoAiAnalysis(context, decision = {}, rawAnalysis = '') {
+    if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
+        return 'Sin contexto suficiente para explicar la jugada.';
+    }
+
+    const route = String(decision.route || '').toUpperCase();
+    const zone = String(decision.zone || '').toUpperCase();
+    const mode = String(context.mode || 'SAFE').toUpperCase();
+    const stability = String(context.stabilityLevel || 'red').toLowerCase();
+    const dom8 = context.dominance8 || {};
+    const mom15 = context.momentum15 || {};
+    const cw = context.routes.cw || {};
+    const ccw = context.routes.ccw || {};
+    const scoreCW = (Number(cw.hitRate) || 0) + ((Number(mom15.cw) || 0) * 4) + ((Number(dom8.cw) || 0) * 2);
+    const scoreCCW = (Number(ccw.hitRate) || 0) + ((Number(mom15.ccw) || 0) * 4) + ((Number(dom8.ccw) || 0) * 2);
+    const zoneBigScore = ((Number(mom15.big) || 0) * 4) + ((Number(dom8.big) || 0) * 2);
+    const zoneSmallScore = ((Number(mom15.small) || 0) * 4) + ((Number(dom8.small) || 0) * 2);
+    const routeGap = Math.abs(scoreCW - scoreCCW);
+    const zoneGap = Math.abs(zoneBigScore - zoneSmallScore);
+    const routeKey = route === 'CCW' ? 'ccw' : 'cw';
+    const patternName = extractAutoPatternName(rawAnalysis, context, routeKey);
+    const routeText = route === 'CCW' ? 'ruta izquierda (CCW)' : 'ruta derecha (CW)';
+    const zoneText = zone === 'BIG' ? 'zona amplia (10-18)' : 'zona corta (1-9)';
+    const stabilityText = {
+        green: 'mesa estable por bloques',
+        yellow: 'mesa en transicion',
+        red: 'mesa sensible o trabada'
+    }[stability] || 'mesa en lectura';
+    const routeEdgeText = routeGap >= 12 ? 'ventaja clara en ruta' : routeGap >= 6 ? 'ventaja moderada en ruta' : 'ventaja corta en ruta';
+    const zoneEdgeText = zoneGap >= 10 ? 'zona bien definida' : zoneGap >= 5 ? 'zona algo definida' : 'zona todavia mezclada';
+
+    if (decision.n9 === 'ESPERAR' || decision.n4 === 'ESPERAR' || route === 'ESPERAR' || zone === 'ESPERAR') {
+        return `${mode} no entra: ${stabilityText}. El patron actual parece ${patternName} y la ventaja entre CW/CCW o BIG/SMALL todavia no alcanza para disparar.`;
+    }
+
+    return `${mode} entra por ${routeText} y ${zoneText}. Ve patron ${patternName}, ${stabilityText}, ${routeEdgeText} y ${zoneEdgeText}.`;
+}
+
+function isLiveDuplicateSpin(currentHistory, payload) {
+    const history = Array.isArray(currentHistory) ? currentHistory : [];
+    if (history.length === 0) return false;
+
+    const eventId = String(payload?.event_id || '').trim();
+    const roundKey = String(payload?.round_key || '').trim();
+    const source = String(payload?.source || '').trim();
+    const number = Number(payload?.number);
+    const lastSpin = history[history.length - 1];
+
+    if (eventId && history.some(spin => String(spin.event_id || '') === eventId)) return true;
+    if (roundKey && history.some(spin => String(spin.round_key || '') === roundKey)) return true;
+    if (['public_scraper', 'casino_org_live'].includes(source) && Number.isInteger(number) && lastSpin && Number(lastSpin.number) === number) {
+        return true;
+    }
+
+    return false;
+}
+
 function buildStrategyDigest(tableId) {
     return strategyStore.buildPromptDigest({ tableId: tableId || 'global', limit: 12 });
 }
@@ -572,19 +644,30 @@ function buildAutoAiFallback(context) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
-            analysis: `Mesa ${stability.toUpperCase()} sin ventaja clara. ${patternText}; dominancia viva insuficiente para entrar.`
+            analysis: buildHumanAutoAiAnalysis(context, {
+                route: 'ESPERAR',
+                zone: 'ESPERAR',
+                n9: 'ESPERAR',
+                n4: 'ESPERAR'
+            }, patternText)
         };
     }
 
-    return {
+    const decision = {
+        route: routeKey.toUpperCase(),
+        zone: zoneLabel,
         n9: String(route.n9),
-        n4: zoneKey === 'big' ? String(route.n4Big) : String(route.n4Small),
-        analysis: [
-            `${patternText}.`,
-            `Dom ${dominantRoute} con zona ${zoneLabel}.`,
-            `Brecha ruta ${routeGap}, brecha zona ${zoneGap}.`,
-            `Mesa ${stability.toUpperCase()}.`
-        ].join(' ')
+        n4: zoneKey === 'big' ? String(route.n4Big) : String(route.n4Small)
+    };
+
+    return {
+        n9: decision.n9,
+        n4: decision.n4,
+        analysis: buildHumanAutoAiAnalysis(
+            context,
+            decision,
+            `${patternText}. Dom ${dominantRoute} con zona ${zoneLabel}. Brecha ruta ${routeGap}, brecha zona ${zoneGap}. Mesa ${stability.toUpperCase()}.`
+        )
     };
 }
 
@@ -697,7 +780,7 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     let zone = String(parsed.zone || parsed.zona || '').toUpperCase();
     let n9 = cleanAutoNumber(parsed.n9);
     let n4 = cleanAutoNumber(parsed.n4);
-    const analysis = String(parsed.analysis || parsed.reason || fallback.analysis || '').trim();
+    const rawAnalysis = String(parsed.analysis || parsed.reason || fallback.analysis || '').trim();
 
     if (!allowedN9.includes(n9)) {
         if (route === 'CW') n9 = String(cw.n9);
@@ -716,13 +799,31 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     if (!allowedN9.includes(n9)) n9 = fallback.n9;
     if (!allowedN4.includes(n4)) n4 = fallback.n4;
 
+    if (!route || route === 'ESPERAR') {
+        if (n9 === String(cw.n9)) route = 'CW';
+        else if (n9 === String(ccw.n9)) route = 'CCW';
+    }
+    if (!zone || zone === 'ESPERAR') {
+        if (route === 'CW' && n4 === String(cw.n4Small)) zone = 'SMALL';
+        else if (route === 'CW' && n4 === String(cw.n4Big)) zone = 'BIG';
+        else if (route === 'CCW' && n4 === String(ccw.n4Small)) zone = 'SMALL';
+        else if (route === 'CCW' && n4 === String(ccw.n4Big)) zone = 'BIG';
+    }
+
     if (n9 === 'ESPERAR' || n4 === 'ESPERAR') {
-        return { reply: formatAutoReply('ESPERAR', 'ESPERAR'), analysis: analysis || fallback.analysis };
+        return {
+            reply: formatAutoReply('ESPERAR', 'ESPERAR'),
+            analysis: buildHumanAutoAiAnalysis(
+                context,
+                { route: 'ESPERAR', zone: 'ESPERAR', n9: 'ESPERAR', n4: 'ESPERAR' },
+                rawAnalysis || fallback.analysis
+            )
+        };
     }
 
     return {
         reply: formatAutoReply(n9, n4),
-        analysis: analysis || fallback.analysis
+        analysis: buildHumanAutoAiAnalysis(context, { route, zone, n9, n4 }, rawAnalysis || fallback.analysis)
     };
 }
 
@@ -997,8 +1098,24 @@ app.post('/api/ai/teach', async (req, res) => {
 app.post('/api/spin', async (req, res) => {
     // ── NODO 1: INGESTA SÚPER RÁPIDA ──
     const { table_id, number, source, direction } = req.body || {};
+    let currentHistory = [];
     if (table_id == null || number == null) return res.status(400).json({ error: 'table_id and number required' });
     if (number < 0 || number > 36) return res.status(400).json({ error: 'number must be 0-36' });
+    const isMongo = db.getUseMongo();
+    if (isMongo) {
+        currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
+        currentHistory.reverse();
+    } else {
+        currentHistory = await new Promise((resolve, reject) => {
+            db.getHistory(table_id, 100, (err, rows) => {
+                if (err) reject(err);
+                else resolve(Array.isArray(rows) ? rows : []);
+            });
+        });
+    }
+    if (isLiveDuplicateSpin(currentHistory, req.body)) {
+        return res.json({ status: 'ignored_duplicate', table_id, number });
+    }
 
     // ✅ ENVÍO INMEDIATO AL FRONTEND (Sin esperar a la IA ni a Mongo)
     if (sseClients[table_id]) {
@@ -1017,30 +1134,8 @@ app.post('/api/spin', async (req, res) => {
                 ntfyCooldowns[table_id]--;
             }
 
-            const isMongo = db.getUseMongo();
-            let currentHistory = [];
-            
             let savedSpinId = null;
-            if (isMongo) {
-                currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
-                currentHistory.reverse();
-            } else {
-                currentHistory = await new Promise((resolve, reject) => {
-                    db.getHistory(table_id, 100, (err, rows) => {
-                        if (err) reject(err); else resolve(rows);
-                    });
-                });
-            }
-            
             const numsOnly = currentHistory.map(s => s.number);
-            const lastNumber = numsOnly.length > 0 ? numsOnly[numsOnly.length - 1] : null;
-
-            if (req.body.event_id) {
-                const isDuplicate = currentHistory.some(s => s.event_id === req.body.event_id);
-                if (isDuplicate) return console.log(`[IGNORE DB] Event ${req.body.event_id}`);
-            } else if (number === lastNumber && ['public_scraper', 'casino_org_live'].includes(source)) {
-                return console.log(`[IGNORE DB] Duplicate ${number}`);
-            }
 
             resolvePendingAiPredictions(table_id, number);
 

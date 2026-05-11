@@ -248,6 +248,20 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
                     return;
                 }
             }
+            if (extra.round_key) {
+                const existingRound = await Spin.findOne({ table_id: parseInt(tableId), round_key: extra.round_key }).exec();
+                if (existingRound) {
+                    if (typeof cb === 'function') cb(null, existingRound.id);
+                    return;
+                }
+            }
+            if (['public_scraper', 'casino_org_live'].includes(source)) {
+                const lastSpin = await Spin.findOne({ table_id: parseInt(tableId) }).sort({ id: -1 }).exec();
+                if (lastSpin && lastSpin.number === parseInt(number)) {
+                    if (typeof cb === 'function') cb(null, lastSpin.id);
+                    return;
+                }
+            }
             const maxSpin = await Spin.findOne().sort('-id').exec();
             const id = maxSpin ? maxSpin.id + 1 : 1;
             
@@ -287,6 +301,20 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
             const exists = fallbackData.spins.find(s => s.table_id == tableId && s.event_id === extra.event_id);
             if (exists) {
                 if (typeof cb === 'function') cb(null, exists.id);
+                return;
+            }
+        }
+        if (extra && extra.round_key) {
+            const exists = fallbackData.spins.find(s => s.table_id == tableId && s.round_key === extra.round_key);
+            if (exists) {
+                if (typeof cb === 'function') cb(null, exists.id);
+                return;
+            }
+        }
+        if (['public_scraper', 'casino_org_live'].includes(source)) {
+            const lastSpin = fallbackData.spins.filter(s => s.table_id == tableId).slice(-1)[0];
+            if (lastSpin && lastSpin.number === parseInt(number)) {
+                if (typeof cb === 'function') cb(null, lastSpin.id);
                 return;
             }
         }
