@@ -96,7 +96,6 @@ async function initDB() {
                     {
                         $setOnInsert: fallbackData.tables[0],
                         $set: {
-                            schema_version: 2,
                             code: 'AUTO',
                             name: 'Auto Roulette',
                             provider: 'Evolution',

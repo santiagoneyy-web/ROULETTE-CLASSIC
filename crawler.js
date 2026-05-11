@@ -217,7 +217,12 @@ async function startCrawler() {
                     }
                 }
             } catch (err) {
-                if (!String(err.message).includes('detached') && !String(err.message).includes('context')) {
+                const message = String(err.message || '');
+                if (
+                    !message.includes('detached') &&
+                    !message.includes('context') &&
+                    !message.includes('Target closed')
+                ) {
                     console.log(`[${tableLabel()}] Read error: ${err.message}`);
                 }
             } finally {

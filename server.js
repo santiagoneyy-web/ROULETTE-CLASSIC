@@ -19,6 +19,9 @@ const {
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
+const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS || '').toLowerCase() === 'true';
 
 const app = express();
 
@@ -101,6 +104,17 @@ app.get('/api/ai/predictions/:tableId', (req, res) => {
     });
 });
 
+app.get('/api/ai/status', (req, res) => {
+    res.json({
+        provider: getPreferredLlmProvider(),
+        ollamaConfigured: hasOllamaConfigured(),
+        ollamaBaseUrl: OLLAMA_BASE_URL,
+        ollamaModel: OLLAMA_MODEL,
+        groqConfigured: Boolean(process.env.GROQ_API_KEY),
+        autoAiRemoteAnalysis: AUTO_AI_REMOTE_ANALYSIS
+    });
+});
+
 // ── SSE: broadcast to all clients listening per table ──────
 const sseClients = {}; // { tableId: [res, res, ...] }
 
@@ -172,6 +186,84 @@ function cleanAutoNumber(value) {
 
 function formatAutoReply(n9, n4) {
     return `N9: ${n9} | N4: ${n4}`;
+}
+
+function hasOllamaConfigured() {
+    return Boolean(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_MODEL || process.env.OLLAMA_ENABLED === 'true');
+}
+
+function getPreferredLlmProvider() {
+    const explicit = String(process.env.LLM_PROVIDER || '').toLowerCase();
+    if (explicit === 'ollama' && hasOllamaConfigured()) return 'ollama';
+    if (explicit === 'groq' && process.env.GROQ_API_KEY) return 'groq';
+    if (hasOllamaConfigured()) return 'ollama';
+    if (process.env.GROQ_API_KEY) return 'groq';
+    return 'none';
+}
+
+async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) throw new Error('GROQ_API_KEY missing');
+
+    const requestBody = {
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ],
+        temperature,
+        max_tokens: maxTokens
+    };
+
+    if (jsonMode) requestBody.response_format = { type: 'json_object' };
+
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', requestBody, {
+        headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' }
+    });
+
+    return String(response.data?.choices?.[0]?.message?.content || '').trim();
+}
+
+async function callOllamaChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
+    const payload = {
+        model: OLLAMA_MODEL,
+        stream: false,
+        format: jsonMode ? 'json' : undefined,
+        options: {
+            temperature,
+            num_predict: maxTokens
+        },
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ]
+    };
+
+    const response = await axios.post(`${OLLAMA_BASE_URL}/api/chat`, payload, {
+        timeout: 30000,
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+    return String(response.data?.message?.content || '').trim();
+}
+
+async function callPreferredLlm(options) {
+    const provider = getPreferredLlmProvider();
+    if (provider === 'ollama') {
+        try {
+            const content = await callOllamaChat(options);
+            return { provider, content };
+        } catch (error) {
+            if (!process.env.GROQ_API_KEY) throw error;
+            const content = await callGroqChat(options);
+            return { provider: 'groq-fallback', content };
+        }
+    }
+    if (provider === 'groq') {
+        const content = await callGroqChat(options);
+        return { provider, content };
+    }
+    throw new Error('No LLM provider configured');
 }
 
 function detectWlPattern(sequence) {
@@ -373,19 +465,27 @@ function buildAutoAiFallback(context) {
     const stability = String(context.stabilityLevel || 'red').toLowerCase();
     const safeMode = String(context.mode || 'SAFE').toUpperCase() === 'SAFE';
     const patternText = summarizePatternContext(context, routeKey);
+    const dominantRoute = routeKey === 'cw' ? 'CW' : 'CCW';
+    const routeGap = Math.abs(scoreCW - scoreCCW);
+    const zoneGap = Math.abs(zoneBigScore - zoneSmallScore);
 
     if (safeMode && stability === 'red' && Math.abs(scoreCW - scoreCCW) < 8) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
-            analysis: `SAFE: ${patternText}; mesa ${stability.toUpperCase()} sin ventaja clara.`
+            analysis: `Mesa ${stability.toUpperCase()} sin ventaja clara. ${patternText}; dominancia viva insuficiente para entrar.`
         };
     }
 
     return {
         n9: String(route.n9),
         n4: zoneKey === 'big' ? String(route.n4Big) : String(route.n4Small),
-        analysis: `${patternText}. Ruta ${routeLabel}, zona ${zoneLabel}.`
+        analysis: [
+            `${patternText}.`,
+            `Dom ${dominantRoute} con zona ${zoneLabel}.`,
+            `Brecha ruta ${routeGap}, brecha zona ${zoneGap}.`,
+            `Mesa ${stability.toUpperCase()}.`
+        ].join(' ')
     };
 }
 
@@ -539,10 +639,18 @@ app.post('/api/ai/groq', async (req, res) => {
         const groqKey = process.env.GROQ_API_KEY;
         const strategyDigest = buildStrategyDigest(tableId || 'global');
         if (autoAiContext) persistMetricSnapshot(autoAiContext, tableId || 0);
-        if (!groqKey) {
+        if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             return res.json({
                 reply: formatAutoReply(fallback.n9, fallback.n4),
-                analysis: fallback.analysis
+                analysis: fallback.analysis,
+                provider: 'local-dominance'
+            });
+        }
+        if (!groqKey && !hasOllamaConfigured()) {
+            return res.json({
+                reply: formatAutoReply(fallback.n9, fallback.n4),
+                analysis: fallback.analysis,
+                provider: 'local-fallback'
             });
         }
 
@@ -614,53 +722,44 @@ app.post('/api/ai/groq', async (req, res) => {
             ].join('\n')
             : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';
 
-        const requestBody = {
-            model: "llama-3.3-70b-versatile",
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt
-                },
-                { role: "user", content: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest) : prompt }
-            ],
+        const llm = await callPreferredLlm({
+            systemPrompt,
+            userPrompt: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest) : prompt,
             temperature: 0.15,
-            max_tokens: autoAiContext ? 140 : 60,
-            response_format: { type: "json_object" }
-        };
-
-        const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
-            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" }
+            maxTokens: autoAiContext ? 140 : 60,
+            jsonMode: true
         });
-        
-        let result = response.data.choices[0].message.content.trim();
+
+        let result = llm.content;
         try {
             const parsed = JSON.parse(result);
             if (autoAiContext) {
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
-                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized.reply, parsed);
-                return res.json(normalized);
+                return res.json({ ...normalized, provider: llm.provider });
             }
 
             let n9 = String(parsed.n9 || '').replace(/[^0-9]/g, '');
             let n4 = String(parsed.n4 || '').replace(/[^0-9]/g, '');
-            res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR') });
+            res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR'), provider: llm.provider });
         } catch(e) {
             if (autoAiContext) {
                 return res.json({
                     reply: formatAutoReply(fallback.n9, fallback.n4),
-                    analysis: fallback.analysis
+                    analysis: fallback.analysis,
+                    provider: 'local-fallback'
                 });
             }
 
             res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
         }
     } catch (error) {
-        console.error('Groq predictor error:', error.message);
+        console.error('LLM predictor error:', error.response?.status || error.message);
         const fallback = buildAutoAiFallback(req.body.autoAiContext);
         res.json({
             reply: formatAutoReply(fallback.n9, fallback.n4),
-            analysis: fallback.analysis
+            analysis: fallback.analysis,
+            provider: 'local-fallback'
         });
     }
 });
@@ -668,8 +767,9 @@ app.post('/api/ai/groq', async (req, res) => {
 app.post('/api/ai/chat', async (req, res) => {
     const { text, tableId, historyStr } = req.body;
     try {
-        const groqKey = process.env.GROQ_API_KEY;
-        if (!groqKey) return res.json({ reply: 'IA Desconectada - Falta GROQ_API_KEY' });
+        if (getPreferredLlmProvider() === 'none') {
+            return res.json({ reply: 'IA desconectada. Configura OLLAMA o GROQ para el chat.' });
+        }
 
         const strategyCommand = parseChatStrategyCommand(text, tableId || 'global');
         if (strategyCommand) {
@@ -703,31 +803,33 @@ Cuando te pregunten sobre la mesa, usas tu conocimiento: SMALL(1-9), BIG(10-18),
 Colores: Verde=Dominancia, Amarillo=Tendencia, Rojo=Caos.
 Si el usuario quiere guardar una estrategia en la biblioteca, dile que use: /estrategia Nombre | resumen | trigger=... | action=... | tags=...
 Responde CORTO, maximo 2-3 oraciones. Sin listas, sin markdown, sin asteriscos.`;
+        const priorTurns = aiMemory[tableId]
+            .slice(-10)
+            .map(item => `${item.role === 'assistant' ? 'IA' : 'Usuario'}: ${item.content}`)
+            .join('\n');
+        const userPrompt = [
+            priorTurns ? `MEMORIA:\n${priorTurns}` : '',
+            historyStr ? `HISTORIAL MESA: ${historyStr}` : '',
+            `USUARIO: ${text}`
+        ].filter(Boolean).join('\n\n');
 
-        const requestBody = {
-            model: "llama-3.3-70b-versatile",
-            messages: [
-                { role: "system", content: sysPrompt },
-                ...aiMemory[tableId].slice(-10),
-                { role: "user", content: text + (historyStr ? ` [Historial mesa: ${historyStr}]` : '') }
-            ],
+        const llm = await callPreferredLlm({
+            systemPrompt: sysPrompt,
+            userPrompt,
             temperature: 0.6,
-            max_tokens: 150
-        };
-
-        const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
-            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" }
+            maxTokens: 150,
+            jsonMode: false
         });
         
-        const reply = response.data.choices[0].message.content;
+        const reply = llm.content;
         aiMemory[tableId].push({ role: "user", content: text });
         aiMemory[tableId].push({ role: "assistant", content: reply });
         if (aiMemory[tableId].length > 20) aiMemory[tableId] = aiMemory[tableId].slice(-20);
 
-        res.json({ reply });
+        res.json({ reply, provider: llm.provider });
     } catch (error) {
-        console.error('Chat error:', error.response?.data || error.message);
-        res.json({ reply: 'Error de conexion con la IA. Verifica GROQ_API_KEY.' });
+        console.error('Chat error:', error.response?.status || error.message);
+        res.json({ reply: 'Error de conexion con la IA. Revisa OLLAMA o GROQ.' });
     }
 });
 
@@ -1136,6 +1238,7 @@ app.use((req, res) => {
 const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n🎰 Roulette Predictor Server running at http://0.0.0.0:${PORT}`);
     console.log(`   API ready at:          http://0.0.0.0:${PORT}/api/\n`);
+    console.log(`[AI] Provider preference: ${getPreferredLlmProvider()} | Ollama: ${hasOllamaConfigured() ? OLLAMA_BASE_URL : 'not configured'} | Auto remote analysis: ${AUTO_AI_REMOTE_ANALYSIS}`);
     
     // 🔥 MongoDB sync disabled by user request (using JSON only)
     /*
