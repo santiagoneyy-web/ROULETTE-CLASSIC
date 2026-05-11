@@ -18,6 +18,8 @@ const AiPredictionSchema = new mongoose.Schema({
     confidence: { type: Number, default: 0 },
     context_hash: { type: String, default: '' },
     result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending', index: true },
+    n9_result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending' },
+    n4_result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending' },
     resolved_number: { type: Number, default: null },
     created_at: { type: Date, default: Date.now, index: true },
     resolved_at: { type: Date, default: null }

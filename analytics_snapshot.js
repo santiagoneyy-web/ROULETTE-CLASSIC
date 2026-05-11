@@ -266,6 +266,8 @@ function chooseDominancePrediction(snapshot, spinId = null) {
             confidence,
             context_hash: buildContextHash(snapshot),
             result: 'skip',
+            n9_result: 'skip',
+            n4_result: 'skip',
             created_at: new Date().toISOString()
         };
     }
@@ -290,6 +292,8 @@ function chooseDominancePrediction(snapshot, spinId = null) {
         confidence,
         context_hash: buildContextHash(snapshot),
         result: 'pending',
+        n9_result: 'pending',
+        n4_result: 'pending',
         created_at: new Date().toISOString()
     };
 }
@@ -306,15 +310,29 @@ function buildContextHash(snapshot) {
 }
 
 function evaluatePredictionHit(prediction, resolvedNumber) {
-    if (!prediction || prediction.result === 'skip') return 'skip';
+    if (!prediction || prediction.result === 'skip') {
+        return { result: 'skip', n9_result: 'skip', n4_result: 'skip' };
+    }
     const n9 = Number(prediction.n9);
     const n4 = Number(prediction.n4);
     const number = Number(resolvedNumber);
-    if (!Number.isInteger(number) || number < 0 || number > 36) return 'pending';
+    if (!Number.isInteger(number) || number < 0 || number > 36) {
+        return { result: 'pending', n9_result: 'pending', n4_result: 'pending' };
+    }
 
     const n9Hit = Number.isInteger(n9) && hitInRadius(n9, number, 4);
     const n4Hit = Number.isInteger(n4) && hitInRadius(n4, number, 2);
-    return n9Hit || n4Hit ? 'win' : 'loss';
+    const n9Result = !Number.isInteger(n9) || prediction.n9 === 'ESPERAR' ? 'skip' : (n9Hit ? 'win' : 'loss');
+    const n4Result = !Number.isInteger(n4) || prediction.n4 === 'ESPERAR' ? 'skip' : (n4Hit ? 'win' : 'loss');
+    const overall = (n9Result === 'win' || n4Result === 'win')
+        ? 'win'
+        : (n9Result === 'skip' && n4Result === 'skip' ? 'skip' : 'loss');
+
+    return {
+        result: overall,
+        n9_result: n9Result,
+        n4_result: n4Result
+    };
 }
 
 module.exports = {

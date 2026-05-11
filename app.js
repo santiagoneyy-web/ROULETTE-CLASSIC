@@ -168,11 +168,13 @@ function wipeData() {
         .then(() => {
             history.length=0; cwHistory.length=0; ccwHistory.length=0;
             cwN4History.length=0; ccwN4History.length=0;
+            aiN9History.length=0; aiN4History.length=0;
+            lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Datos borrados.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleDzHistory(btn) {
@@ -218,6 +220,50 @@ function getPerfText(items, limit = 8) {
     const recent = items.slice(-limit);
     if (!recent.length) return 'Sin datos';
     return recent.map(r => r === 'win' ? 'W' : 'L').join('');
+}
+
+async function syncAiPredictionState() {
+    if (!currentTableId) return;
+    try {
+        const resp = await fetch(`/api/ai/predictions/${currentTableId}?limit=250`);
+        if (!resp.ok) return;
+        const rows = await resp.json();
+        const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
+
+        aiN9History.length = 0;
+        aiN4History.length = 0;
+        lastAiPredN9 = null;
+        lastAiPredN4 = null;
+
+        predictions.forEach(item => {
+            const n9Result = item.n9_result || ((item.result === 'win' || item.result === 'loss') ? item.result : null);
+            const n4Result = item.n4_result || ((item.result === 'win' || item.result === 'loss') ? item.result : null);
+            if (n9Result === 'win' || n9Result === 'loss') aiN9History.push(n9Result);
+            if (n4Result === 'win' || n4Result === 'loss') aiN4History.push(n4Result);
+        });
+
+        const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
+        const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
+        const current = latestPending || latestAny;
+
+        const n9El = document.getElementById('ai-pred-n9-text');
+        const n4El = document.getElementById('ai-pred-n4-text');
+        const statusEl = document.getElementById('auto-ai-status');
+        const analysisEl = document.getElementById('auto-ai-analysis');
+
+        if (current) {
+            lastAiPredN9 = current.n9 || null;
+            lastAiPredN4 = current.n4 || null;
+            if (n9El) n9El.innerText = current.n9 || 'Esperar';
+            if (n4El) n4El.innerText = current.n4 || 'Esperar';
+            if (analysisEl) analysisEl.innerText = current.analysis || 'Analisis AI sincronizado desde la base.';
+            if (statusEl) statusEl.innerText = latestPending ? 'ONLINE' : 'STANDBY';
+        }
+
+        renderDirMetricHistories();
+    } catch (e) {
+        console.error('syncAiPredictionState:', e);
+    }
 }
 
 function renderDirMetricHistories() {
@@ -1456,6 +1502,10 @@ async function syncData() {
             ccwHistory.length = 0;
             cwN4History.length = 0;
             ccwN4History.length = 0;
+            aiN9History.length = 0;
+            aiN4History.length = 0;
+            lastAiPredN9 = null;
+            lastAiPredN4 = null;
             lastSignal = null;
             
             // 1. Inyectar datos en lote
@@ -1486,6 +1536,7 @@ async function syncData() {
             renderWheelAndHistory();
             renderMasterUI();
         }
+        await syncAiPredictionState();
     } catch(e) {}
 }
 
@@ -1565,6 +1616,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ccwHistory.length = 0;
                 cwN4History.length = 0;
                 ccwN4History.length = 0;
+                aiN9History.length = 0;
+                aiN4History.length = 0;
+                lastAiPredN9 = null;
+                lastAiPredN4 = null;
                 lastSignal = null;
                 renderWheelAndHistory();
                 
@@ -1828,11 +1883,13 @@ async function requestAutoAI() {
                 if(zon==='BIG') big++; else small++;
             }
 
+            let dirSeq15 = [];
+            let zoneSeq15 = [];
             const nCount15 = Math.min(history.length - 1, 15);
             for (let i = history.length - nCount15; i < history.length; i++) {
                 let d = calcDist(history[i-1], history[i]);
-                if (d >= 0) der15++; else izq15++;
-                if (Math.abs(d) >= 10) big15++; else small15++;
+                if (d >= 0) { der15++; dirSeq15.push('DER'); } else { izq15++; dirSeq15.push('IZQ'); }
+                if (Math.abs(d) >= 10) { big15++; zoneSeq15.push('BIG'); } else { small15++; zoneSeq15.push('SMALL'); }
             }
 
             pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'Estandar',tiradas:0};
@@ -1892,6 +1949,10 @@ async function requestAutoAI() {
             patternLabel: pat.label || 'Estandar',
             dominance8: { cw: der, ccw: izq, big: big, small: small },
             momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
+            sequence15: {
+                dir: typeof dirSeq15 !== 'undefined' ? dirSeq15.join(' ') : '',
+                zone: typeof zoneSeq15 !== 'undefined' ? zoneSeq15.join(' ') : ''
+            },
             performance8: {
                 cwN9: getPerfText(cwHistory),
                 cwN4: getPerfText(cwN4History),

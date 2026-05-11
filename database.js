@@ -622,6 +622,8 @@ async function addAiPrediction(data, cb) {
             confidence: Number(data.confidence || 0),
             context_hash: data.context_hash || '',
             result: data.result || 'pending',
+            n9_result: data.n9_result || (data.result === 'skip' ? 'skip' : 'pending'),
+            n4_result: data.n4_result || (data.result === 'skip' ? 'skip' : 'pending'),
             resolved_number: data.resolved_number ?? null,
             created_at: data.created_at || new Date().toISOString(),
             resolved_at: data.resolved_at || null
@@ -644,9 +646,16 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
 
             let resolved = 0;
             for (const row of rows) {
-                const result = typeof evaluator === 'function' ? evaluator(row, resolvedNumber) : 'loss';
-                if (!['win', 'loss', 'skip'].includes(result)) continue;
-                row.result = result;
+                const outcome = typeof evaluator === 'function'
+                    ? evaluator(row, resolvedNumber)
+                    : { result: 'loss', n9_result: 'loss', n4_result: 'loss' };
+                const normalized = typeof outcome === 'string'
+                    ? { result: outcome, n9_result: outcome, n4_result: outcome }
+                    : outcome;
+                if (!['win', 'loss', 'skip'].includes(normalized.result)) continue;
+                row.result = normalized.result;
+                row.n9_result = normalized.n9_result || row.n9_result || 'pending';
+                row.n4_result = normalized.n4_result || row.n4_result || 'pending';
                 row.resolved_number = Number(resolvedNumber);
                 row.resolved_at = now;
                 await row.save();
@@ -659,12 +668,19 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
         let resolved = 0;
         fallbackData.aiPredictions = fallbackData.aiPredictions.map(item => {
             if (item.table_id != tableId || item.result !== 'pending') return item;
-            const result = typeof evaluator === 'function' ? evaluator(item, resolvedNumber) : 'loss';
-            if (!['win', 'loss', 'skip'].includes(result)) return item;
+            const outcome = typeof evaluator === 'function'
+                ? evaluator(item, resolvedNumber)
+                : { result: 'loss', n9_result: 'loss', n4_result: 'loss' };
+            const normalized = typeof outcome === 'string'
+                ? { result: outcome, n9_result: outcome, n4_result: outcome }
+                : outcome;
+            if (!['win', 'loss', 'skip'].includes(normalized.result)) return item;
             resolved++;
             return {
                 ...item,
-                result,
+                result: normalized.result,
+                n9_result: normalized.n9_result || item.n9_result || 'pending',
+                n4_result: normalized.n4_result || item.n4_result || 'pending',
                 resolved_number: Number(resolvedNumber),
                 resolved_at: now.toISOString()
             };
@@ -690,6 +706,78 @@ async function getAiPredictions(tableId, limit, cb) {
             .slice(-(limit || 100))
             .reverse();
         cb(null, rows);
+    }
+}
+
+async function getAiLearningSummary(tableId, cb) {
+    if (useMongo) {
+        try {
+            const numericTableId = Number(tableId);
+            const [spinCount, snapshotCount, predictionStats, strategyStats] = await Promise.all([
+                Spin.countDocuments({ table_id: numericTableId }),
+                MetricSnapshot.countDocuments({ table_id: numericTableId }),
+                AiPrediction.aggregate([
+                    { $match: { table_id: numericTableId } },
+                    {
+                        $group: {
+                            _id: null,
+                            total: { $sum: 1 },
+                            wins: { $sum: { $cond: [{ $eq: ['$result', 'win'] }, 1, 0] } },
+                            losses: { $sum: { $cond: [{ $eq: ['$result', 'loss'] }, 1, 0] } },
+                            skips: { $sum: { $cond: [{ $eq: ['$result', 'skip'] }, 1, 0] } },
+                            pending: { $sum: { $cond: [{ $eq: ['$result', 'pending'] }, 1, 0] } }
+                        }
+                    }
+                ]),
+                Strategy.aggregate([
+                    {
+                        $match: {
+                            source: 'ai',
+                            table_id: { $in: [String(tableId), 'global'] }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: '$status',
+                            count: { $sum: 1 }
+                        }
+                    }
+                ])
+            ]);
+
+            const pred = predictionStats[0] || { total: 0, wins: 0, losses: 0, skips: 0, pending: 0 };
+            const strategies = strategyStats.reduce((acc, row) => ({ ...acc, [row._id]: row.count }), {});
+            cb(null, {
+                table_id: numericTableId,
+                spins: spinCount,
+                metricSnapshots: snapshotCount,
+                aiPredictions: pred,
+                aiStrategies: strategies
+            });
+        } catch (e) { cb(e); }
+    } else {
+        const numericTableId = Number(tableId);
+        const predictions = fallbackData.aiPredictions.filter(item => item.table_id == numericTableId);
+        const strategies = fallbackData.strategies.filter(item =>
+            item.source === 'ai' && (item.table_id === String(tableId) || item.table_id === 'global')
+        );
+
+        cb(null, {
+            table_id: numericTableId,
+            spins: fallbackData.spins.filter(item => item.table_id == numericTableId).length,
+            metricSnapshots: fallbackData.metricSnapshots.filter(item => item.table_id == numericTableId).length,
+            aiPredictions: {
+                total: predictions.length,
+                wins: predictions.filter(item => item.result === 'win').length,
+                losses: predictions.filter(item => item.result === 'loss').length,
+                skips: predictions.filter(item => item.result === 'skip').length,
+                pending: predictions.filter(item => item.result === 'pending').length
+            },
+            aiStrategies: strategies.reduce((acc, item) => {
+                acc[item.status || 'active'] = (acc[item.status || 'active'] || 0) + 1;
+                return acc;
+            }, {})
+        });
     }
 }
 
@@ -721,5 +809,5 @@ module.exports = {
     findAccessCode, saveAccessCode,
     listStrategies, saveStrategyRecord,
     addMetricSnapshot, getMetricSnapshots,
-    addAiPrediction, getAiPredictions, resolvePendingAiPredictions
+    addAiPrediction, getAiPredictions, resolvePendingAiPredictions, getAiLearningSummary
 };

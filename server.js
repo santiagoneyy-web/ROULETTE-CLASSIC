@@ -115,6 +115,13 @@ app.get('/api/ai/status', (req, res) => {
     });
 });
 
+app.get('/api/ai/summary/:tableId', (req, res) => {
+    db.getAiLearningSummary(req.params.tableId, (err, summary) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(summary || {});
+    });
+});
+
 // ── SSE: broadcast to all clients listening per table ──────
 const sseClients = {}; // { tableId: [res, res, ...] }
 
@@ -396,6 +403,8 @@ function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
         analysis: String(parsed?.analysis || parsed?.reason || '').trim(),
         strategy_refs: parsed?.strategy_name ? [String(parsed.strategy_name)] : [],
         result: n9 === 'ESPERAR' || n4 === 'ESPERAR' ? 'skip' : 'pending',
+        n9_result: n9 === 'ESPERAR' ? 'skip' : 'pending',
+        n4_result: n4 === 'ESPERAR' ? 'skip' : 'pending',
         created_at: new Date().toISOString()
     }, () => {});
 }
