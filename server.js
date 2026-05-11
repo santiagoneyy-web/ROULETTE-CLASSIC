@@ -498,6 +498,79 @@ function buildAutoAiContextSnapshot(context, strategyDigest, learningDigest) {
     };
 }
 
+function wheelDistance(from, to) {
+    const i1 = predictor.WHEEL_INDEX[Number(from)];
+    const i2 = predictor.WHEEL_INDEX[Number(to)];
+    if (i1 === undefined || i2 === undefined) return 0;
+    let d = i2 - i1;
+    if (d > 18) d -= 37;
+    if (d < -18) d += 37;
+    return d;
+}
+
+function buildSequenceContext(history) {
+    const dir = [];
+    const zone = [];
+    const sample = Array.isArray(history) ? history.slice(-16) : [];
+    for (let i = 1; i < sample.length; i++) {
+        const d = wheelDistance(sample[i - 1], sample[i]);
+        dir.push(d >= 0 ? 'DER' : 'IZQ');
+        zone.push(Math.abs(d) >= 10 ? 'BIG' : 'SMALL');
+    }
+    return { dir: dir.join(' '), zone: zone.join(' ') };
+}
+
+function snapshotToAutoAiContext(snapshot, mode, clientContext = null) {
+    if (!snapshot || !snapshot.routes || !snapshot.routes.cw || !snapshot.routes.ccw) return clientContext;
+    const recentNumbers = Array.isArray(snapshot.recent_numbers) ? snapshot.recent_numbers : [];
+    return {
+        ...(clientContext || {}),
+        mode: String(mode || clientContext?.mode || 'SAFE').toUpperCase(),
+        tableCode: snapshot.table_code || 'AUTO',
+        spinId: snapshot.spin_id ?? clientContext?.spinId ?? null,
+        windowSize: snapshot.window_size || Math.max(0, recentNumbers.length - 1),
+        stabilityLevel: snapshot.stability_level || clientContext?.stabilityLevel || 'red',
+        patternLabel: snapshot.pattern_label || clientContext?.patternLabel || 'Estandar',
+        dominantAxis: snapshot.dominant_axis || clientContext?.dominantAxis || 'none',
+        dominantSignal: snapshot.dominant_signal || clientContext?.dominantSignal || '',
+        dominanceScore: Number(snapshot.dominance_score || clientContext?.dominanceScore || 0),
+        dominance8: snapshot.dominance8 || clientContext?.dominance8 || {},
+        momentum15: snapshot.momentum15 || clientContext?.momentum15 || {},
+        sequence15: buildSequenceContext(recentNumbers),
+        performance8: snapshot.performance8 || clientContext?.performance8 || {},
+        routes: snapshot.routes,
+        recentNumbers,
+        context: {
+            source: 'server_mongo_context',
+            notes: 'Auto AI context rebuilt from saved spins/metric snapshot before prediction.'
+        }
+    };
+}
+
+async function buildServerAutoAiContext(tableId, clientContext = null) {
+    const mode = String(clientContext?.mode || 'SAFE').toUpperCase();
+    const rows = await new Promise(resolve => {
+        db.getHistory(tableId || 0, 100, (err, historyRows) => {
+            if (err || !Array.isArray(historyRows)) return resolve([]);
+            resolve(historyRows);
+        });
+    });
+    const history = rows
+        .map(row => Number(row.number))
+        .filter(n => Number.isInteger(n) && n >= 0 && n <= 36);
+
+    if (history.length < 2) return clientContext;
+    const latestSpin = rows[rows.length - 1] || {};
+    const snapshot = buildMetricSnapshot({
+        tableId,
+        tableCode: 'AUTO',
+        spinId: latestSpin.id ?? clientContext?.spinId ?? null,
+        history,
+        mode: 'AUTO_AI_SERVER_CONTEXT'
+    });
+    return snapshotToAutoAiContext(snapshot, mode, clientContext);
+}
+
 function persistAutoAiStrategy(parsed, context, tableId) {
     const name = String(parsed?.strategy_name || parsed?.strategyName || '').trim();
     const note = String(parsed?.strategy_note || parsed?.strategyNote || '').trim();
@@ -1044,8 +1117,11 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
 // Groq LLM endpoint (Llama 4 via Groq API)
 // ---------------------------------------------------
 app.post('/api/ai/groq', async (req, res) => {
-    const { prompt, autoAiContext, tableId } = req.body;
+    const { prompt, autoAiContext: clientAutoAiContext, tableId } = req.body;
     try {
+        const autoAiContext = clientAutoAiContext
+            ? await buildServerAutoAiContext(tableId || 0, clientAutoAiContext)
+            : null;
         const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
         const strategyDigest = buildStrategyDigest(tableId || 'global');
@@ -1053,7 +1129,6 @@ app.post('/api/ai/groq', async (req, res) => {
         const learningSummary = autoAiContext ? await getLearningSummaryAsync(tableId || 0) : null;
         const learningDigest = autoAiContext ? buildLearningDigest(learningSummary, autoMode) : '';
         const predictionMeta = { strategyDigest, learningDigest, provider: 'local-fallback' };
-        if (autoAiContext) persistMetricSnapshot(autoAiContext, tableId || 0);
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1354,13 +1429,7 @@ app.post('/api/spin', async (req, res) => {
         return res.json({ status: 'ignored_duplicate', table_id, number });
     }
 
-    // ✅ ENVÍO INMEDIATO AL FRONTEND (Sin esperar a la IA ni a Mongo)
-    if (sseClients[table_id]) {
-        sseClients[table_id].forEach(client => {
-            client.write(`data: ${JSON.stringify({ type: 'new_spin', number })}\n\n`);
-        });
-    }
-    // Devolvemos el 200 OK súper rápido al Crawler para que siga su polling
+    // El crawler recibe OK rapido; el frontend espera el evento listo despues de Mongo + metricas.
     res.json({ status: 'received_fast', table_id, number });
 
     // ── NODO 2: PROCESAMIENTO ASÍNCRONO (IA, FÍSICA Y BASE DE DATOS) ──
@@ -1493,6 +1562,11 @@ app.post('/api/spin', async (req, res) => {
                 const snapshot = persistIngestMetricSnapshot(table_id, savedSpinId, numsOnly, source || 'bot');
                 persistTableStateSnapshot(table_id, savedSpinId, snapshot);
                 persistDominanceAiPrediction(table_id, savedSpinId, snapshot);
+                if (sseClients[table_id]) {
+                    sseClients[table_id].forEach(client => {
+                        client.write(`data: ${JSON.stringify({ type: 'new_spin', number, spin_id: savedSpinId, ready: true })}\n\n`);
+                    });
+                }
             }
 
         } catch(e) { console.error('[Background Sync Err]', e); }
