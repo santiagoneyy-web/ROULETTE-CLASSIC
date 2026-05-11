@@ -72,6 +72,10 @@ Prediccion guardada para poder medir si la IA mejora. Se crea automaticamente de
 - `analysis`: explicacion de la IA.
 - `strategy_refs`: estrategias usadas como apoyo.
 - `confidence`: confianza numerica.
+- `context_snapshot`: foto del contexto que recibio la IA: dominancia, momentum, travel, W/L, rutas, estrategias y memoria RL.
+- `decision_source`: origen de la decision (`groq`, `ollama`, `local-dominance`, etc.).
+- `prompt_version`: version del prompt/contrato usado para tomar la decision.
+- `rl_reward` y `reward_reason`: recompensa estricta usada para aprendizaje posterior.
 - `result`: `pending`, `win`, `loss` o `skip`.
 
 Endpoint de revision:

@@ -23,7 +23,7 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
-const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS || '').toLowerCase() === 'true';
+const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS ?? 'true').toLowerCase() !== 'false';
 
 const app = express();
 
@@ -442,6 +442,62 @@ function buildStrategyDigest(tableId) {
     return strategyStore.buildPromptDigest({ tableId: tableId || 'global', limit: 12 });
 }
 
+function getLearningSummaryAsync(tableId) {
+    return new Promise(resolve => {
+        db.getAiLearningSummary(tableId || 0, (err, summary) => {
+            if (err) {
+                console.error('[AI Learning] Summary error:', err.message);
+                return resolve(null);
+            }
+            resolve(summary || null);
+        });
+    });
+}
+
+function buildLearningDigest(summary, mode = 'FULL') {
+    if (!summary || !summary.aiPredictions) {
+        return 'Memoria RL: sin muestra suficiente todavia.';
+    }
+
+    const all = summary.aiPredictions || {};
+    const byMode = summary.aiPredictionsByMode || {};
+    const scoped = byMode[String(mode || 'FULL').toUpperCase()] || null;
+    const source = scoped && Number(scoped.total || 0) > 0 ? scoped : all;
+    const total = Number(source.total || 0);
+    const wins = Number(source.wins || 0);
+    const losses = Number(source.losses || 0);
+    const skips = Number(source.skips || 0);
+    const pending = Number(source.pending || 0);
+    const reward = Number(source.reward || 0);
+    const n9Rate = Number((scoped && scoped.n9Rate) || 0);
+    const n4Rate = Number((scoped && scoped.n4Rate) || 0);
+
+    if (!total) return 'Memoria RL: sin predicciones resueltas para este modo.';
+
+    return [
+        `Memoria RL ${String(mode || 'FULL').toUpperCase()}: total=${total}, W=${wins}, L=${losses}, skip=${skips}, pending=${pending}.`,
+        `Reward acumulado=${reward}. N9 hit=${n9Rate}%, N4 hit=${n4Rate}%.`,
+        'Premios/castigos: N4 +100, N9 +30, esperar +15, fallo total -200, casi/acierto vecino no premiado.'
+    ].join(' ');
+}
+
+function buildAutoAiContextSnapshot(context, strategyDigest, learningDigest) {
+    if (!context) return {};
+    return {
+        mode: String(context.mode || 'SAFE').toUpperCase(),
+        stabilityLevel: context.stabilityLevel || '',
+        patternLabel: context.patternLabel || '',
+        dominance8: context.dominance8 || {},
+        momentum15: context.momentum15 || {},
+        sequence15: context.sequence15 || {},
+        performance8: context.performance8 || {},
+        routes: context.routes || {},
+        recentNumbers: Array.isArray(context.recentNumbers) ? context.recentNumbers.slice(-15) : [],
+        strategyDigest: String(strategyDigest || '').slice(0, 2000),
+        learningDigest: String(learningDigest || '').slice(0, 1000)
+    };
+}
+
 function persistAutoAiStrategy(parsed, context, tableId) {
     const name = String(parsed?.strategy_name || parsed?.strategyName || '').trim();
     const note = String(parsed?.strategy_note || parsed?.strategyNote || '').trim();
@@ -576,7 +632,7 @@ function normalizeAiZone(value, route, n4, context) {
     return 'ESPERAR';
 }
 
-function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
+function persistAiPredictionRecord(tableId, context, normalizedReply, parsed, meta = {}) {
     if (!context || !normalizedReply) return;
 
     const normalized = typeof normalizedReply === 'object'
@@ -602,6 +658,9 @@ function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
         n4,
         analysis: String(normalized.analysis || parsed?.analysis || parsed?.reason || '').trim(),
         strategy_refs: parsed?.strategy_name ? [String(parsed.strategy_name)] : [],
+        context_snapshot: buildAutoAiContextSnapshot(context, meta.strategyDigest, meta.learningDigest),
+        decision_source: meta.provider || normalized.provider || 'auto_ai',
+        prompt_version: 'auto_ai_v3_connected_rl',
         context_hash: contextHash,
         result: n9 === 'ESPERAR' || n4 === 'ESPERAR' ? 'skip' : 'pending',
         n9_result: n9 === 'ESPERAR' ? 'skip' : 'pending',
@@ -730,7 +789,7 @@ function buildAutoAiFallback(context) {
     };
 }
 
-function buildSafeAutoAiUserPrompt(context, strategyDigest) {
+function buildSafeAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
     const perf8 = context.performance8 || {};
@@ -783,7 +842,10 @@ function buildSafeAutoAiUserPrompt(context, strategyDigest) {
         '',
         'BIBLIOTECA DE ESTRATEGIAS:',
         strategyDigest || 'Sin estrategias guardadas.',
-        'Usa la biblioteca solo como refuerzo final, nunca como argumento principal.',
+        'Usa la biblioteca como refuerzo prudente: no es verdad absoluta, pero si encaja con la lectura viva debes considerarla.',
+        '',
+        'MEMORIA RL / RESULTADOS HISTORICOS:',
+        learningDigest || 'Sin memoria RL suficiente.',
         '',
         'CRITERIO DE BLOQUEO:',
         '- Responde ESPERAR si la ventaja no compensa el castigo de -200.',
@@ -804,7 +866,7 @@ function buildSafeAutoAiUserPrompt(context, strategyDigest) {
     ].join('\n');
 }
 
-function buildFullAutoAiUserPrompt(context, strategyDigest) {
+function buildFullAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
     const perf8 = context.performance8 || {};
@@ -834,7 +896,11 @@ function buildFullAutoAiUserPrompt(context, strategyDigest) {
         'BIBLIOTECA CENTRAL DE ESTRATEGIAS:',
         strategyDigest || 'Sin estrategias guardadas.',
         'Las estrategias guardadas son sugerencias y contexto acumulado, no el eje principal.',
-        'Si una estrategia HUMAN, AI o SYSTEM encaja con el flujo actual y con las 6 medidas, usala solo como refuerzo de la lectura viva.',
+        'Si una estrategia HUMAN, AI o SYSTEM encaja con el flujo actual y con las 6 medidas, usala como refuerzo activo de la lectura viva.',
+        '',
+        'MEMORIA RL / RESULTADOS HISTORICOS:',
+        learningDigest || 'Sin memoria RL suficiente.',
+        'Usa esta memoria para ajustar confianza y timing. No copies ciegamente el pasado: compara contexto, modo, ruta, zona, N9/N4 y patron W/L.',
         '',
         'ORDEN DE LECTURA OBLIGATORIO:',
         '1. La prioridad numero 1 es la dominancia viva y reciente.',
@@ -862,6 +928,7 @@ function buildFullAutoAiUserPrompt(context, strategyDigest) {
         '  Racha (WWWL WWWL): 3 W y 1 L, se repite. Cambia antes de la L.',
         '  Alternando (WLWL WLWL): Alterna cada vez. Muy predecible.',
         '  Doble victoria (WWL WWL): 2 W y 1 L, se repite.',
+        '  Patron 2-1-2: dos aciertos, un fallo/pausa, dos aciertos. Si aparece como WWLWW o LLWLL invertido, analiza si toca continuidad, pausa o cambio antes de perseguir.',
         '  Pasos (WWLWL WWLWL): Patron de 5 pasos que se repite.',
         '  En grupo: Despues de W,L vienen +2W porque el patron se desarrolla.',
         '',
@@ -903,11 +970,11 @@ function buildFullAutoAiUserPrompt(context, strategyDigest) {
     ].join('\n');
 }
 
-function buildAutoAiUserPrompt(context, strategyDigest) {
+function buildAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
     const mode = String(context?.mode || 'SAFE').toUpperCase();
     return mode === 'SAFE'
-        ? buildSafeAutoAiUserPrompt(context, strategyDigest)
-        : buildFullAutoAiUserPrompt(context, strategyDigest);
+        ? buildSafeAutoAiUserPrompt(context, strategyDigest, learningDigest)
+        : buildFullAutoAiUserPrompt(context, strategyDigest, learningDigest);
 }
 
 function normalizeAutoAiResponse(parsed, context, fallback) {
@@ -982,6 +1049,10 @@ app.post('/api/ai/groq', async (req, res) => {
         const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
         const strategyDigest = buildStrategyDigest(tableId || 'global');
+        const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
+        const learningSummary = autoAiContext ? await getLearningSummaryAsync(tableId || 0) : null;
+        const learningDigest = autoAiContext ? buildLearningDigest(learningSummary, autoMode) : '';
+        const predictionMeta = { strategyDigest, learningDigest, provider: 'local-fallback' };
         if (autoAiContext) persistMetricSnapshot(autoAiContext, tableId || 0);
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
@@ -991,7 +1062,7 @@ app.post('/api/ai/groq', async (req, res) => {
                 analysis: fallback.analysis,
                 provider: 'local-dominance'
             };
-            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, { ...predictionMeta, provider: 'local-dominance' });
             return res.json(localDecision);
         }
         if (!groqKey && !hasOllamaConfigured()) {
@@ -1002,11 +1073,10 @@ app.post('/api/ai/groq', async (req, res) => {
                 analysis: fallback.analysis,
                 provider: 'local-fallback'
             };
-            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, predictionMeta);
             return res.json(localDecision);
         }
 
-        const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
         const systemPrompt = autoAiContext
             ? [
                 autoMode === 'SAFE'
@@ -1086,7 +1156,7 @@ app.post('/api/ai/groq', async (req, res) => {
 
         const llm = await callPreferredLlm({
             systemPrompt,
-            userPrompt: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest) : prompt,
+            userPrompt: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest, learningDigest) : prompt,
             temperature: 0.15,
             maxTokens: autoAiContext ? 140 : 60,
             jsonMode: true
@@ -1098,7 +1168,7 @@ app.post('/api/ai/groq', async (req, res) => {
             if (autoAiContext) {
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
-                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized, parsed);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized, parsed, { ...predictionMeta, provider: llm.provider });
                 return res.json({ ...normalized, provider: llm.provider });
             }
 
@@ -1114,7 +1184,7 @@ app.post('/api/ai/groq', async (req, res) => {
                     analysis: fallback.analysis,
                     provider: 'local-fallback'
                 };
-                persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, predictionMeta);
                 return res.json(localDecision);
             }
 

@@ -697,6 +697,11 @@ async function addAiPrediction(data, cb) {
             analysis: data.analysis || '',
             strategy_refs: Array.isArray(data.strategy_refs) ? data.strategy_refs : [],
             confidence: Number(data.confidence || 0),
+            context_snapshot: data.context_snapshot || {},
+            decision_source: data.decision_source || 'auto_ai',
+            prompt_version: data.prompt_version || '',
+            rl_reward: Number(data.rl_reward || 0),
+            reward_reason: data.reward_reason || '',
             context_hash: data.context_hash || '',
             result: data.result || 'pending',
             n9_result: data.n9_result || (data.result === 'skip' ? 'skip' : 'pending'),
@@ -710,6 +715,21 @@ async function addAiPrediction(data, cb) {
         saveFallback();
         cb(null, record);
     }
+}
+
+function computeAiReward(normalized) {
+    const result = normalized?.result || 'pending';
+    const n9 = normalized?.n9_result || result;
+    const n4 = normalized?.n4_result || result;
+    if (result === 'skip' || (n9 === 'skip' && n4 === 'skip')) {
+        return { reward: 15, reason: 'disciplina_esperar' };
+    }
+    if (n4 === 'win') return { reward: 100, reason: 'precision_n4' };
+    if (n9 === 'win') return { reward: 30, reason: 'cobertura_n9' };
+    if (n9 === 'loss' || n4 === 'loss' || result === 'loss') {
+        return { reward: -200, reason: 'fallo_total' };
+    }
+    return { reward: 0, reason: 'pendiente' };
 }
 
 async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, cb) {
@@ -730,9 +750,12 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
                     ? { result: outcome, n9_result: outcome, n4_result: outcome }
                     : outcome;
                 if (!['win', 'loss', 'skip'].includes(normalized.result)) continue;
+                const reward = computeAiReward(normalized);
                 row.result = normalized.result;
                 row.n9_result = normalized.n9_result || row.n9_result || 'pending';
                 row.n4_result = normalized.n4_result || row.n4_result || 'pending';
+                row.rl_reward = reward.reward;
+                row.reward_reason = reward.reason;
                 row.resolved_number = Number(resolvedNumber);
                 row.resolved_at = now;
                 await row.save();
@@ -752,12 +775,15 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
                 ? { result: outcome, n9_result: outcome, n4_result: outcome }
                 : outcome;
             if (!['win', 'loss', 'skip'].includes(normalized.result)) return item;
+            const reward = computeAiReward(normalized);
             resolved++;
             return {
                 ...item,
                 result: normalized.result,
                 n9_result: normalized.n9_result || item.n9_result || 'pending',
                 n4_result: normalized.n4_result || item.n4_result || 'pending',
+                rl_reward: reward.reward,
+                reward_reason: reward.reason,
                 resolved_number: Number(resolvedNumber),
                 resolved_at: now.toISOString()
             };
@@ -806,7 +832,7 @@ async function getAiLearningSummary(tableId, cb) {
     if (useMongo) {
         try {
             const numericTableId = Number(tableId);
-            const [spinCount, snapshotCount, stateCount, predictionStats, strategyStats] = await Promise.all([
+            const [spinCount, snapshotCount, stateCount, predictionStats, modeStats, strategyStats] = await Promise.all([
                 Spin.countDocuments({ table_id: numericTableId }),
                 MetricSnapshot.countDocuments({ table_id: numericTableId }),
                 TableStateSnapshot.countDocuments({ table_id: numericTableId }),
@@ -819,7 +845,26 @@ async function getAiLearningSummary(tableId, cb) {
                             wins: { $sum: { $cond: [{ $eq: ['$result', 'win'] }, 1, 0] } },
                             losses: { $sum: { $cond: [{ $eq: ['$result', 'loss'] }, 1, 0] } },
                             skips: { $sum: { $cond: [{ $eq: ['$result', 'skip'] }, 1, 0] } },
-                            pending: { $sum: { $cond: [{ $eq: ['$result', 'pending'] }, 1, 0] } }
+                            pending: { $sum: { $cond: [{ $eq: ['$result', 'pending'] }, 1, 0] } },
+                            reward: { $sum: '$rl_reward' }
+                        }
+                    }
+                ]),
+                AiPrediction.aggregate([
+                    { $match: { table_id: numericTableId, basis: 'ai_analysis' } },
+                    {
+                        $group: {
+                            _id: '$mode',
+                            total: { $sum: 1 },
+                            wins: { $sum: { $cond: [{ $eq: ['$result', 'win'] }, 1, 0] } },
+                            losses: { $sum: { $cond: [{ $eq: ['$result', 'loss'] }, 1, 0] } },
+                            skips: { $sum: { $cond: [{ $eq: ['$result', 'skip'] }, 1, 0] } },
+                            pending: { $sum: { $cond: [{ $eq: ['$result', 'pending'] }, 1, 0] } },
+                            n9Wins: { $sum: { $cond: [{ $eq: ['$n9_result', 'win'] }, 1, 0] } },
+                            n9Resolved: { $sum: { $cond: [{ $in: ['$n9_result', ['win', 'loss']] }, 1, 0] } },
+                            n4Wins: { $sum: { $cond: [{ $eq: ['$n4_result', 'win'] }, 1, 0] } },
+                            n4Resolved: { $sum: { $cond: [{ $in: ['$n4_result', ['win', 'loss']] }, 1, 0] } },
+                            reward: { $sum: '$rl_reward' }
                         }
                     }
                 ]),
@@ -839,7 +884,21 @@ async function getAiLearningSummary(tableId, cb) {
                 ])
             ]);
 
-            const pred = predictionStats[0] || { total: 0, wins: 0, losses: 0, skips: 0, pending: 0 };
+            const pred = predictionStats[0] || { total: 0, wins: 0, losses: 0, skips: 0, pending: 0, reward: 0 };
+            const aiPredictionsByMode = modeStats.reduce((acc, row) => {
+                const key = String(row._id || 'SAFE').toUpperCase();
+                acc[key] = {
+                    total: row.total || 0,
+                    wins: row.wins || 0,
+                    losses: row.losses || 0,
+                    skips: row.skips || 0,
+                    pending: row.pending || 0,
+                    reward: row.reward || 0,
+                    n9Rate: row.n9Resolved ? Number(((row.n9Wins / row.n9Resolved) * 100).toFixed(1)) : 0,
+                    n4Rate: row.n4Resolved ? Number(((row.n4Wins / row.n4Resolved) * 100).toFixed(1)) : 0
+                };
+                return acc;
+            }, {});
             const strategies = strategyStats.reduce((acc, row) => ({ ...acc, [row._id]: row.count }), {});
             cb(null, {
                 table_id: numericTableId,
@@ -847,6 +906,7 @@ async function getAiLearningSummary(tableId, cb) {
                 metricSnapshots: snapshotCount,
                 tableStateSnapshots: stateCount,
                 aiPredictions: pred,
+                aiPredictionsByMode,
                 aiStrategies: strategies
             });
         } catch (e) { cb(e); }
@@ -867,8 +927,25 @@ async function getAiLearningSummary(tableId, cb) {
                 wins: predictions.filter(item => item.result === 'win').length,
                 losses: predictions.filter(item => item.result === 'loss').length,
                 skips: predictions.filter(item => item.result === 'skip').length,
-                pending: predictions.filter(item => item.result === 'pending').length
+                pending: predictions.filter(item => item.result === 'pending').length,
+                reward: predictions.reduce((acc, item) => acc + Number(item.rl_reward || 0), 0)
             },
+            aiPredictionsByMode: ['SAFE', 'FULL'].reduce((acc, mode) => {
+                const rows = predictions.filter(item => item.basis === 'ai_analysis' && String(item.mode || 'SAFE').toUpperCase() === mode);
+                const n9Rows = rows.filter(item => item.n9_result === 'win' || item.n9_result === 'loss');
+                const n4Rows = rows.filter(item => item.n4_result === 'win' || item.n4_result === 'loss');
+                acc[mode] = {
+                    total: rows.length,
+                    wins: rows.filter(item => item.result === 'win').length,
+                    losses: rows.filter(item => item.result === 'loss').length,
+                    skips: rows.filter(item => item.result === 'skip').length,
+                    pending: rows.filter(item => item.result === 'pending').length,
+                    reward: rows.reduce((sum, item) => sum + Number(item.rl_reward || 0), 0),
+                    n9Rate: n9Rows.length ? Number(((n9Rows.filter(item => item.n9_result === 'win').length / n9Rows.length) * 100).toFixed(1)) : 0,
+                    n4Rate: n4Rows.length ? Number(((n4Rows.filter(item => item.n4_result === 'win').length / n4Rows.length) * 100).toFixed(1)) : 0
+                };
+                return acc;
+            }, {}),
             aiStrategies: strategies.reduce((acc, item) => {
                 acc[item.status || 'active'] = (acc[item.status || 'active'] || 0) + 1;
                 return acc;

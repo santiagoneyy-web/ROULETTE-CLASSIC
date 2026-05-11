@@ -16,6 +16,11 @@ const AiPredictionSchema = new mongoose.Schema({
     analysis: { type: String, default: '' },
     strategy_refs: [{ type: String }],
     confidence: { type: Number, default: 0 },
+    context_snapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    decision_source: { type: String, default: 'auto_ai', index: true },
+    prompt_version: { type: String, default: '' },
+    rl_reward: { type: Number, default: 0, index: true },
+    reward_reason: { type: String, default: '' },
     context_hash: { type: String, default: '' },
     result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending', index: true },
     n9_result: { type: String, enum: ['pending', 'win', 'loss', 'skip'], default: 'pending' },
@@ -28,5 +33,6 @@ const AiPredictionSchema = new mongoose.Schema({
 AiPredictionSchema.index({ table_id: 1, created_at: -1 });
 AiPredictionSchema.index({ table_id: 1, mode: 1, basis: 1, created_at: -1 });
 AiPredictionSchema.index({ table_id: 1, mode: 1, context_hash: 1 });
+AiPredictionSchema.index({ table_id: 1, mode: 1, basis: 1, rl_reward: -1 });
 
 module.exports = mongoose.model('AiPrediction', AiPredictionSchema);

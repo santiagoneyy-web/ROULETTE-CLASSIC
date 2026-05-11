@@ -63,6 +63,21 @@
       "updatedAt": "2026-05-10T00:00:00.000Z"
     },
     {
+      "id": "sys_pattern_2_1_2",
+      "source": "system",
+      "origin": "prompt_seed",
+      "tableId": "global",
+      "status": "active",
+      "name": "Patron 2-1-2",
+      "summary": "Cuando una ruta o zona marca dos aciertos, una ruptura o pausa, y vuelve a dos aciertos, tratarlo como continuidad con respiracion, no como cambio rigido.",
+      "pattern": "WWLWW, LLWLL o bloques 2-1-2 en direccion/zona/travel.",
+      "trigger": "Dos impulsos similares separados por una ruptura corta, especialmente si la dominancia viva y el momentum siguen del mismo lado.",
+      "action": "FULL puede reforzar continuidad si las 6 medidas y el contexto acompanan; SAFE debe pedir confirmacion si N4 viene muy castigado o el reward reciente es negativo.",
+      "tags": ["2-1-2", "timing", "continuidad", "ruptura-corta", "wl"],
+      "createdAt": "2026-05-11T00:00:00.000Z",
+      "updatedAt": "2026-05-11T00:00:00.000Z"
+    },
+    {
       "id": "sys_bambu_3_2",
       "source": "system",
       "origin": "prompt_seed",
