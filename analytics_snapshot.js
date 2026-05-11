@@ -213,8 +213,114 @@ function buildMetricSnapshot({ tableId, tableCode = 'AUTO', spinId = null, histo
     };
 }
 
+function normalizeRouteLabel(routeKey) {
+    return routeKey === 'ccw' ? 'CCW' : 'CW';
+}
+
+function chooseDominancePrediction(snapshot, spinId = null) {
+    if (!snapshot || !snapshot.routes || !snapshot.routes.cw || !snapshot.routes.ccw) {
+        return null;
+    }
+
+    const dominance8 = snapshot.dominance8 || {};
+    const momentum15 = snapshot.momentum15 || {};
+    const cw = snapshot.routes.cw;
+    const ccw = snapshot.routes.ccw;
+    const windowSize = Number(snapshot.window_size || 0);
+
+    const scoreCW = (Number(dominance8.cw) || 0) * 2
+        + (Number(momentum15.cw) || 0) * 3
+        + (Number(cw.hitRate) || 0) / 10;
+    const scoreCCW = (Number(dominance8.ccw) || 0) * 2
+        + (Number(momentum15.ccw) || 0) * 3
+        + (Number(ccw.hitRate) || 0) / 10;
+    const scoreBig = (Number(dominance8.big) || 0) * 2
+        + (Number(momentum15.big) || 0) * 3;
+    const scoreSmall = (Number(dominance8.small) || 0) * 2
+        + (Number(momentum15.small) || 0) * 3;
+
+    const routeKey = scoreCW >= scoreCCW ? 'cw' : 'ccw';
+    const zoneKey = scoreBig >= scoreSmall ? 'big' : 'small';
+    const route = snapshot.routes[routeKey];
+    const routeDiff = Math.abs(scoreCW - scoreCCW);
+    const zoneDiff = Math.abs(scoreBig - scoreSmall);
+    const stability = String(snapshot.stability_level || 'red').toLowerCase();
+    const stabilityBonus = stability === 'green' ? 16 : stability === 'yellow' ? 8 : 0;
+    const confidence = Math.min(99, Math.round(35 + stabilityBonus + routeDiff * 2 + zoneDiff * 1.5));
+
+    const shouldSkip = windowSize < 4 || (stability === 'red' && confidence < 58);
+    if (shouldSkip) {
+        return {
+            table_id: snapshot.table_id,
+            table_code: snapshot.table_code || 'AUTO',
+            spin_id: spinId,
+            basis: 'dominance',
+            dominance_priority: true,
+            mode: 'SAFE',
+            route: 'ESPERAR',
+            zone: 'ESPERAR',
+            n9: 'ESPERAR',
+            n4: 'ESPERAR',
+            analysis: `Dominancia insuficiente: ${snapshot.pattern_label || 'sin patron claro'}.`,
+            strategy_refs: [],
+            confidence,
+            context_hash: buildContextHash(snapshot),
+            result: 'skip',
+            created_at: new Date().toISOString()
+        };
+    }
+
+    return {
+        table_id: snapshot.table_id,
+        table_code: snapshot.table_code || 'AUTO',
+        spin_id: spinId,
+        basis: 'dominance',
+        dominance_priority: true,
+        mode: 'SAFE',
+        route: normalizeRouteLabel(routeKey),
+        zone: zoneKey === 'big' ? 'BIG' : 'SMALL',
+        n9: String(route.n9),
+        n4: String(zoneKey === 'big' ? route.n4Big : route.n4Small),
+        analysis: [
+            `Dominancia ${normalizeRouteLabel(routeKey)} con zona ${zoneKey.toUpperCase()}.`,
+            `Patron: ${snapshot.pattern_label || 'sin etiqueta'}.`,
+            `Score ruta ${Math.round(Math.max(scoreCW, scoreCCW))}, confianza ${confidence}%.`
+        ].join(' '),
+        strategy_refs: [],
+        confidence,
+        context_hash: buildContextHash(snapshot),
+        result: 'pending',
+        created_at: new Date().toISOString()
+    };
+}
+
+function buildContextHash(snapshot) {
+    const recent = Array.isArray(snapshot.recent_numbers) ? snapshot.recent_numbers.join('-') : '';
+    return [
+        snapshot.table_code || 'AUTO',
+        snapshot.spin_id || 'na',
+        snapshot.stability_level || 'na',
+        snapshot.dominant_signal || 'na',
+        recent
+    ].join('|');
+}
+
+function evaluatePredictionHit(prediction, resolvedNumber) {
+    if (!prediction || prediction.result === 'skip') return 'skip';
+    const n9 = Number(prediction.n9);
+    const n4 = Number(prediction.n4);
+    const number = Number(resolvedNumber);
+    if (!Number.isInteger(number) || number < 0 || number > 36) return 'pending';
+
+    const n9Hit = Number.isInteger(n9) && hitInRadius(n9, number, 4);
+    const n4Hit = Number.isInteger(n4) && hitInRadius(n4, number, 2);
+    return n9Hit || n4Hit ? 'win' : 'loss';
+}
+
 module.exports = {
     buildMetricSnapshot,
+    chooseDominancePrediction,
+    evaluatePredictionHit,
     calcDistance,
     wheelNumberAt,
     wheelNeighbors

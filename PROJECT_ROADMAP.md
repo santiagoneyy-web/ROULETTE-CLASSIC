@@ -54,7 +54,7 @@ Una web que:
 3. Persist analytic snapshots [DONE: automatic metricSnapshots]
 - guardar por giro: dominancia, momentum, estabilidad, performance, rutas y contexto
 
-4. Persist AI predictions
+4. Persist AI predictions [DONE: dominance-first predictions]
 - guardar por giro: modo, ruta, zona, N9, N4, analysis y resultado posterior
 
 5. Formalize strategy library

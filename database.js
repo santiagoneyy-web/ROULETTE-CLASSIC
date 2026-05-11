@@ -591,12 +591,22 @@ async function getMetricSnapshots(tableId, limit, cb) {
 async function addAiPrediction(data, cb) {
     if (useMongo) {
         try {
-            const id = data.id || ((await AiPrediction.findOne().sort('-id').lean().exec())?.id || 0) + 1;
-            const created = await AiPrediction.create({ ...data, id });
+            let created = null;
+            let attempts = 0;
+            while (!created && attempts < 5) {
+                try {
+                    const id = data.id || ((await AiPrediction.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+                    created = await AiPrediction.create({ ...data, schema_version: 2, id });
+                } catch (err) {
+                    if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
+                    else throw err;
+                }
+            }
             cb(null, created);
         } catch (e) { cb(e); }
     } else {
         const record = {
+            schema_version: 2,
             id: data.id || nextFallbackId(fallbackData.aiPredictions),
             table_id: Number(data.table_id),
             table_code: data.table_code || 'AUTO',
@@ -621,6 +631,47 @@ async function addAiPrediction(data, cb) {
         if (fallbackData.aiPredictions.length > 10000) fallbackData.aiPredictions.shift();
         saveFallback();
         cb(null, record);
+    }
+}
+
+async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, cb) {
+    const now = new Date();
+    if (useMongo) {
+        try {
+            const rows = await AiPrediction.find({
+                table_id: Number(tableId),
+                result: 'pending'
+            }).sort({ created_at: 1 }).limit(25).exec();
+
+            let resolved = 0;
+            for (const row of rows) {
+                const result = typeof evaluator === 'function' ? evaluator(row, resolvedNumber) : 'loss';
+                if (!['win', 'loss', 'skip'].includes(result)) continue;
+                row.result = result;
+                row.resolved_number = Number(resolvedNumber);
+                row.resolved_at = now;
+                await row.save();
+                resolved++;
+            }
+
+            cb(null, { resolved });
+        } catch (e) { cb(e); }
+    } else {
+        let resolved = 0;
+        fallbackData.aiPredictions = fallbackData.aiPredictions.map(item => {
+            if (item.table_id != tableId || item.result !== 'pending') return item;
+            const result = typeof evaluator === 'function' ? evaluator(item, resolvedNumber) : 'loss';
+            if (!['win', 'loss', 'skip'].includes(result)) return item;
+            resolved++;
+            return {
+                ...item,
+                result,
+                resolved_number: Number(resolvedNumber),
+                resolved_at: now.toISOString()
+            };
+        });
+        saveFallback();
+        cb(null, { resolved });
     }
 }
 
@@ -671,5 +722,5 @@ module.exports = {
     findAccessCode, saveAccessCode,
     listStrategies, saveStrategyRecord,
     addMetricSnapshot, getMetricSnapshots,
-    addAiPrediction, getAiPredictions
+    addAiPrediction, getAiPredictions, resolvePendingAiPredictions
 };

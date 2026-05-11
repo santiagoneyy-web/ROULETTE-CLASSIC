@@ -64,7 +64,7 @@ Endpoint de revision:
 
 ### `aiPredictions`
 
-Prediccion guardada para poder medir si la IA mejora.
+Prediccion guardada para poder medir si la IA mejora. Se crea automaticamente despues de cada `metricSnapshot` y se resuelve cuando entra el siguiente giro real.
 
 - `basis`: `dominance`, `ai_analysis`, `strategy` o `hybrid`.
 - `dominance_priority`: mantiene tu regla: dominancia es el eje principal.
@@ -73,6 +73,10 @@ Prediccion guardada para poder medir si la IA mejora.
 - `strategy_refs`: estrategias usadas como apoyo.
 - `confidence`: confianza numerica.
 - `result`: `pending`, `win`, `loss` o `skip`.
+
+Endpoint de revision:
+
+- `GET /api/ai/predictions/:tableId?limit=100`
 
 ### `strategies`
 
@@ -87,4 +91,4 @@ Biblioteca central de estrategias humanas y de IA.
 
 ## Regla de prioridad actual
 
-La dominancia manda como primer eje. El analisis IA y las estrategias son apoyo contextual mientras la base de datos todavia esta creciendo. Cuando haya suficiente muestra, el motor de evaluacion podra subir o bajar el peso de cada estrategia segun efectividad real.
+La dominancia manda como primer eje. El analisis IA y las estrategias son apoyo contextual mientras la base de datos todavia esta creciendo. Las predicciones automaticas se guardan con `basis=dominance` y `dominance_priority=true`. Cuando haya suficiente muestra, el motor de evaluacion podra subir o bajar el peso de cada estrategia segun efectividad real.

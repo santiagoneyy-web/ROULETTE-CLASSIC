@@ -11,7 +11,11 @@ const predictor = require('./predictor'); // Agents 1-4
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const axios   = require('axios');
 const strategyStore = require('./strategy_store');
-const { buildMetricSnapshot } = require('./analytics_snapshot');
+const {
+    buildMetricSnapshot,
+    chooseDominancePrediction,
+    evaluatePredictionHit
+} = require('./analytics_snapshot');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
@@ -83,6 +87,15 @@ app.get('/api/metrics/:tableId', (req, res) => {
     const tableId = req.params.tableId;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
     db.getMetricSnapshots(tableId, limit, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/ai/predictions/:tableId', (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
+    db.getAiPredictions(tableId, limit, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
     });
@@ -250,9 +263,28 @@ function persistIngestMetricSnapshot(tableId, spinId, history, mode = 'INGEST') 
         db.addMetricSnapshot(snapshot, (err) => {
             if (err) console.error('[MetricSnapshot] Save error:', err.message);
         });
+        return snapshot;
     } catch (err) {
         console.error('[MetricSnapshot] Build error:', err.message);
+        return null;
     }
+}
+
+function resolvePendingAiPredictions(tableId, resolvedNumber) {
+    db.resolvePendingAiPredictions(tableId, resolvedNumber, evaluatePredictionHit, (err, info) => {
+        if (err) return console.error('[AiPrediction] Resolve error:', err.message);
+        if (info?.resolved) console.log(`[AiPrediction] Resolved ${info.resolved} pending prediction(s).`);
+    });
+}
+
+function persistDominanceAiPrediction(tableId, spinId, snapshot) {
+    const prediction = chooseDominancePrediction(snapshot, spinId);
+    if (!prediction) return;
+
+    db.addAiPrediction(prediction, (err) => {
+        if (err) return console.error('[AiPrediction] Save error:', err.message);
+        console.log(`[AiPrediction] Next ${prediction.route}/${prediction.zone} N9=${prediction.n9} N4=${prediction.n4} (${prediction.result})`);
+    });
 }
 
 function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
@@ -809,6 +841,8 @@ app.post('/api/spin', async (req, res) => {
                 return console.log(`[IGNORE DB] Duplicate ${number}`);
             }
 
+            resolvePendingAiPredictions(table_id, number);
+
             const prevSpin = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : null;
             const prevNumber = prevSpin ? prevSpin.number : null;
             const physics = agent5.getPhysics(prevNumber, number);
@@ -923,7 +957,8 @@ app.post('/api/spin', async (req, res) => {
             }
 
             if (savedSpinId) {
-                persistIngestMetricSnapshot(table_id, savedSpinId, numsOnly, source || 'bot');
+                const snapshot = persistIngestMetricSnapshot(table_id, savedSpinId, numsOnly, source || 'bot');
+                persistDominanceAiPrediction(table_id, savedSpinId, snapshot);
             }
 
         } catch(e) { console.error('[Background Sync Err]', e); }
@@ -968,8 +1003,10 @@ app.post('/api/spin/batch', async (req, res) => {
         });
 
         if (savedBatchSpinId || source === 'batch') {
+            resolvePendingAiPredictions(table_id, n);
             rollingHistory.push(n);
-            persistIngestMetricSnapshot(table_id, savedBatchSpinId, rollingHistory, source || 'batch');
+            const snapshot = persistIngestMetricSnapshot(table_id, savedBatchSpinId, rollingHistory, source || 'batch');
+            persistDominanceAiPrediction(table_id, savedBatchSpinId, snapshot);
         }
     }
 
