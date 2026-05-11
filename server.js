@@ -639,8 +639,20 @@ function buildAutoAiFallback(context) {
     const dominantRoute = routeKey === 'cw' ? 'CW' : 'CCW';
     const routeGap = Math.abs(scoreCW - scoreCCW);
     const zoneGap = Math.abs(zoneBigScore - zoneSmallScore);
+    const strongestHitRate = Math.max(Number(cw.hitRate) || 0, Number(ccw.hitRate) || 0);
+    const directionalPressure = Math.max(Number(dom8.cw) || 0, Number(dom8.ccw) || 0) + Math.max(Number(mom15.cw) || 0, Number(mom15.ccw) || 0);
+    const zonePressure = Math.max(Number(dom8.big) || 0, Number(dom8.small) || 0) + Math.max(Number(mom15.big) || 0, Number(mom15.small) || 0);
+    const patternLower = String(context.patternLabel || '').toLowerCase();
+    const unstablePattern = ['mixta', 'mixto', 'transicion', 'turbulencia', 'inest'].some(tag => patternLower.includes(tag));
 
-    if (safeMode && stability === 'red' && Math.abs(scoreCW - scoreCCW) < 8) {
+    if (safeMode && (
+        routeGap < 10 ||
+        zoneGap < 6 ||
+        strongestHitRate < 55 ||
+        directionalPressure < 10 ||
+        zonePressure < 10 ||
+        unstablePattern
+    )) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
@@ -671,7 +683,81 @@ function buildAutoAiFallback(context) {
     };
 }
 
-function buildAutoAiUserPrompt(context, strategyDigest) {
+function buildSafeAutoAiUserPrompt(context, strategyDigest) {
+    const dom8 = context.dominance8 || {};
+    const mom15 = context.momentum15 || {};
+    const perf8 = context.performance8 || {};
+    const cw = context.routes.cw;
+    const ccw = context.routes.ccw;
+
+    return [
+        'Actuas como un Agente Auditor de Alta Precision para Mylucky Roulete.',
+        'No eres un predictor libre. Eres un filtro conservador que audita y valida si una jugada merece confianza real.',
+        'Si la evidencia no es suficientemente fuerte, debes responder ESPERAR.',
+        '',
+        'MISION:',
+        '- Auditar la decision entre las 6 medidas ya calculadas por el motor.',
+        '- Puedes validar o bloquear.',
+        '- Tu prioridad es disciplina, no actividad.',
+        '',
+        'RECOMPENSA INTERNA:',
+        '- Acierto directo n4 = +100',
+        '- Acierto n9 = +30',
+        '- ESPERAR correcto = +15',
+        '- Fallo total = -200',
+        '- Casi acierto / vecino = -50',
+        '',
+        'CONTEXTO ACTUAL:',
+        `MODO: ${String(context.mode || 'SAFE').toUpperCase()}`,
+        `COLOR DE CONTEXTO: ${String(context.stabilityLevel || 'red').toUpperCase()}`,
+        `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
+        `DOMINANCIA 8T: CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
+        `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
+        `PERF 8T CW_N9=${perf8.cwN9 || 'Sin datos'} | CW_N4=${perf8.cwN4 || 'Sin datos'}`,
+        `PERF 8T CCW_N9=${perf8.ccwN9 || 'Sin datos'} | CCW_N4=${perf8.ccwN4 || 'Sin datos'}`,
+        `SEC_DIR_15: ${context.sequence15?.dir || 'Sin datos'}`,
+        `SEC_ZON_15: ${context.sequence15?.zone || 'Sin datos'}`,
+        `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
+        `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
+        `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
+        '',
+        'REGLAS FIJAS:',
+        '- SMALL = 1-9, BIG = 10-18.',
+        '- Solo puedes elegir entre las 6 medidas activas.',
+        '- El color es contexto visual, NO una orden de operar o bloquear.',
+        '- Puedes operar en verde, amarillo o rojo si la evidencia real lo justifica.',
+        '',
+        'ANALISIS OBLIGATORIO:',
+        '- Cruza direccion, zona, travel, patron, continuidad, rebote, farol, fatiga y W/L.',
+        '- Busca similitud contextual en el historial, no solo secuencias exactas.',
+        '- Da mas peso a casos recientes y consistentes.',
+        '- Si el historial comparable es escaso o contradictorio, responde ESPERAR.',
+        '- Una señal bonita no basta si el riesgo de fallo sigue alto.',
+        '',
+        'BIBLIOTECA DE ESTRATEGIAS:',
+        strategyDigest || 'Sin estrategias guardadas.',
+        'Usa la biblioteca solo como refuerzo final, nunca como argumento principal.',
+        '',
+        'CRITERIO DE BLOQUEO:',
+        '- Responde ESPERAR si la ventaja no compensa el castigo de -200.',
+        '- Responde ESPERAR si hay contradiccion fuerte entre direccion y zona.',
+        '- Responde ESPERAR si el patron parece mixto, farol, ruptura o fatiga no resuelta.',
+        '- Responde ESPERAR si el historial comparable no es suficientemente fuerte.',
+        '',
+        'CRITERIO DE VALIDACION:',
+        '- Valida solo si hay dominancia clara, travel coherente, patron entendible, historial favorable y riesgo controlado.',
+        '- Premia precision estructural y consistencia. Desconfia de coincidencias aisladas.',
+        '',
+        'RESPUESTA FINAL:',
+        '- Primero decide si el contexto es operable.',
+        '- Si NO es operable, responde ESPERAR.',
+        '- Si SI es operable, elige ruta, zona, n9 y n4 dentro de las 6 medidas.',
+        '- El analysis debe explicar por que valida o por que bloquea.',
+        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
+    ].join('\n');
+}
+
+function buildFullAutoAiUserPrompt(context, strategyDigest) {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
     const perf8 = context.performance8 || {};
@@ -713,9 +799,9 @@ function buildAutoAiUserPrompt(context, strategyDigest) {
         '7. Si el modo es SAFE y no hay ventaja clara, responde ESPERAR.',
         '',
         'COLORES DE ESTABILIDAD:',
-        '- VERDE: Mesa en BLOQUES. Las direcciones salen en grupos largos (DER DER DER DER IZQ IZQ IZQ IZQ). Tiene doble tendencia o estructura fuerte. MEJOR MOMENTO para operar. Alta confianza.',
-        '- AMARILLO: Transicion. La mesa esta cambiando. Puede estar saliendo de bloques a turbulencia o viceversa. Precaucion media.',
-        '- ROJO: Mesa dificil. Las direcciones no forman bloques grandes, son patrones cortos (DER IZQ DER DER IZQ DER IZQ). Necesita mas lectura de patrones W/L para encontrar ventaja.',
+        '- VERDE, AMARILLO y ROJO son contexto visual. Describen la mesa, pero no te bloquean por si solos.',
+        '- Puedes operar en cualquier color si el flujo, la dominancia y el historial te respaldan.',
+        '- Usa el color como descripcion adicional, no como regla ciega.',
         '',
         'FILOSOFIA DE LECTURA:',
         '- Esto no es un codigo rigido; es una lectura probabilistica con azar y fluctuaciones naturales.',
@@ -754,10 +840,10 @@ function buildAutoAiUserPrompt(context, strategyDigest) {
         '- En fases de turbulencia donde los bloques no te guian, apoyate fuertemente en los PATRONES W/L de cada direccion.',
         '',
         'MODOS DE DECISION:',
-        '- SAFE: Opera solo con estructura clara, bloques limpios, dominancia fuerte o patrones repetitivos. Si mesa en ROJO sin ventaja, responde ESPERAR.',
-        '- FULL: Siempre elige la mejor opcion, incluso en turbulencia. No buscas certeza total, buscas la mejor lectura relativa.',
-        '- En SAFE prioriza VERDE + bloques + patrones fuertes.',
-        '- En FULL puedes anticipar, seguir, romper o sostener segun el flujo.',
+        '- FULL: Siempre elige la mejor opcion disponible entre las 6 medidas.',
+        '- No buscas certeza total; buscas la mejor lectura relativa del flujo actual.',
+        '- Puedes anticipar, seguir, romper o sostener segun el flujo.',
+        '- El color no te limita. Decide por evidencia contextual.',
         '',
         'CRITERIO FINAL DE RESPUESTA:',
         '- Primero decide ruta.',
@@ -768,6 +854,13 @@ function buildAutoAiUserPrompt(context, strategyDigest) {
         'Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note. Si no aplica, dejalos vacios o no los envies.',
         'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
     ].join('\n');
+}
+
+function buildAutoAiUserPrompt(context, strategyDigest) {
+    const mode = String(context?.mode || 'SAFE').toUpperCase();
+    return mode === 'SAFE'
+        ? buildSafeAutoAiUserPrompt(context, strategyDigest)
+        : buildFullAutoAiUserPrompt(context, strategyDigest);
 }
 
 function normalizeAutoAiResponse(parsed, context, fallback) {
@@ -854,11 +947,16 @@ app.post('/api/ai/groq', async (req, res) => {
             });
         }
 
+        const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
         const systemPrompt = autoAiContext
             ? [
-                'Eres el motor AUTO AI de ROULETTE-CLASSIC.',
+                autoMode === 'SAFE'
+                    ? 'Eres el AGENTE AUDITOR SAFE de ROULETTE-CLASSIC.'
+                    : 'Eres el motor AUTO AI FULL de ROULETTE-CLASSIC.',
+                autoMode === 'SAFE'
+                    ? 'Tu trabajo es auditar y filtrar la jugada. Puedes bloquear y responder ESPERAR.'
+                    : 'Tu trabajo es leer el flujo actual de la mesa y elegir la mejor opcion posible entre las 6 medidas calculadas por el motor.',
                 'Trabajas sobre travel, cuadro, grafica, color de estabilidad, hit rate, momentum, patrones W/L y estrategia de bloques.',
-                'Tu trabajo es leer el flujo actual de la mesa y elegir la mejor opcion posible entre las 6 medidas calculadas por el motor.',
                 '',
                 'REGLAS TECNICAS:',
                 '- SMALL = 1-9 casillas. BIG = 10-18 casillas.',
@@ -870,11 +968,14 @@ app.post('/api/ai/groq', async (req, res) => {
                 '- Lee tambien la biblioteca central de estrategias enviada en el prompt del usuario.',
                 '- La prioridad numero 1 es la dominancia viva y reciente.',
                 '- Las estrategias guardadas son sugerencias y contexto, no el primer eje de decision.',
+                autoMode === 'SAFE'
+                    ? '- En SAFE tienes permiso total para bloquear una operacion si la evidencia no compensa el riesgo.'
+                    : '- En FULL siempre debes proponer la mejor lectura relativa disponible, aunque la ventaja sea corta.',
                 '',
                 'COLORES DE ESTABILIDAD (significado real):',
-                '- VERDE: La mesa sale en BLOQUES claros (DER DER DER DER IZQ IZQ IZQ IZQ). Tiene doble tendencia o estructura fuerte. Es el mejor momento para operar.',
-                '- AMARILLO: Transicion. La mesa esta cambiando de estructura. Puede estar saliendo de bloques a turbulencia o viceversa. Precaucion.',
-                '- ROJO: Mesa dificil de leer, no necesariamente caos. Las direcciones no forman bloques grandes, son patrones cortos tipo DER IZQ DER DER IZQ DER IZQ IZQ. Necesita mas lectura de patrones W/L.',
+                '- VERDE, AMARILLO y ROJO son contexto visual descriptivo.',
+                '- El color ayuda a describir la mesa, pero no te obliga a operar ni a bloquear por si solo.',
+                '- Puedes operar en cualquier color si el resto del contexto lo justifica.',
                 '',
                 'ORDEN DE ANALISIS:',
                 '1. Lee primero la dominancia viva y reciente.',
@@ -914,10 +1015,12 @@ app.post('/api/ai/groq', async (req, res) => {
                 '- Si el string W/L se acerca a una L esperada o a una trampa, reduce confianza o espera.',
                 '- Tu analysis DEBE mencionar el patron identificado, no solo hit rate o momentum.',
                 '- Si hay conflicto entre estabilidad, momentum y W/L, prioriza la lectura mas viva y mas reciente.',
-                '- Si el modo SAFE no tiene ventaja clara, responde ESPERAR.',
+                autoMode === 'SAFE'
+                    ? '- Si no hay ventaja clara, debes responder ESPERAR.'
+                    : '- En FULL no debes congelarte por duda leve; elige la mejor lectura disponible.',
                 '- Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note al JSON.',
                 '',
-                'SAFE = conservador y selectivo. FULL = agresivo y siempre activo, pero aun asi tecnico.',
+                'SAFE = auditor conservador y selectivo. FULL = operador libre, pero aun asi tecnico.',
                 'Responde solo JSON valido.'
             ].join('\n')
             : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';
