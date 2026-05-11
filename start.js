@@ -3,12 +3,11 @@ const concurrently = require('concurrently');
 const port = process.env.PORT || 3000;
 
 console.log('Initializing ROULETTE-CLASSIC data stack...');
-console.log(`API on port ${port} + single crawler for casino.org tables.`);
+console.log(`API on port ${port}. The API process starts the casino.org crawler.`);
 
 const { result } = concurrently(
     [
-        { command: 'node server.js', name: 'API', prefixColor: 'blue' },
-        { command: `node crawler.js --api http://127.0.0.1:${port}/api/spin`, name: 'BOT', prefixColor: 'magenta' }
+        { command: 'node server.js', name: 'API', prefixColor: 'blue' }
     ],
     {
         prefix: 'name',
