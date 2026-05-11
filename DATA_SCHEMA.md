@@ -47,7 +47,7 @@ Cada giro real de la ruleta. Esta es la base cruda del big data.
 
 ### `metricSnapshots`
 
-Foto analitica por giro o ventana. Este sera el paso 3.
+Foto analitica por giro o ventana. Se genera automaticamente cuando entra un nuevo giro por `/api/spin`.
 
 - `table_id`, `table_code`, `spin_id`.
 - `recent_numbers`: ventana usada.
@@ -57,6 +57,10 @@ Foto analitica por giro o ventana. Este sera el paso 3.
 - `dominance8`, `momentum15`, `performance8`.
 - `routes`: rutas CW/CCW y tasas.
 - `context`: notas y fuente del calculo.
+
+Endpoint de revision:
+
+- `GET /api/metrics/:tableId?limit=100`
 
 ### `aiPredictions`
 

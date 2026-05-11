@@ -51,7 +51,7 @@ Una web que:
 - cerrar entidades y campos finales
 - mantener compatibilidad `JSON + Mongo`
 
-3. Persist analytic snapshots
+3. Persist analytic snapshots [DONE: automatic metricSnapshots]
 - guardar por giro: dominancia, momentum, estabilidad, performance, rutas y contexto
 
 4. Persist AI predictions

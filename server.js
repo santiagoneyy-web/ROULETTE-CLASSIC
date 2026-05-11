@@ -11,6 +11,7 @@ const predictor = require('./predictor'); // Agents 1-4
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const axios   = require('axios');
 const strategyStore = require('./strategy_store');
+const { buildMetricSnapshot } = require('./analytics_snapshot');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
@@ -75,6 +76,15 @@ app.get('/api/history/:tableId', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         console.log(`[DB] Found ${rows.length} rows for table ${tableId}`);
         res.json(rows);
+    });
+});
+
+app.get('/api/metrics/:tableId', (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
+    db.getMetricSnapshots(tableId, limit, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
     });
 });
 
@@ -209,15 +219,40 @@ function persistMetricSnapshot(context, tableId) {
     if (!context) return;
     db.addMetricSnapshot({
         table_id: Number(tableId) || 0,
+        table_code: context.tableCode || 'AUTO',
+        spin_id: context.spinId ?? null,
+        window_size: context.windowSize || 15,
         recent_numbers: Array.isArray(context.recentNumbers) ? context.recentNumbers : [],
         stability_level: context.stabilityLevel || 'red',
         pattern_label: context.patternLabel || '',
+        dominant_axis: context.dominantAxis || 'none',
+        dominant_signal: context.dominantSignal || '',
+        dominance_score: Number(context.dominanceScore || 0),
         dominance8: context.dominance8 || {},
         momentum15: context.momentum15 || {},
         performance8: context.performance8 || {},
         routes: context.routes || {},
+        context: context.context || { source: 'auto_ai_context', notes: '' },
         captured_at: new Date().toISOString()
     }, () => {});
+}
+
+function persistIngestMetricSnapshot(tableId, spinId, history, mode = 'INGEST') {
+    try {
+        const snapshot = buildMetricSnapshot({
+            tableId,
+            tableCode: 'AUTO',
+            spinId,
+            history,
+            mode
+        });
+
+        db.addMetricSnapshot(snapshot, (err) => {
+            if (err) console.error('[MetricSnapshot] Save error:', err.message);
+        });
+    } catch (err) {
+        console.error('[MetricSnapshot] Build error:', err.message);
+    }
 }
 
 function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
@@ -752,6 +787,7 @@ app.post('/api/spin', async (req, res) => {
             const isMongo = db.getUseMongo();
             let currentHistory = [];
             
+            let savedSpinId = null;
             if (isMongo) {
                 currentHistory = await Spin.find({ table_id }).sort({ id: -1 }).limit(100).exec();
                 currentHistory.reverse();
@@ -864,13 +900,30 @@ app.post('/api/spin', async (req, res) => {
                             ingested_at: new Date()
                         });
                         savedSpin = await newSpin.save();
+                        savedSpinId = savedSpin.id;
                     } catch (err) {
                         if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
                         else throw err;
                     }
                 }
             } else {
-                db.addSpin(table_id, number, source || 'bot', { event_id: req.body.event_id }, () => {});
+                savedSpinId = await new Promise(resolve => {
+                    db.addSpin(table_id, number, source || 'bot', {
+                        event_id: req.body.event_id,
+                        source_quality: source === 'casino_org_live' ? 'live' : 'manual',
+                        session_id: req.body.session_id || '',
+                        round_key: req.body.round_key || req.body.event_id || '',
+                        raw_history: Array.isArray(req.body.raw_history) ? req.body.raw_history : [],
+                        observed_at: req.body.observed_at || new Date().toISOString()
+                    }, (err, id) => {
+                        if (err) console.error('[DB] JSON spin save err:', err.message);
+                        resolve(id || null);
+                    });
+                });
+            }
+
+            if (savedSpinId) {
+                persistIngestMetricSnapshot(table_id, savedSpinId, numsOnly, source || 'bot');
             }
 
         } catch(e) { console.error('[Background Sync Err]', e); }
@@ -889,6 +942,12 @@ app.post('/api/spin/batch', async (req, res) => {
     const cleanNumbers = numbers
         .map(n => Number(n))
         .filter(n => Number.isInteger(n));
+    let rollingHistory = await new Promise(resolve => {
+        db.getHistory(table_id, 100, (err, rows) => {
+            if (err || !Array.isArray(rows)) return resolve([]);
+            resolve(rows.map(row => Number(row.number)).filter(n => Number.isInteger(n)));
+        });
+    });
 
     for (const n of cleanNumbers) {
         if (n < 0 || n > 36) {
@@ -896,13 +955,22 @@ app.post('/api/spin/batch', async (req, res) => {
             continue;
         }
 
+        let savedBatchSpinId = null;
         await new Promise(resolve => {
-            db.addSpin(table_id, n, source || 'batch', {}, (err) => {
+            db.addSpin(table_id, n, source || 'batch', {}, (err, id) => {
                 if (err) errors.push({ number: n, error: err.message });
-                else inserted++;
+                else {
+                    inserted++;
+                    savedBatchSpinId = id || null;
+                }
                 resolve();
             });
         });
+
+        if (savedBatchSpinId || source === 'batch') {
+            rollingHistory.push(n);
+            persistIngestMetricSnapshot(table_id, savedBatchSpinId, rollingHistory, source || 'batch');
+        }
     }
 
     if (sseClients[table_id]) {

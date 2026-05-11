@@ -528,12 +528,22 @@ async function saveStrategyRecord(data, cb) {
 async function addMetricSnapshot(data, cb) {
     if (useMongo) {
         try {
-            const id = data.id || ((await MetricSnapshot.findOne().sort('-id').lean().exec())?.id || 0) + 1;
-            const created = await MetricSnapshot.create({ ...data, id });
+            let created = null;
+            let attempts = 0;
+            while (!created && attempts < 5) {
+                try {
+                    const id = data.id || ((await MetricSnapshot.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+                    created = await MetricSnapshot.create({ ...data, schema_version: 2, id });
+                } catch (err) {
+                    if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
+                    else throw err;
+                }
+            }
             cb(null, created);
         } catch (e) { cb(e); }
     } else {
         const record = {
+            schema_version: 2,
             id: data.id || nextFallbackId(fallbackData.metricSnapshots),
             table_id: Number(data.table_id),
             table_code: data.table_code || 'AUTO',
