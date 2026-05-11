@@ -7,6 +7,7 @@
     "api": "node server.js",
     "stack": "node start.js",
     "crawler": "node crawler.js --api http://127.0.0.1:3000/api/spin",
+    "postinstall": "npx puppeteer browsers install chrome",
     "build": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

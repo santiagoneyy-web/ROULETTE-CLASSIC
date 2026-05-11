@@ -3,7 +3,7 @@ services:
     name: roulette-classic
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && npx puppeteer browsers install chrome
     startCommand: npm run stack
     envVars:
       - key: PORT
