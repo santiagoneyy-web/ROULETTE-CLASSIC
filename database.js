@@ -10,6 +10,7 @@ const Strategy = require('./models/Strategy');
 const MetricSnapshot = require('./models/MetricSnapshot');
 const AiPrediction = require('./models/AiPrediction');
 const TableStateSnapshot = require('./models/TableStateSnapshot');
+const Pattern = require('./models/Pattern');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -349,11 +350,21 @@ async function addSpin(tableId, number, source, extra = {}, cb) {
 async function clearHistory(tableId, cb) {
     if (useMongo) {
         try {
-            await Spin.deleteMany({ table_id: tableId });
+            const numericTableId = Number(tableId);
+            await Promise.all([
+                Spin.deleteMany({ table_id: numericTableId }),
+                MetricSnapshot.deleteMany({ table_id: numericTableId }),
+                AiPrediction.deleteMany({ table_id: numericTableId }),
+                TableStateSnapshot.deleteMany({ table_id: numericTableId }),
+                Pattern.deleteMany({ table_id: String(tableId) })
+            ]);
             if (typeof cb === 'function') cb(null);
         } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
         fallbackData.spins = fallbackData.spins.filter(s => s.table_id != tableId);
+        fallbackData.metricSnapshots = fallbackData.metricSnapshots.filter(s => s.table_id != tableId);
+        fallbackData.aiPredictions = fallbackData.aiPredictions.filter(s => s.table_id != tableId);
+        fallbackData.tableStateSnapshots = fallbackData.tableStateSnapshots.filter(s => s.table_id != tableId);
         saveFallback();
         if (typeof cb === 'function') cb(null);
     }
@@ -376,11 +387,20 @@ async function getStats(tableId, cb) {
 async function wipeAllSpins(cb) {
     if (useMongo) {
         try {
-            await Spin.deleteMany({});
+            await Promise.all([
+                Spin.deleteMany({}),
+                MetricSnapshot.deleteMany({}),
+                AiPrediction.deleteMany({}),
+                TableStateSnapshot.deleteMany({}),
+                Pattern.deleteMany({})
+            ]);
             if (typeof cb === 'function') cb(null);
         } catch (e) { if (typeof cb === 'function') cb(e); }
     } else {
         fallbackData.spins = [];
+        fallbackData.metricSnapshots = [];
+        fallbackData.aiPredictions = [];
+        fallbackData.tableStateSnapshots = [];
         saveFallback();
         if (typeof cb === 'function') cb(null);
     }

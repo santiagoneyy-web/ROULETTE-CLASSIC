@@ -164,9 +164,7 @@ function renderShadowPanelNeighborsOnly() {
 }
 function wipeData() {
     if (!confirm('\u{26A0} WIPE ALL DATA?')) return;
-    const tableId = currentTableId;
-    if (!tableId) { alert('Selecciona una mesa primero'); return; }
-    fetch('/api/history/' + tableId, { method: 'DELETE' })
+    fetch('/api/wipe-all', { method: 'DELETE' })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(() => {
             history.length=0; cwHistory.length=0; ccwHistory.length=0;
@@ -176,7 +174,7 @@ function wipeData() {
             zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
             dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
-            alert('\u{2705} Datos borrados.');
+            alert('\u{2705} Base de datos operativa borrada.');
         }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
