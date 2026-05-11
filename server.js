@@ -550,33 +550,66 @@ function persistDominanceAiPrediction(tableId, spinId, snapshot) {
     });
 }
 
+function normalizeAiRoute(value, n9, context) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'CW' || raw === 'DER' || raw === 'DERECHA' || raw === 'RIGHT') return 'CW';
+    if (raw === 'CCW' || raw === 'IZQ' || raw === 'IZQUIERDA' || raw === 'LEFT') return 'CCW';
+    const routes = context?.routes || {};
+    if (n9 !== 'ESPERAR') {
+        if (String(routes.cw?.n9) === String(n9)) return 'CW';
+        if (String(routes.ccw?.n9) === String(n9)) return 'CCW';
+    }
+    return 'ESPERAR';
+}
+
+function normalizeAiZone(value, route, n4, context) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'SMALL' || raw === 'CORTA' || raw === 'SHORT') return 'SMALL';
+    if (raw === 'BIG' || raw === 'AMPLIA' || raw === 'LARGA' || raw === 'LONG') return 'BIG';
+    const routes = context?.routes || {};
+    if (n4 !== 'ESPERAR') {
+        if (route === 'CW' && String(routes.cw?.n4Small) === String(n4)) return 'SMALL';
+        if (route === 'CW' && String(routes.cw?.n4Big) === String(n4)) return 'BIG';
+        if (route === 'CCW' && String(routes.ccw?.n4Small) === String(n4)) return 'SMALL';
+        if (route === 'CCW' && String(routes.ccw?.n4Big) === String(n4)) return 'BIG';
+    }
+    return 'ESPERAR';
+}
+
 function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
     if (!context || !normalizedReply) return;
 
-    const parts = String(normalizedReply).split('|');
+    const normalized = typeof normalizedReply === 'object'
+        ? normalizedReply
+        : { reply: String(normalizedReply || '') };
+    const parts = String(normalized.reply || '').split('|');
     const n9 = parts[0] ? parts[0].replace('N9:', '').trim() : 'ESPERAR';
     const n4 = parts[1] ? parts[1].replace('N4:', '').trim() : 'ESPERAR';
     const mode = String(context.mode || 'SAFE').toUpperCase();
     const recentKey = Array.isArray(context.recentNumbers) ? context.recentNumbers.slice(-15).join('-') : '';
     const contextHash = ['AI', mode, recentKey, n9, n4].join('|');
+    const route = normalizeAiRoute(normalized.route || parsed?.route || parsed?.direccion, n9, context);
+    const zone = normalizeAiZone(normalized.zone || parsed?.zone || parsed?.zona, route, n4, context);
 
     db.addAiPrediction({
         table_id: Number(tableId) || 0,
         basis: 'ai_analysis',
         dominance_priority: false,
         mode,
-        route: String(parsed?.route || parsed?.direccion || (n9 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
-        zone: String(parsed?.zone || parsed?.zona || (n4 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
+        route,
+        zone,
         n9,
         n4,
-        analysis: String(parsed?.analysis || parsed?.reason || '').trim(),
+        analysis: String(normalized.analysis || parsed?.analysis || parsed?.reason || '').trim(),
         strategy_refs: parsed?.strategy_name ? [String(parsed.strategy_name)] : [],
         context_hash: contextHash,
         result: n9 === 'ESPERAR' || n4 === 'ESPERAR' ? 'skip' : 'pending',
         n9_result: n9 === 'ESPERAR' ? 'skip' : 'pending',
         n4_result: n4 === 'ESPERAR' ? 'skip' : 'pending',
         created_at: new Date().toISOString()
-    }, () => {});
+    }, (err) => {
+        if (err) console.error('[AiPrediction] Auto AI save error:', err.message);
+    });
 }
 
 function parseChatStrategyCommand(text, tableId) {
@@ -622,6 +655,8 @@ function buildAutoAiFallback(context) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
+            route: 'ESPERAR',
+            zone: 'ESPERAR',
             analysis: 'Sin medidas matematicas activas para analizar.'
         };
     }
@@ -664,6 +699,8 @@ function buildAutoAiFallback(context) {
         return {
             n9: 'ESPERAR',
             n4: 'ESPERAR',
+            route: 'ESPERAR',
+            zone: 'ESPERAR',
             analysis: buildHumanAutoAiAnalysis(context, {
                 route: 'ESPERAR',
                 zone: 'ESPERAR',
@@ -683,6 +720,8 @@ function buildAutoAiFallback(context) {
     return {
         n9: decision.n9,
         n4: decision.n4,
+        route: decision.route,
+        zone: decision.zone,
         analysis: buildHumanAutoAiAnalysis(
             context,
             decision,
@@ -914,6 +953,8 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     if (n9 === 'ESPERAR' || n4 === 'ESPERAR') {
         return {
             reply: formatAutoReply('ESPERAR', 'ESPERAR'),
+            route: 'ESPERAR',
+            zone: 'ESPERAR',
             analysis: buildHumanAutoAiAnalysis(
                 context,
                 { route: 'ESPERAR', zone: 'ESPERAR', n9: 'ESPERAR', n4: 'ESPERAR' },
@@ -924,6 +965,8 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
 
     return {
         reply: formatAutoReply(n9, n4),
+        route,
+        zone,
         analysis: buildHumanAutoAiAnalysis(context, { route, zone, n9, n4 }, rawAnalysis || fallback.analysis)
     };
 }
@@ -941,18 +984,26 @@ app.post('/api/ai/groq', async (req, res) => {
         const strategyDigest = buildStrategyDigest(tableId || 'global');
         if (autoAiContext) persistMetricSnapshot(autoAiContext, tableId || 0);
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
-            return res.json({
+            const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
+                route: fallback.route,
+                zone: fallback.zone,
                 analysis: fallback.analysis,
                 provider: 'local-dominance'
-            });
+            };
+            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+            return res.json(localDecision);
         }
         if (!groqKey && !hasOllamaConfigured()) {
-            return res.json({
+            const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
+                route: fallback.route,
+                zone: fallback.zone,
                 analysis: fallback.analysis,
                 provider: 'local-fallback'
-            });
+            };
+            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+            return res.json(localDecision);
         }
 
         const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
@@ -1047,7 +1098,7 @@ app.post('/api/ai/groq', async (req, res) => {
             if (autoAiContext) {
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
-                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized.reply, parsed);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized, parsed);
                 return res.json({ ...normalized, provider: llm.provider });
             }
 
@@ -1056,11 +1107,15 @@ app.post('/api/ai/groq', async (req, res) => {
             res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR'), provider: llm.provider });
         } catch(e) {
             if (autoAiContext) {
-                return res.json({
+                const localDecision = {
                     reply: formatAutoReply(fallback.n9, fallback.n4),
+                    route: fallback.route,
+                    zone: fallback.zone,
                     analysis: fallback.analysis,
                     provider: 'local-fallback'
-                });
+                };
+                persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback);
+                return res.json(localDecision);
             }
 
             res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
