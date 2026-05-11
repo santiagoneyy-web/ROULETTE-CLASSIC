@@ -97,7 +97,11 @@ async function initDB() {
                 await Table.updateOne(
                     { id: 1 },
                     {
-                        $setOnInsert: fallbackData.tables[0],
+                        $setOnInsert: {
+                            schema_version: fallbackData.tables[0]?.schema_version || 2,
+                            id: 1,
+                            created_at: new Date()
+                        },
                         $set: {
                             code: 'AUTO',
                             name: 'Auto Roulette',
