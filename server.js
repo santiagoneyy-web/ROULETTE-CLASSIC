@@ -11,6 +11,7 @@ const predictor = require('./predictor'); // Agents 1-4
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const axios   = require('axios');
 const strategyStore = require('./strategy_store');
+const { evaluatePredictionContexts } = require('./evaluation_engine');
 const {
     buildMetricSnapshot,
     buildTableStateSnapshot,
@@ -129,6 +130,65 @@ app.get('/api/ai/summary/:tableId', (req, res) => {
     db.getAiLearningSummary(req.params.tableId, (err, summary) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(summary || {});
+    });
+});
+
+app.get('/api/evaluation/:tableId', (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 500;
+
+    db.getAiPredictions(tableId, limit, (predErr, predictions) => {
+        if (predErr) return res.status(500).json({ error: predErr.message });
+
+        db.getTableStateSnapshots(tableId, limit, (stateErr, states) => {
+            if (stateErr) return res.status(500).json({ error: stateErr.message });
+
+            const evaluation = evaluatePredictionContexts(predictions || [], states || []);
+            res.json(evaluation);
+        });
+    });
+});
+
+app.post('/api/evaluation/:tableId/promote-candidates', (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = req.body?.limit ? parseInt(req.body.limit, 10) : 500;
+
+    db.getAiPredictions(tableId, limit, (predErr, predictions) => {
+        if (predErr) return res.status(500).json({ error: predErr.message });
+
+        db.getTableStateSnapshots(tableId, limit, (stateErr, states) => {
+            if (stateErr) return res.status(500).json({ error: stateErr.message });
+
+            const evaluation = evaluatePredictionContexts(predictions || [], states || []);
+            const saved = [];
+            const failed = [];
+
+            const candidates = evaluation.candidates || [];
+            if (!candidates.length) {
+                return res.json({ saved: 0, failed: 0, strategies: [] });
+            }
+
+            let pending = candidates.length;
+            candidates.forEach(candidate => {
+                db.saveStrategyRecord({
+                    ...candidate,
+                    table_id: String(tableId),
+                    table_code: 'AUTO'
+                }, (err, record) => {
+                    if (err) failed.push({ name: candidate.name, error: err.message });
+                    else saved.push(record);
+                    pending--;
+                    if (pending === 0) {
+                        res.json({
+                            saved: saved.length,
+                            failed: failed.length,
+                            strategies: saved,
+                            errors: failed
+                        });
+                    }
+                });
+            });
+        });
     });
 });
 

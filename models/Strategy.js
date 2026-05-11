@@ -9,6 +9,7 @@ const StrategySchema = new mongoose.Schema({
     summary: { type: String, required: true },
     source: { type: String, enum: ['human', 'ai', 'system'], default: 'human', index: true },
     origin: { type: String, default: 'manual' },
+    category: { type: String, enum: ['strategy', 'analysis_rule', 'context_rule'], default: 'strategy', index: true },
     status: { type: String, enum: ['candidate', 'active', 'validated', 'inactive'], default: 'active', index: true },
     pattern: { type: String, default: '' },
     trigger: { type: String, default: '' },
@@ -23,6 +24,13 @@ const StrategySchema = new mongoose.Schema({
         direct_rate: { type: Number, default: 0 },
         neighbor_rate: { type: Number, default: 0 },
         loss_rate: { type: Number, default: 0 }
+    },
+    evidence: {
+        sample_size: { type: Number, default: 0 },
+        win_rate: { type: Number, default: 0 },
+        loss_rate: { type: Number, default: 0 },
+        skip_rate: { type: Number, default: 0 },
+        contexts: [{ type: String }]
     },
     last_context: { type: String, default: '' },
     last_used_at: { type: Date, default: null },
