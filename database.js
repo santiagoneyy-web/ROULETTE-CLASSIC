@@ -5,6 +5,10 @@ const path = require('path');
 
 const Table = require('./models/Table');
 const Spin = require('./models/Spin');
+const UserAccess = require('./models/UserAccess');
+const Strategy = require('./models/Strategy');
+const MetricSnapshot = require('./models/MetricSnapshot');
+const AiPrediction = require('./models/AiPrediction');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -16,7 +20,11 @@ let fallbackData = {
         { id: 2, name: 'Inmersive Roulette', provider: 'Evolution', url: 'https://www.casino.org/casinoscores/es/immersive-roulette/' }
     ],
     spins: [],
-    expertRules: []
+    expertRules: [],
+    users: [],
+    strategies: [],
+    metricSnapshots: [],
+    aiPredictions: []
 };
 
 function loadFallback() {
@@ -27,6 +35,10 @@ function loadFallback() {
             if (data.tables && data.tables.length > 0) fallbackData.tables = data.tables;
             if (data.spins) fallbackData.spins = data.spins;
             if (data.expertRules) fallbackData.expertRules = data.expertRules;
+            if (data.users) fallbackData.users = data.users;
+            if (data.strategies) fallbackData.strategies = data.strategies;
+            if (data.metricSnapshots) fallbackData.metricSnapshots = data.metricSnapshots;
+            if (data.aiPredictions) fallbackData.aiPredictions = data.aiPredictions;
             
             console.log('[DB] Loaded JSON fallback data.');
         } catch (e) {
@@ -45,8 +57,7 @@ function saveFallback() {
 
 async function initDB() {
     // console.log('📡 [DB] Connecting to MongoDB Atlas...');
-    // process.env.MONGODB_URI is now ignored for JSON-only mode.
-    let mongoUri = null; 
+    let mongoUri = process.env.MONGODB_URI || null; 
     
     if (mongoUri) {
         try {
@@ -306,6 +317,240 @@ async function addExpertRule(data, cb) {
     }
 }
 
+function nextFallbackId(collection) {
+    return collection.length > 0 ? Math.max(...collection.map(item => Number(item.id) || 0)) + 1 : 1;
+}
+
+async function findAccessCode(code, cb) {
+    if (useMongo) {
+        try {
+            const user = await UserAccess.findOne({ code }).lean().exec();
+            cb(null, user || null);
+        } catch (e) { cb(e); }
+    } else {
+        const user = fallbackData.users.find(item => item.code === code);
+        cb(null, user || null);
+    }
+}
+
+async function saveAccessCode(data, cb) {
+    if (useMongo) {
+        try {
+            const existing = data.id ? await UserAccess.findOne({ id: data.id }).exec() : await UserAccess.findOne({ code: data.code }).exec();
+            if (existing) {
+                Object.assign(existing, data, { updated_at: new Date() });
+                await existing.save();
+                cb(null, existing);
+                return;
+            }
+
+            const id = data.id || ((await UserAccess.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+            const created = await UserAccess.create({ ...data, id });
+            cb(null, created);
+        } catch (e) { cb(e); }
+    } else {
+        const idx = fallbackData.users.findIndex(item => item.code === data.code || item.id === data.id);
+        const now = new Date().toISOString();
+        if (idx >= 0) {
+            fallbackData.users[idx] = { ...fallbackData.users[idx], ...data, updated_at: now };
+            saveFallback();
+            cb(null, fallbackData.users[idx]);
+            return;
+        }
+
+        const record = {
+            id: data.id || nextFallbackId(fallbackData.users),
+            name: data.name || 'User',
+            code: data.code,
+            role: data.role || 'member',
+            status: data.status || 'active',
+            permissions: Array.isArray(data.permissions) ? data.permissions : [],
+            notes: data.notes || '',
+            last_login_at: data.last_login_at || null,
+            created_at: now,
+            updated_at: now
+        };
+        fallbackData.users.push(record);
+        saveFallback();
+        cb(null, record);
+    }
+}
+
+async function listStrategies(filters, cb) {
+    const source = filters?.source || null;
+    const tableId = filters?.tableId || null;
+    const includeInactive = Boolean(filters?.includeInactive);
+
+    if (useMongo) {
+        try {
+            const query = {};
+            if (source) query.source = source;
+            if (!includeInactive) query.status = { $ne: 'inactive' };
+            if (tableId) query.table_id = { $in: [String(tableId), 'global'] };
+            const rows = await Strategy.find(query).sort({ updated_at: -1 }).lean().exec();
+            cb(null, rows);
+        } catch (e) { cb(e); }
+    } else {
+        const rows = fallbackData.strategies
+            .filter(item => includeInactive || item.status !== 'inactive')
+            .filter(item => !source || item.source === source)
+            .filter(item => !tableId || item.table_id === String(tableId) || item.table_id === 'global')
+            .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+        cb(null, rows);
+    }
+}
+
+async function saveStrategyRecord(data, cb) {
+    if (useMongo) {
+        try {
+            const query = data.id ? { id: data.id } : { name: data.name, source: data.source || 'human', table_id: data.table_id || 'global' };
+            let existing = await Strategy.findOne(query).exec();
+            if (existing) {
+                Object.assign(existing, data, { updated_at: new Date() });
+                await existing.save();
+                cb(null, existing);
+                return;
+            }
+
+            const id = data.id || ((await Strategy.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+            const created = await Strategy.create({ ...data, id });
+            cb(null, created);
+        } catch (e) { cb(e); }
+    } else {
+        const idx = fallbackData.strategies.findIndex(item =>
+            (data.id && item.id === data.id) ||
+            (item.name === data.name && item.source === (data.source || 'human') && item.table_id === (data.table_id || 'global'))
+        );
+        const now = new Date().toISOString();
+        if (idx >= 0) {
+            fallbackData.strategies[idx] = { ...fallbackData.strategies[idx], ...data, updated_at: now };
+            saveFallback();
+            cb(null, fallbackData.strategies[idx]);
+            return;
+        }
+
+        const record = {
+            id: data.id || nextFallbackId(fallbackData.strategies),
+            table_id: data.table_id || 'global',
+            name: data.name || 'Strategy',
+            summary: data.summary || '',
+            source: data.source || 'human',
+            origin: data.origin || 'manual',
+            status: data.status || 'active',
+            pattern: data.pattern || '',
+            trigger: data.trigger || '',
+            action: data.action || '',
+            tags: Array.isArray(data.tags) ? data.tags : [],
+            confidence_weight: Number(data.confidence_weight || 1),
+            success_hits: Number(data.success_hits || 0),
+            fail_hits: Number(data.fail_hits || 0),
+            last_used_at: data.last_used_at || null,
+            created_at: now,
+            updated_at: now
+        };
+        fallbackData.strategies.push(record);
+        saveFallback();
+        cb(null, record);
+    }
+}
+
+async function addMetricSnapshot(data, cb) {
+    if (useMongo) {
+        try {
+            const id = data.id || ((await MetricSnapshot.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+            const created = await MetricSnapshot.create({ ...data, id });
+            cb(null, created);
+        } catch (e) { cb(e); }
+    } else {
+        const record = {
+            id: data.id || nextFallbackId(fallbackData.metricSnapshots),
+            table_id: Number(data.table_id),
+            spin_id: data.spin_id ?? null,
+            recent_numbers: Array.isArray(data.recent_numbers) ? data.recent_numbers : [],
+            stability_level: data.stability_level || 'red',
+            pattern_label: data.pattern_label || '',
+            dominance8: data.dominance8 || { cw: 0, ccw: 0, big: 0, small: 0 },
+            momentum15: data.momentum15 || { cw: 0, ccw: 0, big: 0, small: 0 },
+            performance8: data.performance8 || { cwN9: '', cwN4: '', ccwN9: '', ccwN4: '' },
+            routes: data.routes || {},
+            captured_at: data.captured_at || new Date().toISOString()
+        };
+        fallbackData.metricSnapshots.push(record);
+        if (fallbackData.metricSnapshots.length > 10000) fallbackData.metricSnapshots.shift();
+        saveFallback();
+        cb(null, record);
+    }
+}
+
+async function getMetricSnapshots(tableId, limit, cb) {
+    if (useMongo) {
+        try {
+            const rows = await MetricSnapshot.find({ table_id: Number(tableId) })
+                .sort({ captured_at: -1 })
+                .limit(limit || 100)
+                .lean()
+                .exec();
+            cb(null, rows);
+        } catch (e) { cb(e); }
+    } else {
+        const rows = fallbackData.metricSnapshots
+            .filter(item => item.table_id == tableId)
+            .slice(-(limit || 100))
+            .reverse();
+        cb(null, rows);
+    }
+}
+
+async function addAiPrediction(data, cb) {
+    if (useMongo) {
+        try {
+            const id = data.id || ((await AiPrediction.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+            const created = await AiPrediction.create({ ...data, id });
+            cb(null, created);
+        } catch (e) { cb(e); }
+    } else {
+        const record = {
+            id: data.id || nextFallbackId(fallbackData.aiPredictions),
+            table_id: Number(data.table_id),
+            spin_id: data.spin_id ?? null,
+            mode: data.mode || 'SAFE',
+            route: data.route || 'ESPERAR',
+            zone: data.zone || 'ESPERAR',
+            n9: data.n9 || 'ESPERAR',
+            n4: data.n4 || 'ESPERAR',
+            analysis: data.analysis || '',
+            strategy_refs: Array.isArray(data.strategy_refs) ? data.strategy_refs : [],
+            result: data.result || 'pending',
+            resolved_number: data.resolved_number ?? null,
+            created_at: data.created_at || new Date().toISOString(),
+            resolved_at: data.resolved_at || null
+        };
+        fallbackData.aiPredictions.push(record);
+        if (fallbackData.aiPredictions.length > 10000) fallbackData.aiPredictions.shift();
+        saveFallback();
+        cb(null, record);
+    }
+}
+
+async function getAiPredictions(tableId, limit, cb) {
+    if (useMongo) {
+        try {
+            const rows = await AiPrediction.find({ table_id: Number(tableId) })
+                .sort({ created_at: -1 })
+                .limit(limit || 100)
+                .lean()
+                .exec();
+            cb(null, rows);
+        } catch (e) { cb(e); }
+    } else {
+        const rows = fallbackData.aiPredictions
+            .filter(item => item.table_id == tableId)
+            .slice(-(limit || 100))
+            .reverse();
+        cb(null, rows);
+    }
+}
+
 // --- Pattern Stats (Learning Engine) ---
 async function getPatternStats(tableId, seqMag, seqDir, cb) {
     if (useMongo) {
@@ -330,5 +575,9 @@ async function getPatternStats(tableId, seqMag, seqDir, cb) {
 module.exports = { 
     initDB, getTables, addTable, deleteTable, getHistory, addSpin, 
     clearHistory, wipeAllSpins, getStats, getUseMongo: () => useMongo,
-    getExpertRule, addExpertRule, getPatternStats
+    getExpertRule, addExpertRule, getPatternStats,
+    findAccessCode, saveAccessCode,
+    listStrategies, saveStrategyRecord,
+    addMetricSnapshot, getMetricSnapshots,
+    addAiPrediction, getAiPredictions
 };

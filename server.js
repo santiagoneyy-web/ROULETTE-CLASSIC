@@ -10,6 +10,7 @@ const Spin    = require('./models/Spin'); // MongoDB Model
 const predictor = require('./predictor'); // Agents 1-4
 const agent5  = require('./agent5');      // Autonomous AI & Physics
 const axios   = require('axios');
+const strategyStore = require('./strategy_store');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
@@ -78,6 +79,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 db.initDB();
+strategyStore.ensureStore();
 
 // ---- API: Tables ----
 app.get('/api/tables', (req, res) => {
@@ -215,6 +217,113 @@ function summarizePatternContext(context, routeKey) {
     return `Patron ${detectWlPattern(n9Seq)} en N9 y ${detectWlPattern(n4Seq)} en N4`;
 }
 
+function buildStrategyDigest(tableId) {
+    return strategyStore.buildPromptDigest({ tableId: tableId || 'global', limit: 12 });
+}
+
+function persistAutoAiStrategy(parsed, context, tableId) {
+    const name = String(parsed?.strategy_name || parsed?.strategyName || '').trim();
+    const note = String(parsed?.strategy_note || parsed?.strategyNote || '').trim();
+    if (!name || !note || !context) return null;
+
+    const route = String(parsed?.route || parsed?.direccion || '').toUpperCase();
+    const zone = String(parsed?.zone || parsed?.zona || '').toUpperCase();
+    const tags = [
+        'auto-ai',
+        String(context.mode || '').toLowerCase(),
+        String(context.stabilityLevel || '').toLowerCase(),
+        String(context.patternLabel || '').toLowerCase(),
+        route.toLowerCase(),
+        zone.toLowerCase()
+    ].filter(Boolean);
+
+    return strategyStore.saveStrategy({
+        source: 'ai',
+        origin: 'auto_ai',
+        tableId: tableId || 'global',
+        name,
+        summary: note,
+        pattern: context.patternLabel || '',
+        trigger: `stability=${context.stabilityLevel || 'na'} route=${route || 'na'} zone=${zone || 'na'}`,
+        action: `Aplicar sobre las 6 medidas activas usando ${route || 'ruta'} y ${zone || 'zona'}.`,
+        tags
+    });
+}
+
+function persistMetricSnapshot(context, tableId) {
+    if (!context) return;
+    db.addMetricSnapshot({
+        table_id: Number(tableId) || 0,
+        recent_numbers: Array.isArray(context.recentNumbers) ? context.recentNumbers : [],
+        stability_level: context.stabilityLevel || 'red',
+        pattern_label: context.patternLabel || '',
+        dominance8: context.dominance8 || {},
+        momentum15: context.momentum15 || {},
+        performance8: context.performance8 || {},
+        routes: context.routes || {},
+        captured_at: new Date().toISOString()
+    }, () => {});
+}
+
+function persistAiPredictionRecord(tableId, context, normalizedReply, parsed) {
+    if (!context || !normalizedReply) return;
+
+    const parts = String(normalizedReply).split('|');
+    const n9 = parts[0] ? parts[0].replace('N9:', '').trim() : 'ESPERAR';
+    const n4 = parts[1] ? parts[1].replace('N4:', '').trim() : 'ESPERAR';
+
+    db.addAiPrediction({
+        table_id: Number(tableId) || 0,
+        mode: String(context.mode || 'SAFE').toUpperCase(),
+        route: String(parsed?.route || parsed?.direccion || (n9 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
+        zone: String(parsed?.zone || parsed?.zona || (n4 === 'ESPERAR' ? 'ESPERAR' : '')).toUpperCase() || 'ESPERAR',
+        n9,
+        n4,
+        analysis: String(parsed?.analysis || parsed?.reason || '').trim(),
+        strategy_refs: parsed?.strategy_name ? [String(parsed.strategy_name)] : [],
+        result: n9 === 'ESPERAR' || n4 === 'ESPERAR' ? 'skip' : 'pending',
+        created_at: new Date().toISOString()
+    }, () => {});
+}
+
+function parseChatStrategyCommand(text, tableId) {
+    const raw = String(text || '').trim();
+    const lower = raw.toLowerCase();
+    const prefixes = ['/estrategia', 'guardar estrategia:', 'guardar estrategia '];
+    const prefix = prefixes.find(item => lower.startsWith(item));
+    if (!prefix) return null;
+
+    let body = raw.slice(prefix.length).trim();
+    if (!body) return { error: 'Formato sugerido: /estrategia Nombre | resumen | trigger=... | action=... | tags=a,b' };
+
+    const parts = body.split('|').map(part => String(part || '').trim()).filter(Boolean);
+    if (parts.length < 2) {
+        return { error: 'Te falta informacion. Usa: /estrategia Nombre | resumen | trigger=... | action=... | tags=a,b' };
+    }
+
+    const data = {
+        source: 'human',
+        origin: 'chat_command',
+        tableId: tableId || 'global',
+        name: parts[0],
+        summary: parts[1]
+    };
+
+    for (const part of parts.slice(2)) {
+        const idx = part.indexOf('=');
+        if (idx === -1) continue;
+        const key = part.slice(0, idx).trim().toLowerCase();
+        const value = part.slice(idx + 1).trim();
+        if (!value) continue;
+        if (key === 'trigger') data.trigger = value;
+        if (key === 'action') data.action = value;
+        if (key === 'pattern') data.pattern = value;
+        if (key === 'tags') data.tags = value.split(',').map(tag => tag.trim()).filter(Boolean);
+    }
+
+    return { data };
+}
+
 function buildAutoAiFallback(context) {
     if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
         return {
@@ -258,7 +367,7 @@ function buildAutoAiFallback(context) {
     };
 }
 
-function buildAutoAiUserPrompt(context) {
+function buildAutoAiUserPrompt(context, strategyDigest) {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
     const perf8 = context.performance8 || {};
@@ -266,6 +375,7 @@ function buildAutoAiUserPrompt(context) {
     const ccw = context.routes.ccw;
 
     return [
+        'CONTEXTO ACTUAL DE LA MESA:',
         `MODO: ${String(context.mode || 'SAFE').toUpperCase()}`,
         `ESTABILIDAD: ${String(context.stabilityLevel || 'red').toUpperCase()}`,
         `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
@@ -273,11 +383,30 @@ function buildAutoAiUserPrompt(context) {
         `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
         `PERF 8T CW_N9=${perf8.cwN9 || 'Sin datos'} | CW_N4=${perf8.cwN4 || 'Sin datos'}`,
         `PERF 8T CCW_N9=${perf8.ccwN9 || 'Sin datos'} | CCW_N4=${perf8.ccwN4 || 'Sin datos'}`,
+        `SEC_DIR_15: ${context.sequence15?.dir || 'Sin datos'}`,
+        `SEC_ZON_15: ${context.sequence15?.zone || 'Sin datos'}`,
         `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
         `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
         `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
+        '',
+        'REGLAS FIJAS:',
         'Recuerda: SMALL es 1-9 y BIG es 10-18.',
         'Recuerda: en CW el objetivo BIG es N4_BIG y en CCW el objetivo BIG es N4_BIG.',
+        'Elige SOLO entre estas 6 medidas. No inventes numeros.',
+        '',
+        'BIBLIOTECA CENTRAL DE ESTRATEGIAS:',
+        strategyDigest || 'Sin estrategias guardadas.',
+        'Las estrategias guardadas son sugerencias y contexto acumulado, no el eje principal.',
+        'Si una estrategia HUMAN, AI o SYSTEM encaja con el flujo actual y con las 6 medidas, usala solo como refuerzo de la lectura viva.',
+        '',
+        'ORDEN DE LECTURA OBLIGATORIO:',
+        '1. La prioridad numero 1 es la dominancia viva y reciente.',
+        '2. Luego lee estabilidad, patron travel, momentum e hit rate.',
+        '3. Decide si la mejor lectura es seguir CW o CCW.',
+        '4. Decide si la zona con mas ventaja es SMALL o BIG.',
+        '5. Usa los patrones W/L para confirmar, anticipar desgaste, rebote, ruptura o farol.',
+        '6. Revisa la biblioteca de estrategias solo como sugerencia o refuerzo final.',
+        '7. Si el modo es SAFE y no hay ventaja clara, responde ESPERAR.',
         '',
         'COLORES DE ESTABILIDAD:',
         '- VERDE: Mesa en BLOQUES. Las direcciones salen en grupos largos (DER DER DER DER IZQ IZQ IZQ IZQ). Tiene doble tendencia o estructura fuerte. MEJOR MOMENTO para operar. Alta confianza.',
@@ -326,9 +455,14 @@ function buildAutoAiUserPrompt(context) {
         '- En SAFE prioriza VERDE + bloques + patrones fuertes.',
         '- En FULL puedes anticipar, seguir, romper o sostener segun el flujo.',
         '',
-        'Elige SOLO entre estas 6 medidas. No inventes numeros.',
+        'CRITERIO FINAL DE RESPUESTA:',
+        '- Primero decide ruta.',
+        '- Luego decide zona.',
+        '- Luego convierte eso al N9 y N4 exactos de esa ruta y zona.',
+        '- Si hay conflicto o mezcla, mencionalo en analysis sin salirte de las 6 medidas.',
         'Tu analysis DEBE mencionar: patron identificado (racha, ola, bambu, rodillo, trampa, pico, bloque, turbulencia, farol, mixto) + razon de la eleccion.',
-        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras"}.'
+        'Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note. Si no aplica, dejalos vacios o no los envies.',
+        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
     ].join('\n');
 }
 
@@ -377,10 +511,12 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
 // Groq LLM endpoint (Llama 4 via Groq API)
 // ---------------------------------------------------
 app.post('/api/ai/groq', async (req, res) => {
-    const { prompt, autoAiContext } = req.body;
+    const { prompt, autoAiContext, tableId } = req.body;
     try {
         const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
+        const strategyDigest = buildStrategyDigest(tableId || 'global');
+        if (autoAiContext) persistMetricSnapshot(autoAiContext, tableId || 0);
         if (!groqKey) {
             return res.json({
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -392,17 +528,31 @@ app.post('/api/ai/groq', async (req, res) => {
             ? [
                 'Eres el motor AUTO AI de ROULETTE-CLASSIC.',
                 'Trabajas sobre travel, cuadro, grafica, color de estabilidad, hit rate, momentum, patrones W/L y estrategia de bloques.',
+                'Tu trabajo es leer el flujo actual de la mesa y elegir la mejor opcion posible entre las 6 medidas calculadas por el motor.',
                 '',
                 'REGLAS TECNICAS:',
                 '- SMALL = 1-9 casillas. BIG = 10-18 casillas.',
                 '- En CW, el objetivo BIG es N4_BIG de CW. En CCW, el objetivo BIG es N4_BIG de CCW.',
                 '- Solo puedes elegir entre las 6 medidas calculadas por el motor.',
                 '- Compara hit rate CW vs CCW y el momentum de los ultimos 15 tiros.',
+                '- Primero decide la ruta (CW o CCW), luego la zona (SMALL o BIG), y de ahi salen N9 y N4.',
+                '- No inventes reglas nuevas, no inventes numeros y no ignores el modo SAFE/FULL.',
+                '- Lee tambien la biblioteca central de estrategias enviada en el prompt del usuario.',
+                '- La prioridad numero 1 es la dominancia viva y reciente.',
+                '- Las estrategias guardadas son sugerencias y contexto, no el primer eje de decision.',
                 '',
                 'COLORES DE ESTABILIDAD (significado real):',
                 '- VERDE: La mesa sale en BLOQUES claros (DER DER DER DER IZQ IZQ IZQ IZQ). Tiene doble tendencia o estructura fuerte. Es el mejor momento para operar.',
                 '- AMARILLO: Transicion. La mesa esta cambiando de estructura. Puede estar saliendo de bloques a turbulencia o viceversa. Precaucion.',
                 '- ROJO: Mesa dificil de leer, no necesariamente caos. Las direcciones no forman bloques grandes, son patrones cortos tipo DER IZQ DER DER IZQ DER IZQ IZQ. Necesita mas lectura de patrones W/L.',
+                '',
+                'ORDEN DE ANALISIS:',
+                '1. Lee primero la dominancia viva y reciente.',
+                '2. Luego lee estabilidad, patron travel, momentum e hit rate.',
+                '3. Decide si conviene seguir, anticipar, romper o esperar.',
+                '4. Usa los patrones W/L para confirmar o frenar una lectura engañosa.',
+                '5. Usa la biblioteca de estrategias solo como apoyo o refuerzo final.',
+                '6. Da una salida final coherente con la ruta y zona elegidas.',
                 '',
                 'PATRONES W/L DETALLADOS (Guia de Patrones):',
                 '- REGLA PRINCIPAL: Los patrones se repiten. Al observar un patron, cambia JUSTO ANTES de que ocurra la perdida o espera.',
@@ -433,6 +583,9 @@ app.post('/api/ai/groq', async (req, res) => {
                 '',
                 '- Si el string W/L se acerca a una L esperada o a una trampa, reduce confianza o espera.',
                 '- Tu analysis DEBE mencionar el patron identificado, no solo hit rate o momentum.',
+                '- Si hay conflicto entre estabilidad, momentum y W/L, prioriza la lectura mas viva y mas reciente.',
+                '- Si el modo SAFE no tiene ventaja clara, responde ESPERAR.',
+                '- Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note al JSON.',
                 '',
                 'SAFE = conservador y selectivo. FULL = agresivo y siempre activo, pero aun asi tecnico.',
                 'Responde solo JSON valido.'
@@ -446,7 +599,7 @@ app.post('/api/ai/groq', async (req, res) => {
                     role: "system",
                     content: systemPrompt
                 },
-                { role: "user", content: autoAiContext ? buildAutoAiUserPrompt(autoAiContext) : prompt }
+                { role: "user", content: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest) : prompt }
             ],
             temperature: 0.15,
             max_tokens: autoAiContext ? 140 : 60,
@@ -461,7 +614,10 @@ app.post('/api/ai/groq', async (req, res) => {
         try {
             const parsed = JSON.parse(result);
             if (autoAiContext) {
-                return res.json(normalizeAutoAiResponse(parsed, autoAiContext, fallback));
+                persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
+                const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, normalized.reply, parsed);
+                return res.json(normalized);
             }
 
             let n9 = String(parsed.n9 || '').replace(/[^0-9]/g, '');
@@ -493,6 +649,22 @@ app.post('/api/ai/chat', async (req, res) => {
         const groqKey = process.env.GROQ_API_KEY;
         if (!groqKey) return res.json({ reply: 'IA Desconectada - Falta GROQ_API_KEY' });
 
+        const strategyCommand = parseChatStrategyCommand(text, tableId || 'global');
+        if (strategyCommand) {
+            if (strategyCommand.error) {
+                return res.json({ reply: strategyCommand.error });
+            }
+
+            const saved = strategyStore.saveStrategy(strategyCommand.data);
+            if (!saved.ok) {
+                return res.json({ reply: 'No pude guardar esa estrategia. Revisa nombre y resumen.' });
+            }
+
+            return res.json({
+                reply: `Estrategia guardada en la biblioteca: ${saved.strategy.name}.`
+            });
+        }
+
         if (!aiMemory[tableId]) aiMemory[tableId] = [];
         // Sanitizar memoria vieja (formato Gemini -> Groq)
         aiMemory[tableId] = aiMemory[tableId].map(m => {
@@ -501,12 +673,13 @@ app.post('/api/ai/chat', async (req, res) => {
             return m;
         }).filter(m => m.content && m.role);
 
-        const sysPrompt = `Eres el pata de Santi, su colega analista en la web "ROULETTE CLASSIC". 
-Tu nombre es Brain. Eres conversacional, directo y casual.
+        const sysPrompt = `Eres la IA analista de apoyo en la web "ROULETTE CLASSIC". 
+Eres conversacional, directo y casual.
 IMPORTANTE: Si Santi te saluda, SALUDALO de vuelta como un amigo. Si te pregunta algo personal, responde normal.
 NO eres un robot de datos. Eres un compañero humano que TAMBIEN sabe de ruleta.
 Cuando te pregunten sobre la mesa, usas tu conocimiento: SMALL(1-9), BIG(10-18), CW(Derecha), CCW(Izquierda).
 Colores: Verde=Dominancia, Amarillo=Tendencia, Rojo=Caos.
+Si el usuario quiere guardar una estrategia en la biblioteca, dile que use: /estrategia Nombre | resumen | trigger=... | action=... | tags=...
 Responde CORTO, maximo 2-3 oraciones. Sin listas, sin markdown, sin asteriscos.`;
 
         const requestBody = {
@@ -532,13 +705,65 @@ Responde CORTO, maximo 2-3 oraciones. Sin listas, sin markdown, sin asteriscos.`
         res.json({ reply });
     } catch (error) {
         console.error('Chat error:', error.response?.data || error.message);
-        res.json({ reply: 'Error de conexion con Ollama. Verifica GROQ_API_KEY.' });
+        res.json({ reply: 'Error de conexion con la IA. Verifica GROQ_API_KEY.' });
+    }
+});
+
+app.get('/api/strategies', (req, res) => {
+    try {
+        const strategies = strategyStore.listStrategies({
+            source: req.query.source,
+            tableId: req.query.tableId,
+            includeInactive: String(req.query.includeInactive || '').toLowerCase() === 'true'
+        });
+        res.json({
+            count: strategies.length,
+            strategies
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/strategies', (req, res) => {
+    try {
+        const saved = strategyStore.saveStrategy({
+            source: req.body.source === 'ai' ? 'ai' : 'human',
+            origin: req.body.origin || 'manual_api',
+            tableId: req.body.tableId || 'global',
+            name: req.body.name,
+            summary: req.body.summary || req.body.note,
+            pattern: req.body.pattern,
+            trigger: req.body.trigger,
+            action: req.body.action,
+            tags: req.body.tags,
+            status: req.body.status
+        });
+
+        if (!saved.ok) {
+            return res.status(400).json({ error: saved.error });
+        }
+
+        res.json({ success: true, strategy: saved.strategy });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
 app.post('/api/ai/teach', async (req, res) => {
     const { patternDna, label, suggestedMove } = req.body;
     try {
+        strategyStore.saveStrategy({
+            source: 'human',
+            origin: 'teach',
+            tableId: req.body.tableId || 'global',
+            name: label || 'Patron humano',
+            summary: suggestedMove || 'Sin movimiento sugerido.',
+            pattern: patternDna || '',
+            trigger: req.body.trigger || '',
+            action: suggestedMove || ''
+        });
+
         db.addExpertRule({ pattern_dna: patternDna, label, suggested_move: suggestedMove, learned_from: 'human' }, (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true, message: 'Conceito aprendido y guardado.' });
