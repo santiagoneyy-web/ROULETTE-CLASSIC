@@ -9,6 +9,7 @@ const UserAccess = require('./models/UserAccess');
 const Strategy = require('./models/Strategy');
 const MetricSnapshot = require('./models/MetricSnapshot');
 const AiPrediction = require('./models/AiPrediction');
+const TableStateSnapshot = require('./models/TableStateSnapshot');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -32,7 +33,8 @@ let fallbackData = {
     users: [],
     strategies: [],
     metricSnapshots: [],
-    aiPredictions: []
+    aiPredictions: [],
+    tableStateSnapshots: []
 };
 
 function loadFallback() {
@@ -47,6 +49,7 @@ function loadFallback() {
             if (data.strategies) fallbackData.strategies = data.strategies;
             if (data.metricSnapshots) fallbackData.metricSnapshots = data.metricSnapshots;
             if (data.aiPredictions) fallbackData.aiPredictions = data.aiPredictions;
+            if (data.tableStateSnapshots) fallbackData.tableStateSnapshots = data.tableStateSnapshots;
             
             console.log('[DB] Loaded JSON fallback data.');
         } catch (e) {
@@ -713,9 +716,10 @@ async function getAiLearningSummary(tableId, cb) {
     if (useMongo) {
         try {
             const numericTableId = Number(tableId);
-            const [spinCount, snapshotCount, predictionStats, strategyStats] = await Promise.all([
+            const [spinCount, snapshotCount, stateCount, predictionStats, strategyStats] = await Promise.all([
                 Spin.countDocuments({ table_id: numericTableId }),
                 MetricSnapshot.countDocuments({ table_id: numericTableId }),
+                TableStateSnapshot.countDocuments({ table_id: numericTableId }),
                 AiPrediction.aggregate([
                     { $match: { table_id: numericTableId } },
                     {
@@ -751,6 +755,7 @@ async function getAiLearningSummary(tableId, cb) {
                 table_id: numericTableId,
                 spins: spinCount,
                 metricSnapshots: snapshotCount,
+                tableStateSnapshots: stateCount,
                 aiPredictions: pred,
                 aiStrategies: strategies
             });
@@ -766,6 +771,7 @@ async function getAiLearningSummary(tableId, cb) {
             table_id: numericTableId,
             spins: fallbackData.spins.filter(item => item.table_id == numericTableId).length,
             metricSnapshots: fallbackData.metricSnapshots.filter(item => item.table_id == numericTableId).length,
+            tableStateSnapshots: fallbackData.tableStateSnapshots.filter(item => item.table_id == numericTableId).length,
             aiPredictions: {
                 total: predictions.length,
                 wins: predictions.filter(item => item.result === 'win').length,
@@ -778,6 +784,73 @@ async function getAiLearningSummary(tableId, cb) {
                 return acc;
             }, {})
         });
+    }
+}
+
+async function addTableStateSnapshot(data, cb) {
+    if (useMongo) {
+        try {
+            let created = null;
+            let attempts = 0;
+            while (!created && attempts < 5) {
+                try {
+                    const id = data.id || ((await TableStateSnapshot.findOne().sort('-id').lean().exec())?.id || 0) + 1;
+                    created = await TableStateSnapshot.create({ ...data, schema_version: 1, id });
+                } catch (err) {
+                    if (err.code === 11000 && err.keyPattern && err.keyPattern.id) attempts++;
+                    else throw err;
+                }
+            }
+            cb(null, created);
+        } catch (e) { cb(e); }
+    } else {
+        const record = {
+            schema_version: 1,
+            id: data.id || nextFallbackId(fallbackData.tableStateSnapshots),
+            table_id: Number(data.table_id),
+            table_code: data.table_code || 'AUTO',
+            spin_id: data.spin_id ?? null,
+            metric_snapshot_id: data.metric_snapshot_id ?? null,
+            recent_numbers: Array.isArray(data.recent_numbers) ? data.recent_numbers : [],
+            block_state: data.block_state || 'none',
+            block_size: Number(data.block_size || 0),
+            turbulence_level: data.turbulence_level || 'none',
+            turbulence_size: Number(data.turbulence_size || 0),
+            dominance_state: data.dominance_state || 'none',
+            dominance_side: data.dominance_side || 'NONE',
+            dominance_strength: Number(data.dominance_strength || 0),
+            dominance_fatigue: Number(data.dominance_fatigue || 0),
+            farol_state: data.farol_state || 'none',
+            farol_side: data.farol_side || 'NONE',
+            continuation_bias: data.continuation_bias || 'NONE',
+            reversal_risk: data.reversal_risk || 'low',
+            color_state: data.color_state || 'red',
+            interpretation: data.interpretation || '',
+            created_at: data.created_at || new Date().toISOString()
+        };
+        fallbackData.tableStateSnapshots.push(record);
+        if (fallbackData.tableStateSnapshots.length > 10000) fallbackData.tableStateSnapshots.shift();
+        saveFallback();
+        cb(null, record);
+    }
+}
+
+async function getTableStateSnapshots(tableId, limit, cb) {
+    if (useMongo) {
+        try {
+            const rows = await TableStateSnapshot.find({ table_id: Number(tableId) })
+                .sort({ created_at: -1 })
+                .limit(limit || 100)
+                .lean()
+                .exec();
+            cb(null, rows);
+        } catch (e) { cb(e); }
+    } else {
+        const rows = fallbackData.tableStateSnapshots
+            .filter(item => item.table_id == tableId)
+            .slice(-(limit || 100))
+            .reverse();
+        cb(null, rows);
     }
 }
 
@@ -809,5 +882,6 @@ module.exports = {
     findAccessCode, saveAccessCode,
     listStrategies, saveStrategyRecord,
     addMetricSnapshot, getMetricSnapshots,
-    addAiPrediction, getAiPredictions, resolvePendingAiPredictions, getAiLearningSummary
+    addAiPrediction, getAiPredictions, resolvePendingAiPredictions, getAiLearningSummary,
+    addTableStateSnapshot, getTableStateSnapshots
 };

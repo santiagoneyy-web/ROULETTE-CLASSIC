@@ -309,6 +309,145 @@ function buildContextHash(snapshot) {
     ].join('|');
 }
 
+function getRunInfo(events, extractor) {
+    let current = 0;
+    let previous = 0;
+    let currentValue = null;
+    let previousValue = null;
+
+    for (let i = events.length - 1; i >= 0; i--) {
+        const value = extractor(events[i]);
+        if (currentValue === null) {
+            currentValue = value;
+            current = 1;
+            continue;
+        }
+        if (value === currentValue) {
+            current++;
+            continue;
+        }
+        previousValue = value;
+        previous = 1;
+        for (let j = i - 1; j >= 0; j--) {
+            const prev = extractor(events[j]);
+            if (prev !== previousValue) break;
+            previous++;
+        }
+        break;
+    }
+
+    return { current, previous, currentValue, previousValue };
+}
+
+function classifyTurbulence(dirRun, zoneRun) {
+    const shortestRun = Math.min(dirRun.current || 0, zoneRun.current || 0);
+    if (!shortestRun) return { level: 'none', size: 0 };
+    if (shortestRun <= 1) return { level: 'micro', size: shortestRun };
+    if (shortestRun === 2) return { level: 'short', size: shortestRun };
+    if (shortestRun <= 4) return { level: 'medium', size: shortestRun };
+    return { level: 'large', size: shortestRun };
+}
+
+function buildTableStateSnapshot({ metricSnapshot, tableId, tableCode = 'AUTO', spinId = null }) {
+    if (!metricSnapshot) return null;
+
+    const recentNumbers = Array.isArray(metricSnapshot.recent_numbers) ? metricSnapshot.recent_numbers : [];
+    const events = buildTravelEvents(recentNumbers);
+    const dirRun = getRunInfo(events, event => event.dir);
+    const zoneRun = getRunInfo(events, event => event.zone);
+    const turbulence = classifyTurbulence(dirRun, zoneRun);
+    const dominantSide = String(metricSnapshot.dominant_signal || 'NONE').toUpperCase() || 'NONE';
+    const dominanceStrength = Number(metricSnapshot.dominance_score || 0);
+
+    let dominanceState = 'none';
+    if (dominanceStrength >= 5) dominanceState = 'strong';
+    else if (dominanceStrength >= 3) dominanceState = 'forming';
+    else if (dominanceStrength > 0) dominanceState = 'breaking';
+
+    let blockState = 'none';
+    if ((dirRun.current || 0) >= 4 || (zoneRun.current || 0) >= 4) blockState = 'active';
+    else if ((dirRun.current || 0) >= 2 || (zoneRun.current || 0) >= 2) blockState = 'forming';
+
+    let dominanceFatigue = 0;
+    if (dominanceState === 'strong') {
+        dominanceFatigue = Math.max(0, (dirRun.current || 0) + (zoneRun.current || 0) - 6);
+        if (dominanceFatigue >= 3) dominanceState = 'tired';
+    }
+
+    let farolState = 'none';
+    let farolSide = 'NONE';
+    if (
+        dominanceStrength >= 4 &&
+        dirRun.previousValue &&
+        dirRun.currentValue &&
+        dirRun.previousValue !== dirRun.currentValue &&
+        (dirRun.current || 0) <= 2 &&
+        (dirRun.previous || 0) >= 3
+    ) {
+        farolState = 'suspected';
+        farolSide = dirRun.currentValue;
+    }
+    if (
+        dominanceStrength >= 4 &&
+        zoneRun.previousValue &&
+        zoneRun.currentValue &&
+        zoneRun.previousValue !== zoneRun.currentValue &&
+        (zoneRun.current || 0) <= 3 &&
+        (zoneRun.previous || 0) >= 4
+    ) {
+        farolState = farolState === 'suspected' ? 'active' : 'suspected';
+        farolSide = zoneRun.currentValue;
+    }
+
+    let reversalRisk = 'low';
+    if (dominanceState === 'tired' || farolState === 'suspected') reversalRisk = 'medium';
+    if (farolState === 'active' || turbulence.level === 'large') reversalRisk = 'high';
+
+    if (dominanceState === 'breaking' && reversalRisk !== 'low') {
+        dominanceState = 'reversing';
+    }
+    if (blockState === 'active' && turbulence.level === 'large') {
+        blockState = 'broken';
+    } else if (blockState === 'active' && turbulence.level === 'medium') {
+        blockState = 'weakening';
+    }
+
+    const continuationBias = dominanceState === 'strong' || dominanceState === 'forming'
+        ? dominantSide
+        : 'NONE';
+
+    const interpretation = [
+        `Dominancia ${dominanceState} en ${dominantSide}.`,
+        `Bloque ${blockState} (${Math.max(dirRun.current || 0, zoneRun.current || 0)}t).`,
+        `Turbulencia ${turbulence.level}.`,
+        farolState !== 'none' ? `Farol ${farolState} en ${farolSide}.` : 'Sin farol claro.',
+        `Riesgo de rebote ${reversalRisk}.`
+    ].join(' ');
+
+    return {
+        table_id: Number(tableId),
+        table_code: tableCode,
+        spin_id: spinId,
+        metric_snapshot_id: metricSnapshot.id || null,
+        recent_numbers: recentNumbers,
+        block_state: blockState,
+        block_size: Math.max(dirRun.current || 0, zoneRun.current || 0),
+        turbulence_level: turbulence.level,
+        turbulence_size: turbulence.size,
+        dominance_state: dominanceState,
+        dominance_side: dominantSide,
+        dominance_strength: dominanceStrength,
+        dominance_fatigue: dominanceFatigue,
+        farol_state: farolState,
+        farol_side: farolSide === 'NONE' ? 'NONE' : String(farolSide).toUpperCase(),
+        continuation_bias: continuationBias,
+        reversal_risk: reversalRisk,
+        color_state: metricSnapshot.stability_level || 'red',
+        interpretation,
+        created_at: new Date().toISOString()
+    };
+}
+
 function evaluatePredictionHit(prediction, resolvedNumber) {
     if (!prediction || prediction.result === 'skip') {
         return { result: 'skip', n9_result: 'skip', n4_result: 'skip' };
@@ -337,6 +476,7 @@ function evaluatePredictionHit(prediction, resolvedNumber) {
 
 module.exports = {
     buildMetricSnapshot,
+    buildTableStateSnapshot,
     chooseDominancePrediction,
     evaluatePredictionHit,
     calcDistance,

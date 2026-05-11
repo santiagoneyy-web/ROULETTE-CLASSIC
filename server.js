@@ -13,6 +13,7 @@ const axios   = require('axios');
 const strategyStore = require('./strategy_store');
 const {
     buildMetricSnapshot,
+    buildTableStateSnapshot,
     chooseDominancePrediction,
     evaluatePredictionHit
 } = require('./analytics_snapshot');
@@ -90,6 +91,15 @@ app.get('/api/metrics/:tableId', (req, res) => {
     const tableId = req.params.tableId;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
     db.getMetricSnapshots(tableId, limit, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/table-state/:tableId', (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
+    db.getTableStateSnapshots(tableId, limit, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
     });
@@ -365,6 +375,26 @@ function persistIngestMetricSnapshot(tableId, spinId, history, mode = 'INGEST') 
         return snapshot;
     } catch (err) {
         console.error('[MetricSnapshot] Build error:', err.message);
+        return null;
+    }
+}
+
+function persistTableStateSnapshot(tableId, spinId, metricSnapshot) {
+    try {
+        const stateSnapshot = buildTableStateSnapshot({
+            metricSnapshot,
+            tableId,
+            tableCode: 'AUTO',
+            spinId
+        });
+        if (!stateSnapshot) return null;
+
+        db.addTableStateSnapshot(stateSnapshot, (err) => {
+            if (err) console.error('[TableStateSnapshot] Save error:', err.message);
+        });
+        return stateSnapshot;
+    } catch (err) {
+        console.error('[TableStateSnapshot] Build error:', err.message);
         return null;
     }
 }
@@ -1069,6 +1099,7 @@ app.post('/api/spin', async (req, res) => {
 
             if (savedSpinId) {
                 const snapshot = persistIngestMetricSnapshot(table_id, savedSpinId, numsOnly, source || 'bot');
+                persistTableStateSnapshot(table_id, savedSpinId, snapshot);
                 persistDominanceAiPrediction(table_id, savedSpinId, snapshot);
             }
 
@@ -1117,6 +1148,7 @@ app.post('/api/spin/batch', async (req, res) => {
             resolvePendingAiPredictions(table_id, n);
             rollingHistory.push(n);
             const snapshot = persistIngestMetricSnapshot(table_id, savedBatchSpinId, rollingHistory, source || 'batch');
+            persistTableStateSnapshot(table_id, savedBatchSpinId, snapshot);
             persistDominanceAiPrediction(table_id, savedBatchSpinId, snapshot);
         }
     }
