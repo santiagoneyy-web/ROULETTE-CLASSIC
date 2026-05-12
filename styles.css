@@ -460,7 +460,8 @@ html, body {
   opacity: 0.95;
 }
 .compact-perf .perf-w,
-.compact-perf .perf-l {
+.compact-perf .perf-l,
+.compact-perf .perf-s {
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
@@ -490,6 +491,12 @@ html, body {
   font-size: 13px;
   font-weight: 900;
   color: var(--red);
+}
+.perf-s {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--muted);
 }
 
 /* Inline switch button (next to title) */

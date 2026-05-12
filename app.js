@@ -220,23 +220,31 @@ function toggleDirMetricHistory(metricId, btn) {
 function getPerfHtml(items, limit = 12) {
     const recent = items.slice(-limit);
     if (!recent.length) return '<span style="opacity:0.5">Sin datos</span>';
-    return recent.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    return recent.map(r => {
+        if (r === 'skip') return '<span class="perf-s">E</span>';
+        return `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`;
+    }).join('');
 }
 function getAiModeStats(rows, metricKey) {
-    const resolved = rows
-        .map(item => item[metricKey] || ((item.result === 'win' || item.result === 'loss') ? item.result : null))
-        .filter(item => item === 'win' || item === 'loss');
+    const outcomes = rows
+        .map(item => item[metricKey] || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null))
+        .filter(item => item === 'win' || item === 'loss' || item === 'skip');
+    const resolved = outcomes.filter(item => item === 'win' || item === 'loss');
+    const skips = outcomes.filter(item => item === 'skip').length;
     const wins = resolved.filter(item => item === 'win').length;
     const losses = resolved.length - wins;
     const rate = resolved.length ? Math.round((wins / resolved.length) * 100) : 0;
-    return { wins, losses, total: resolved.length, rate };
+    return { wins, losses, skips, total: resolved.length, records: outcomes.length, rate };
 }
 function getAiPerfHtml(items, stats, limit = 50) {
     const marks = getPerfHtml(items, limit);
     const summary = stats && stats.total > 0
         ? `<span style="margin-left:8px; color:var(--accent); font-weight:700;">${stats.rate}%</span><span style="margin-left:4px; color:var(--muted);">(${stats.wins}W/${stats.losses}L)</span>`
         : '<span style="margin-left:8px; color:var(--muted);">0%</span>';
-    return marks + summary;
+    const skipSummary = stats && stats.skips > 0
+        ? `<span style="margin-left:4px; color:var(--muted);">${stats.skips}E</span>`
+        : '';
+    return marks + summary + skipSummary;
 }
 
 function getPerfText(items, limit = 8) {
@@ -262,10 +270,10 @@ async function syncAiPredictionState() {
         lastAiPredN4 = null;
 
         predictions.forEach(item => {
-            const n9Result = item.n9_result || ((item.result === 'win' || item.result === 'loss') ? item.result : null);
-            const n4Result = item.n4_result || ((item.result === 'win' || item.result === 'loss') ? item.result : null);
-            if (n9Result === 'win' || n9Result === 'loss') aiN9History.push(n9Result);
-            if (n4Result === 'win' || n4Result === 'loss') aiN4History.push(n4Result);
+            const n9Result = item.n9_result || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null);
+            const n4Result = item.n4_result || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null);
+            if (n9Result === 'win' || n9Result === 'loss' || n9Result === 'skip') aiN9History.push(n9Result);
+            if (n4Result === 'win' || n4Result === 'loss' || n4Result === 'skip') aiN4History.push(n4Result);
         });
         if (aiN9History.length > 50) aiN9History.splice(0, aiN9History.length - 50);
         if (aiN4History.length > 50) aiN4History.splice(0, aiN4History.length - 50);

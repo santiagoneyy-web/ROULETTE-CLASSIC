@@ -24,6 +24,15 @@ const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
 const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS ?? 'true').toLowerCase() !== 'false';
+let llmRateLimitedUntil = 0;
+let lastLlmRateLimit = null;
+const llmUsage = {
+    total: { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    minute: { key: '', requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    day: { key: '', requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    last: null,
+    limits: {}
+};
 
 const app = express();
 
@@ -124,7 +133,8 @@ app.get('/api/ai/status', (req, res) => {
         ollamaBaseUrl: OLLAMA_BASE_URL,
         ollamaModel: OLLAMA_MODEL,
         groqConfigured: Boolean(process.env.GROQ_API_KEY),
-        autoAiRemoteAnalysis: AUTO_AI_REMOTE_ANALYSIS
+        autoAiRemoteAnalysis: AUTO_AI_REMOTE_ANALYSIS,
+        ...getLlmUsageStatus()
     });
 });
 
@@ -280,6 +290,88 @@ function getPreferredLlmProvider() {
     return 'none';
 }
 
+function isLlmRateLimited() {
+    return Date.now() < llmRateLimitedUntil;
+}
+
+function markLlmRateLimit(error) {
+    const status = error?.response?.status;
+    if (status !== 429) return false;
+    const retryAfter = Number(error?.response?.headers?.['retry-after']);
+    const cooldownMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : 5 * 60 * 1000;
+    llmRateLimitedUntil = Date.now() + cooldownMs;
+    lastLlmRateLimit = {
+        at: new Date().toISOString(),
+        status,
+        retryAfterSeconds: Number.isFinite(retryAfter) ? retryAfter : null,
+        until: new Date(llmRateLimitedUntil).toISOString(),
+        provider: getPreferredLlmProvider()
+    };
+    return true;
+}
+
+function emptyUsageBucket(key) {
+    return { key, requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+}
+
+function addUsageToBucket(bucket, usage) {
+    bucket.requests += 1;
+    bucket.promptTokens += usage.promptTokens;
+    bucket.completionTokens += usage.completionTokens;
+    bucket.totalTokens += usage.totalTokens;
+}
+
+function extractRateLimitHeaders(headers = {}) {
+    const pick = (name) => headers[name] || headers[name.toLowerCase()] || null;
+    return {
+        limitRequests: pick('x-ratelimit-limit-requests'),
+        remainingRequests: pick('x-ratelimit-remaining-requests'),
+        resetRequests: pick('x-ratelimit-reset-requests'),
+        limitTokens: pick('x-ratelimit-limit-tokens'),
+        remainingTokens: pick('x-ratelimit-remaining-tokens'),
+        resetTokens: pick('x-ratelimit-reset-tokens')
+    };
+}
+
+function recordLlmUsage(provider, usage = {}, headers = {}) {
+    const normalized = {
+        promptTokens: Number(usage.prompt_tokens || usage.promptTokens || 0),
+        completionTokens: Number(usage.completion_tokens || usage.completionTokens || 0),
+        totalTokens: Number(usage.total_tokens || usage.totalTokens || 0)
+    };
+    if (!normalized.totalTokens) {
+        normalized.totalTokens = normalized.promptTokens + normalized.completionTokens;
+    }
+
+    const now = new Date();
+    const minuteKey = now.toISOString().slice(0, 16);
+    const dayKey = now.toISOString().slice(0, 10);
+    if (llmUsage.minute.key !== minuteKey) llmUsage.minute = emptyUsageBucket(minuteKey);
+    if (llmUsage.day.key !== dayKey) llmUsage.day = emptyUsageBucket(dayKey);
+
+    addUsageToBucket(llmUsage.total, normalized);
+    addUsageToBucket(llmUsage.minute, normalized);
+    addUsageToBucket(llmUsage.day, normalized);
+    llmUsage.limits = extractRateLimitHeaders(headers);
+    llmUsage.last = {
+        at: now.toISOString(),
+        provider,
+        ...normalized,
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+    };
+}
+
+function getLlmUsageStatus() {
+    return {
+        usage: llmUsage,
+        rateLimited: isLlmRateLimited(),
+        rateLimitedUntil: isLlmRateLimited() ? new Date(llmRateLimitedUntil).toISOString() : null,
+        lastRateLimit: lastLlmRateLimit
+    };
+}
+
 async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) throw new Error('GROQ_API_KEY missing');
@@ -300,7 +392,11 @@ async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTo
         headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' }
     });
 
-    return String(response.data?.choices?.[0]?.message?.content || '').trim();
+    return {
+        content: String(response.data?.choices?.[0]?.message?.content || '').trim(),
+        usage: response.data?.usage || {},
+        headers: response.headers || {}
+    };
 }
 
 async function callOllamaChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
@@ -323,24 +419,35 @@ async function callOllamaChat({ systemPrompt, userPrompt, temperature = 0.3, max
         headers: { 'Content-Type': 'application/json' }
     });
 
-    return String(response.data?.message?.content || '').trim();
+    return {
+        content: String(response.data?.message?.content || '').trim(),
+        usage: {
+            promptTokens: response.data?.prompt_eval_count || 0,
+            completionTokens: response.data?.eval_count || 0,
+            totalTokens: (response.data?.prompt_eval_count || 0) + (response.data?.eval_count || 0)
+        },
+        headers: response.headers || {}
+    };
 }
 
 async function callPreferredLlm(options) {
     const provider = getPreferredLlmProvider();
     if (provider === 'ollama') {
         try {
-            const content = await callOllamaChat(options);
-            return { provider, content };
+            const result = await callOllamaChat(options);
+            recordLlmUsage(provider, result.usage, result.headers);
+            return { provider, content: result.content, usage: result.usage };
         } catch (error) {
             if (!process.env.GROQ_API_KEY) throw error;
-            const content = await callGroqChat(options);
-            return { provider: 'groq-fallback', content };
+            const result = await callGroqChat(options);
+            recordLlmUsage('groq-fallback', result.usage, result.headers);
+            return { provider: 'groq-fallback', content: result.content, usage: result.usage };
         }
     }
     if (provider === 'groq') {
-        const content = await callGroqChat(options);
-        return { provider, content };
+        const result = await callGroqChat(options);
+        recordLlmUsage(provider, result.usage, result.headers);
+        return { provider, content: result.content, usage: result.usage };
     }
     throw new Error('No LLM provider configured');
 }
@@ -703,6 +810,19 @@ function normalizeAiZone(value, route, n4, context) {
         if (route === 'CCW' && String(routes.ccw?.n4Big) === String(n4)) return 'BIG';
     }
     return 'ESPERAR';
+}
+
+function buildAiUnavailableDecision(reason) {
+    const analysis = reason === 'rate_limit'
+        ? 'IA externa limitada por 429. No se fuerza lectura sin auditor; queda en espera.'
+        : 'IA externa no disponible. No se fuerza lectura sin auditor; queda en espera.';
+    return {
+        reply: formatAutoReply('ESPERAR', 'ESPERAR'),
+        route: 'ESPERAR',
+        zone: 'ESPERAR',
+        analysis,
+        provider: reason === 'rate_limit' ? 'llm-rate-limit' : 'llm-unavailable'
+    };
 }
 
 function persistAiPredictionRecord(tableId, context, normalizedReply, parsed, meta = {}) {
@@ -1128,7 +1248,7 @@ app.post('/api/ai/groq', async (req, res) => {
         const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
         const learningSummary = autoAiContext ? await getLearningSummaryAsync(tableId || 0) : null;
         const learningDigest = autoAiContext ? buildLearningDigest(learningSummary, autoMode) : '';
-        const predictionMeta = { strategyDigest, learningDigest, provider: 'local-fallback' };
+        const predictionMeta = { strategyDigest, learningDigest, provider: 'llm-pending' };
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1141,15 +1261,14 @@ app.post('/api/ai/groq', async (req, res) => {
             return res.json(localDecision);
         }
         if (!groqKey && !hasOllamaConfigured()) {
-            const localDecision = {
-                reply: formatAutoReply(fallback.n9, fallback.n4),
-                route: fallback.route,
-                zone: fallback.zone,
-                analysis: fallback.analysis,
-                provider: 'local-fallback'
-            };
-            persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, predictionMeta);
-            return res.json(localDecision);
+            const unavailableDecision = buildAiUnavailableDecision('unavailable');
+            persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
+            return res.json(unavailableDecision);
+        }
+        if (autoAiContext && isLlmRateLimited()) {
+            const unavailableDecision = buildAiUnavailableDecision('rate_limit');
+            persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
+            return res.json(unavailableDecision);
         }
 
         const systemPrompt = autoAiContext
@@ -1252,27 +1371,30 @@ app.post('/api/ai/groq', async (req, res) => {
             res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR'), provider: llm.provider });
         } catch(e) {
             if (autoAiContext) {
-                const localDecision = {
-                    reply: formatAutoReply(fallback.n9, fallback.n4),
-                    route: fallback.route,
-                    zone: fallback.zone,
-                    analysis: fallback.analysis,
-                    provider: 'local-fallback'
+                const unavailableDecision = {
+                    ...buildAiUnavailableDecision('unavailable'),
+                    analysis: 'La IA respondio fuera de formato JSON. No se fuerza lectura sin auditor; queda en espera.',
+                    provider: 'llm-invalid-json'
                 };
-                persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, predictionMeta);
-                return res.json(localDecision);
+                persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
+                return res.json(unavailableDecision);
             }
 
             res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
         }
     } catch (error) {
-        console.error('LLM predictor error:', error.response?.status || error.message);
-        const fallback = buildAutoAiFallback(req.body.autoAiContext);
-        res.json({
-            reply: formatAutoReply(fallback.n9, fallback.n4),
-            analysis: fallback.analysis,
-            provider: 'local-fallback'
-        });
+        const autoAiContext = req.body.autoAiContext || null;
+        const isRateLimit = markLlmRateLimit(error);
+        const unavailableDecision = buildAiUnavailableDecision(isRateLimit ? 'rate_limit' : 'unavailable');
+        if (autoAiContext) {
+            persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { provider: unavailableDecision.provider });
+        }
+        if (isRateLimit) {
+            console.warn('LLM predictor rate limited (429). AI decision paused; stored skip for audit trail.');
+        } else {
+            console.error('LLM predictor error:', error.response?.status || error.message);
+        }
+        res.json(unavailableDecision);
     }
 });
 
