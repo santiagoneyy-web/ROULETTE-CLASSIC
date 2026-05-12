@@ -1020,7 +1020,7 @@ function buildAutoAiPromptLines(context, strategyDigest, learningDigest = '', mo
         `MEM=${compactDigest(learningDigest || 'sin memoria', 280)}`,
         `ESTR=${compactDigest(strategyDigest || 'sin estrategias', 260)}`,
         'Reglas: SMALL=1-9, BIG=10-18. No inventes numeros. Patrones W/L: racha, alternancia, ola, bambu, pico, trampa, bloque, turbulencia, farol, mixto.',
-        'route es para N9 (CW,CCW,SMALL,BIG). N4 es independiente: siempre elige un N4 de las 4 opciones CW/CCW x SMALL/BIG.',
+        'REGLA DIRECCION: Si N9 es CW o CCW, N4 DEBE ser de esa misma direccion. Si N9 es SMALL o BIG, N4 puede ser cualquiera.',
         safeMode ? 'Bloquea por contradiccion, fatiga, mezcla o W/L peligroso.' : 'Prioriza dominancia viva, momentum, W/L e hit rate; si hay mezcla elige la opcion menos mala.',
         'JSON exacto: {"route":"CW|CCW|SMALL|BIG|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
     ];
@@ -1074,6 +1074,19 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
             n4 = String(ccw.n4Small);
         } else {
             n4 = fallback.n4;
+        }
+    }
+
+    // 🔥 Forced direction consistency for CW/CCW
+    if (route === 'CW') {
+        const cwN4s = [String(cw.n4Small), String(cw.n4Big)];
+        if (!cwN4s.includes(n4)) {
+            n4 = (zone === 'BIG') ? String(cw.n4Big) : String(cw.n4Small);
+        }
+    } else if (route === 'CCW') {
+        const ccwN4s = [String(ccw.n4Small), String(ccw.n4Big)];
+        if (!ccwN4s.includes(n4)) {
+            n4 = (zone === 'BIG') ? String(ccw.n4Big) : String(ccw.n4Small);
         }
     }
 
