@@ -1568,6 +1568,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- AUTO AI PREDICTORS VIA GROQ ---
 window.currentAIMode = 'SAFE';
+let autoAiInFlight = false;
+let lastAutoAiRequestAt = 0;
+let lastAutoAiRequestKey = '';
+const AUTO_AI_MIN_INTERVAL_MS = 12000;
+
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
     const note = document.getElementById('auto-ai-mode-note');
@@ -1604,6 +1609,26 @@ async function requestAutoAI() {
         return;
     }
 
+    const tableId = document.getElementById('table-select')?.value || '1';
+    const requestKey = [
+        tableId,
+        String(window.currentAIMode || 'SAFE').toUpperCase(),
+        history.slice(-6).join('-'),
+        lastSignal.targetCW,
+        lastSignal.targetCCW,
+        lastSignal.targetUnderCW,
+        lastSignal.targetOverCW,
+        lastSignal.targetOverCCW,
+        lastSignal.targetUnderCCW
+    ].join('|');
+    const now = Date.now();
+    if (autoAiInFlight || (requestKey === lastAutoAiRequestKey && now - lastAutoAiRequestAt < AUTO_AI_MIN_INTERVAL_MS)) {
+        return;
+    }
+    autoAiInFlight = true;
+    lastAutoAiRequestAt = now;
+    lastAutoAiRequestKey = requestKey;
+
     if (statusEl) statusEl.innerText = 'THINKING';
     
     let der=0, izq=0, big=0, small=0;
@@ -1612,7 +1637,6 @@ async function requestAutoAI() {
     let pat = {label:'Estandar'};
     
     try {
-        const tableId = document.getElementById('table-select')?.value || '1';
         let stabilityInfo = '';
         try {
             let evts = [];
@@ -1725,6 +1749,13 @@ async function requestAutoAI() {
             body: JSON.stringify({ prompt: p, tableId, historyStr: history.join(','), autoAiContext })
         });
         const data = await resp.json();
+        if (data.rateLimited) {
+            if (statusEl) statusEl.innerText = 'WAIT';
+            if (analysisEl) analysisEl.innerText = 'IA limitada por 429. No se guarda jugada ni se fuerza lectura; esperando cooldown.';
+            n9El.innerText = 'ESPERAR';
+            n4El.innerText = 'ESPERAR';
+            return;
+        }
         
         if (data.reply) {
             let parts = data.reply.split('|');
@@ -1775,6 +1806,8 @@ n9El.innerText = rawN9 || 'Esperar';
         console.error('Predictor error:', e);
         n9El.innerText = 'Error';
         n4El.innerText = 'Error';
+    } finally {
+        autoAiInFlight = false;
     }
 }
 

@@ -24,6 +24,7 @@ const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
 const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS ?? 'true').toLowerCase() !== 'false';
+const GROQ_MODEL = process.env.GROQ_MODEL || process.env.AUTO_AI_GROQ_MODEL || 'llama-3.1-8b-instant';
 let llmRateLimitedUntil = 0;
 let lastLlmRateLimit = null;
 const llmUsage = {
@@ -359,7 +360,7 @@ function recordLlmUsage(provider, usage = {}, headers = {}) {
         at: now.toISOString(),
         provider,
         ...normalized,
-        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+        model: GROQ_MODEL
     };
 }
 
@@ -377,7 +378,7 @@ async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTo
     if (!groqKey) throw new Error('GROQ_API_KEY missing');
 
     const requestBody = {
-        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -389,6 +390,7 @@ async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTo
     if (jsonMode) requestBody.response_format = { type: 'json_object' };
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', requestBody, {
+        timeout: 20000,
         headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' }
     });
 
@@ -549,6 +551,15 @@ function buildStrategyDigest(tableId) {
     return strategyStore.buildPromptDigest({ tableId: tableId || 'global', limit: 12 });
 }
 
+function compactDigest(text, maxChars = 500) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    return clean.length > maxChars ? clean.slice(0, maxChars) + '...' : clean;
+}
+
+function estimateTokens(text) {
+    return Math.ceil(String(text || '').length / 4);
+}
+
 function getLearningSummaryAsync(tableId) {
     return new Promise(resolve => {
         db.getAiLearningSummary(tableId || 0, (err, summary) => {
@@ -584,7 +595,7 @@ function buildLearningDigest(summary, mode = 'FULL') {
     return [
         `Memoria RL ${String(mode || 'FULL').toUpperCase()}: total=${total}, W=${wins}, L=${losses}, skip=${skips}, pending=${pending}.`,
         `Reward acumulado=${reward}. N9 hit=${n9Rate}%, N4 hit=${n4Rate}%.`,
-        'Premios/castigos: N4 +100, N9 +30, esperar +15, fallo total -200, casi/acierto vecino no premiado.'
+        'Premios/castigos: N4 +100, N9 +30, esperar +15, fallo total -200.'
     ].join(' ');
 }
 
@@ -982,185 +993,38 @@ function buildAutoAiFallback(context) {
     };
 }
 
-function buildSafeAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
+function buildAutoAiPromptLines(context, strategyDigest, learningDigest = '', mode = 'SAFE') {
     const dom8 = context.dominance8 || {};
     const mom15 = context.momentum15 || {};
     const perf8 = context.performance8 || {};
     const cw = context.routes.cw;
     const ccw = context.routes.ccw;
+    const safeMode = String(mode || context.mode || 'SAFE').toUpperCase() === 'SAFE';
 
     return [
-        'Actuas como un Agente Auditor de Alta Precision para Mylucky Roulete.',
-        'No eres un predictor libre. Eres un filtro conservador que audita y valida si una jugada merece confianza real.',
-        'Si la evidencia no es suficientemente fuerte, debes responder ESPERAR.',
-        '',
-        'MISION:',
-        '- Auditar la decision entre las 6 medidas ya calculadas por el motor.',
-        '- Puedes validar o bloquear.',
-        '- Tu prioridad es disciplina, no actividad.',
-        '',
-        'RECOMPENSA INTERNA:',
-        '- Acierto directo n4 = +100',
-        '- Acierto n9 = +30',
-        '- ESPERAR correcto = +15',
-        '- Fallo total = -200',
-        '- Casi acierto / vecino = -50',
-        '',
-        'CONTEXTO ACTUAL:',
-        `MODO: ${String(context.mode || 'SAFE').toUpperCase()}`,
-        `COLOR DE CONTEXTO: ${String(context.stabilityLevel || 'red').toUpperCase()}`,
-        `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
-        `DOMINANCIA 8T: CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
-        `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
-        `PERF 8T CW_N9=${perf8.cwN9 || 'Sin datos'} | CW_N4=${perf8.cwN4 || 'Sin datos'}`,
-        `PERF 8T CCW_N9=${perf8.ccwN9 || 'Sin datos'} | CCW_N4=${perf8.ccwN4 || 'Sin datos'}`,
-        `SEC_DIR_15: ${context.sequence15?.dir || 'Sin datos'}`,
-        `SEC_ZON_15: ${context.sequence15?.zone || 'Sin datos'}`,
-        `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
-        `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
-        `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
-        '',
-        'REGLAS FIJAS:',
-        '- SMALL = 1-9, BIG = 10-18.',
-        '- Solo puedes elegir entre las 6 medidas activas.',
-        '- El color es contexto visual, NO una orden de operar o bloquear.',
-        '- Puedes operar en verde, amarillo o rojo si la evidencia real lo justifica.',
-        '',
-        'ANALISIS OBLIGATORIO:',
-        '- Cruza direccion, zona, travel, patron, continuidad, rebote, farol, fatiga y W/L.',
-        '- Busca similitud contextual en el historial, no solo secuencias exactas.',
-        '- Da mas peso a casos recientes y consistentes.',
-        '- Si el historial comparable es escaso o contradictorio, responde ESPERAR.',
-        '- Una señal bonita no basta si el riesgo de fallo sigue alto.',
-        '',
-        'BIBLIOTECA DE ESTRATEGIAS:',
-        strategyDigest || 'Sin estrategias guardadas.',
-        'Usa la biblioteca como refuerzo prudente: no es verdad absoluta, pero si encaja con la lectura viva debes considerarla.',
-        '',
-        'MEMORIA RL / RESULTADOS HISTORICOS:',
-        learningDigest || 'Sin memoria RL suficiente.',
-        '',
-        'CRITERIO DE BLOQUEO:',
-        '- Responde ESPERAR si la ventaja no compensa el castigo de -200.',
-        '- Responde ESPERAR si hay contradiccion fuerte entre direccion y zona.',
-        '- Responde ESPERAR si el patron parece mixto, farol, ruptura o fatiga no resuelta.',
-        '- Responde ESPERAR si el historial comparable no es suficientemente fuerte.',
-        '',
-        'CRITERIO DE VALIDACION:',
-        '- Valida solo si hay dominancia clara, travel coherente, patron entendible, historial favorable y riesgo controlado.',
-        '- Premia precision estructural y consistencia. Desconfia de coincidencias aisladas.',
-        '',
-        'RESPUESTA FINAL:',
-        '- Primero decide si el contexto es operable.',
-        '- Si NO es operable, responde ESPERAR.',
-        '- Si SI es operable, elige ruta, zona, n9 y n4 dentro de las 6 medidas.',
-        '- El analysis debe explicar por que valida o por que bloquea.',
-        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
-    ].join('\n');
+        safeMode ? 'MODO SAFE: audita; si no hay ventaja clara responde ESPERAR.' : 'MODO FULL: elige la mejor lectura relativa entre las 6 medidas.',
+        `ESTABILIDAD=${String(context.stabilityLevel || 'red').toUpperCase()} PATRON=${context.patternLabel || 'Sin patron'}`,
+        `DOM8 CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
+        `MOM15 CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
+        `WL CW_N9=${perf8.cwN9 || '-'} CW_N4=${perf8.cwN4 || '-'} CCW_N9=${perf8.ccwN9 || '-'} CCW_N4=${perf8.ccwN4 || '-'}`,
+        `DIR15=${context.sequence15?.dir || '-'} ZON15=${context.sequence15?.zone || '-'}`,
+        `CW n9=${cw.n9} n4S=${cw.n4Small} n4B=${cw.n4Big} hit=${cw.hitRate}%`,
+        `CCW n9=${ccw.n9} n4S=${ccw.n4Small} n4B=${ccw.n4Big} hit=${ccw.hitRate}%`,
+        `NUMS=${(context.recentNumbers || []).slice(-12).join(',') || '-'}`,
+        `MEM=${compactDigest(learningDigest || 'sin memoria', 280)}`,
+        `ESTR=${compactDigest(strategyDigest || 'sin estrategias', 260)}`,
+        'Reglas: SMALL=1-9, BIG=10-18. No inventes numeros. Patrones W/L: racha, alternancia, ola, bambu, pico, trampa, bloque, turbulencia, farol, mixto.',
+        safeMode ? 'Bloquea por contradiccion, fatiga, mezcla o W/L peligroso.' : 'Prioriza dominancia viva, momentum, W/L e hit rate; si hay mezcla elige la opcion menos mala.',
+        'JSON exacto: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
+    ];
+}
+
+function buildSafeAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
+    return buildAutoAiPromptLines(context, strategyDigest, learningDigest, 'SAFE').join('\n');
 }
 
 function buildFullAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
-    const dom8 = context.dominance8 || {};
-    const mom15 = context.momentum15 || {};
-    const perf8 = context.performance8 || {};
-    const cw = context.routes.cw;
-    const ccw = context.routes.ccw;
-
-    return [
-        'CONTEXTO ACTUAL DE LA MESA:',
-        `MODO: ${String(context.mode || 'SAFE').toUpperCase()}`,
-        `ESTABILIDAD: ${String(context.stabilityLevel || 'red').toUpperCase()}`,
-        `PATRON TRAVEL: ${context.patternLabel || 'Sin patron'}`,
-        `DOMINANCIA 8T: CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
-        `MOMENTUM 15T: CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
-        `PERF 8T CW_N9=${perf8.cwN9 || 'Sin datos'} | CW_N4=${perf8.cwN4 || 'Sin datos'}`,
-        `PERF 8T CCW_N9=${perf8.ccwN9 || 'Sin datos'} | CCW_N4=${perf8.ccwN4 || 'Sin datos'}`,
-        `SEC_DIR_15: ${context.sequence15?.dir || 'Sin datos'}`,
-        `SEC_ZON_15: ${context.sequence15?.zone || 'Sin datos'}`,
-        `RUTA CW: N9=${cw.n9}, N4_SMALL=${cw.n4Small}, N4_BIG=${cw.n4Big}, HIT_RATE=${cw.hitRate}%`,
-        `RUTA CCW: N9=${ccw.n9}, N4_SMALL=${ccw.n4Small}, N4_BIG=${ccw.n4Big}, HIT_RATE=${ccw.hitRate}%`,
-        `ULTIMOS_NUMEROS: ${(context.recentNumbers || []).join(',') || 'Sin datos'}`,
-        '',
-        'REGLAS FIJAS:',
-        'Recuerda: SMALL es 1-9 y BIG es 10-18.',
-        'Recuerda: en CW el objetivo BIG es N4_BIG y en CCW el objetivo BIG es N4_BIG.',
-        'Elige SOLO entre estas 6 medidas. No inventes numeros.',
-        '',
-        'BIBLIOTECA CENTRAL DE ESTRATEGIAS:',
-        strategyDigest || 'Sin estrategias guardadas.',
-        'Las estrategias guardadas son sugerencias y contexto acumulado, no el eje principal.',
-        'Si una estrategia HUMAN, AI o SYSTEM encaja con el flujo actual y con las 6 medidas, usala como refuerzo activo de la lectura viva.',
-        '',
-        'MEMORIA RL / RESULTADOS HISTORICOS:',
-        learningDigest || 'Sin memoria RL suficiente.',
-        'Usa esta memoria para ajustar confianza y timing. No copies ciegamente el pasado: compara contexto, modo, ruta, zona, N9/N4 y patron W/L.',
-        '',
-        'ORDEN DE LECTURA OBLIGATORIO:',
-        '1. La prioridad numero 1 es la dominancia viva y reciente.',
-        '2. Luego lee estabilidad, patron travel, momentum e hit rate.',
-        '3. Decide si la mejor lectura es seguir CW o CCW.',
-        '4. Decide si la zona con mas ventaja es SMALL o BIG.',
-        '5. Usa los patrones W/L para confirmar, anticipar desgaste, rebote, ruptura o farol.',
-        '6. Revisa la biblioteca de estrategias solo como sugerencia o refuerzo final.',
-        '7. Si el modo es SAFE y no hay ventaja clara, responde ESPERAR.',
-        '',
-        'COLORES DE ESTABILIDAD:',
-        '- VERDE, AMARILLO y ROJO son contexto visual. Describen la mesa, pero no te bloquean por si solos.',
-        '- Puedes operar en cualquier color si el flujo, la dominancia y el historial te respaldan.',
-        '- Usa el color como descripcion adicional, no como regla ciega.',
-        '',
-        'FILOSOFIA DE LECTURA:',
-        '- Esto no es un codigo rigido; es una lectura probabilistica con azar y fluctuaciones naturales.',
-        '- No asumas que un patron se cumple perfecto; evalua continuidad, desgaste, rebote, ruptura y falsa ruptura.',
-        '- Si la mesa fluctua pero mantiene una estructura viva, aun puedes leer ventaja parcial.',
-        '',
-        'GUIA DE PATRONES W/L (aplica al historial WIN/LOSS de CADA DIRECCION, no a la mesa en general):',
-        '- REGLA PRINCIPAL: Los patrones se repiten. Cambia JUSTO ANTES de la perdida esperada.',
-        '',
-        '- BASICOS REPETITIVOS:',
-        '  Racha (WWWL WWWL): 3 W y 1 L, se repite. Cambia antes de la L.',
-        '  Alternando (WLWL WLWL): Alterna cada vez. Muy predecible.',
-        '  Doble victoria (WWL WWL): 2 W y 1 L, se repite.',
-        '  Patron 2-1-2: dos aciertos, un fallo/pausa, dos aciertos. Si aparece como WWLWW o LLWLL invertido, analiza si toca continuidad, pausa o cambio antes de perseguir.',
-        '  Pasos (WWLWL WWLWL): Patron de 5 pasos que se repite.',
-        '  En grupo: Despues de W,L vienen +2W porque el patron se desarrolla.',
-        '',
-        '- TENDENCIA:',
-        '  Ascendente: 1W-L, 2W-L, 3W-L. Las W crecen entre cada L. Sube.',
-        '  Descendente: 3W-L, 2W-L, 1W-L. Las W bajan. Peligro, puede venir racha de L.',
-        '',
-        '- PATRONES PODEROSOS:',
-        '  Rodillo (WLWLWL): Ida y vuelta constante. No hay rachas largas.',
-        '  Ola (WWLLWWLL): 2 buenas, 2 malas, se repite. Alerta antes de las 2 L.',
-        '  Bambu (WWWLLWWWLL): 3 suben, 2 bajan, luego otra vez. Tras 2 L, observa la subida.',
-        '  Pico (WWWWLWWWWL): Larga racha de W y 1 L fuerte. Puede venir gran perdida.',
-        '  Trampa (WLLWLLWLL): 1 W te atrapa en L. Cuidado despues de la W solitaria.',
-        '',
-        'OBSERVACIONES ESTRATEGICAS: BLOQUES, TURBULENCIA Y FAROLES (Son patrones a analizar, NO reglas fijas - es una mesa de azar):',
-        '- DOMINANCIA Y FAROLES: Cuando hay una dominancia clara (ej: BIG BIG BIG BIG BIG), puede saltar a la contraria (SMALL SMALL), y luego volver a la original. A ese salto temporal le llamamos "farol" o mini-turbulencia.',
-        '- El farol NO tiene una longitud exacta (puede ser 2, 3, o indefinidos tiros). Analiza si es un simple farol o si la dominancia realmente ha cambiado.',
-        '- BLOQUES Y TURBULENCIA: A veces la mesa entra en modo bloques (ej: DER DER DER DER IZQ IZQ IZQ IZQ).',
-        '- Al final de un bloque, suele aparecer una "turbulencia" (patrones cortos y rotos).',
-        '- Si es una MINI-turbulencia, la mesa puede volver a seguir en bloques. ¡OJO! El siguiente bloque NO necesariamente es en la direccion contraria, puede mantenerse en la misma direccion.',
-        '- Si la turbulencia es GRANDE o prolongada, por lo general los bloques terminan y entras en fase de turbulencia pura (no hay bloques grandes).',
-        '- Tu trabajo es ANALIZAR la grafica: si hubo turbulencia y luego estable, puede que toque turbulencia de nuevo, o bloque. Predice leyendo el flujo, no hay nada fijo.',
-        '- En fases de turbulencia donde los bloques no te guian, apoyate fuertemente en los PATRONES W/L de cada direccion.',
-        '',
-        'MODOS DE DECISION:',
-        '- FULL: Siempre elige la mejor opcion disponible entre las 6 medidas.',
-        '- No buscas certeza total; buscas la mejor lectura relativa del flujo actual.',
-        '- Puedes anticipar, seguir, romper o sostener segun el flujo.',
-        '- El color no te limita. Decide por evidencia contextual.',
-        '',
-        'CRITERIO FINAL DE RESPUESTA:',
-        '- Primero decide ruta.',
-        '- Luego decide zona.',
-        '- Luego convierte eso al N9 y N4 exactos de esa ruta y zona.',
-        '- Si hay conflicto o mezcla, mencionalo en analysis sin salirte de las 6 medidas.',
-        'Tu analysis DEBE mencionar: patron identificado (racha, ola, bambu, rodillo, trampa, pico, bloque, turbulencia, farol, mixto) + razon de la eleccion.',
-        'Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note. Si no aplica, dejalos vacios o no los envies.',
-        'Responde JSON exacto con: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
-    ].join('\n');
+    return buildAutoAiPromptLines(context, strategyDigest, learningDigest, 'FULL').join('\n');
 }
 
 function buildAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
@@ -1267,92 +1131,31 @@ app.post('/api/ai/groq', async (req, res) => {
         }
         if (autoAiContext && isLlmRateLimited()) {
             const unavailableDecision = buildAiUnavailableDecision('rate_limit');
-            persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
-            return res.json(unavailableDecision);
+            return res.json({
+                ...unavailableDecision,
+                rateLimited: true,
+                model: GROQ_MODEL,
+                estimatedPromptTokens: 0,
+                rateLimitedUntil: new Date(llmRateLimitedUntil).toISOString()
+            });
         }
 
+        const userPrompt = autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest, learningDigest) : prompt;
         const systemPrompt = autoAiContext
             ? [
-                autoMode === 'SAFE'
-                    ? 'Eres el AGENTE AUDITOR SAFE de ROULETTE-CLASSIC.'
-                    : 'Eres el motor AUTO AI FULL de ROULETTE-CLASSIC.',
-                autoMode === 'SAFE'
-                    ? 'Tu trabajo es auditar y filtrar la jugada. Puedes bloquear y responder ESPERAR.'
-                    : 'Tu trabajo es leer el flujo actual de la mesa y elegir la mejor opcion posible entre las 6 medidas calculadas por el motor.',
-                'Trabajas sobre travel, cuadro, grafica, color de estabilidad, hit rate, momentum, patrones W/L y estrategia de bloques.',
-                '',
-                'REGLAS TECNICAS:',
-                '- SMALL = 1-9 casillas. BIG = 10-18 casillas.',
-                '- En CW, el objetivo BIG es N4_BIG de CW. En CCW, el objetivo BIG es N4_BIG de CCW.',
-                '- Solo puedes elegir entre las 6 medidas calculadas por el motor.',
-                '- Compara hit rate CW vs CCW y el momentum de los ultimos 15 tiros.',
-                '- Primero decide la ruta (CW o CCW), luego la zona (SMALL o BIG), y de ahi salen N9 y N4.',
-                '- No inventes reglas nuevas, no inventes numeros y no ignores el modo SAFE/FULL.',
-                '- Lee tambien la biblioteca central de estrategias enviada en el prompt del usuario.',
-                '- La prioridad numero 1 es la dominancia viva y reciente.',
-                '- Las estrategias guardadas son sugerencias y contexto, no el primer eje de decision.',
-                autoMode === 'SAFE'
-                    ? '- En SAFE tienes permiso total para bloquear una operacion si la evidencia no compensa el riesgo.'
-                    : '- En FULL siempre debes proponer la mejor lectura relativa disponible, aunque la ventaja sea corta.',
-                '',
-                'COLORES DE ESTABILIDAD (significado real):',
-                '- VERDE, AMARILLO y ROJO son contexto visual descriptivo.',
-                '- El color ayuda a describir la mesa, pero no te obliga a operar ni a bloquear por si solo.',
-                '- Puedes operar en cualquier color si el resto del contexto lo justifica.',
-                '',
-                'ORDEN DE ANALISIS:',
-                '1. Lee primero la dominancia viva y reciente.',
-                '2. Luego lee estabilidad, patron travel, momentum e hit rate.',
-                '3. Decide si conviene seguir, anticipar, romper o esperar.',
-                '4. Usa los patrones W/L para confirmar o frenar una lectura engañosa.',
-                '5. Usa la biblioteca de estrategias solo como apoyo o refuerzo final.',
-                '6. Da una salida final coherente con la ruta y zona elegidas.',
-                '',
-                'PATRONES W/L DETALLADOS (Guia de Patrones):',
-                '- REGLA PRINCIPAL: Los patrones se repiten. Al observar un patron, cambia JUSTO ANTES de que ocurra la perdida o espera.',
-                '',
-                '1. PATRONES BASICOS REPETITIVOS:',
-                '  - Racha de victorias (WWWL): 3 victorias y luego 1 perdida, se repite. Cambia o espera antes de la L.',
-                '  - Alternando (WLWL): Alterna cada vez. Muy predecible. Sigue el ritmo.',
-                '  - Doble victoria (WWL WWL): 2 victorias y luego 1 perdida, se repite. Cambia antes de la L.',
-                '  - Patron de pasos (WWLWL WWLWL): Este patron exacto de 5 pasos se repite.',
-                '  - Patron en grupo: Despues de W,L vienen mas de 2 victorias porque el patron se esta desarrollando. Confia en la estructura.',
-                '',
-                '2. PATRONES DE TENDENCIA:',
-                '  - Tendencia ascendente: 1W luego L, 2W luego L, 3W luego L. Las victorias aumentan con una L entre cada grupo. La tendencia sube. Cambia antes de la L.',
-                '  - Tendencia descendente: 3W luego L, 2W luego L, 1W luego L. Las victorias disminuyen con una L entre cada grupo. Despues puede venir racha de perdidas. Ten cuidado.',
-                '',
-                '3. OTROS PATRONES PODEROSOS:',
-                '  - El rodillo (WLWLWL): Ida y vuelta. Muy comun. No hay rachas largas.',
-                '  - La ola (WWLLWWLL): 2 buenas, 2 malas. Se repite. Mantente alerta antes de las 2 perdidas.',
-                '  - El bambu (WWWLLWWWLL): 3 suben, 2 bajan. Luego otra vez. Despues de 2 perdidas, observa el siguiente aumento.',
-                '  - El pico (WWWWLWWWWL): Larga racha de victorias y luego 1 perdida fuerte. Puede venir una gran perdida despues.',
-                '  - La trampa (WLLWLLWLL): Da una victoria, luego te atrapa en perdidas. Ten cuidado despues de la W.',
-                '',
-                '4. ESTRATEGIA AVANZADA Y PROBABILIDAD (NO son reglas fijas):',
-                '  - FAROLES: Una dominancia (ej: BIG BIG BIG) puede saltar a la contraria (SMALL SMALL) y volver. El "farol" no tiene longitud exacta (2, 3 o mas tiros). Analiza si es farol o cambio real.',
-                '  - CICLO DE BLOQUES: Al final de un bloque suele haber turbulencia (patrones rotos). Si es MINI-turbulencia, pueden volver los bloques (en la misma direccion o en la contraria, no hay regla).',
-                '  - TURBULENCIA GRANDE: Si la turbulencia es larga, los bloques desaparecen por un tiempo. Aqui usa la lectura de patrones W/L de cada direccion.',
-                '  - Nada es rigido, es una mesa de azar. Predice leyendo el flujo actual.',
-                '',
-                '- Si el string W/L se acerca a una L esperada o a una trampa, reduce confianza o espera.',
-                '- Tu analysis DEBE mencionar el patron identificado, no solo hit rate o momentum.',
-                '- Si hay conflicto entre estabilidad, momentum y W/L, prioriza la lectura mas viva y mas reciente.',
-                autoMode === 'SAFE'
-                    ? '- Si no hay ventaja clara, debes responder ESPERAR.'
-                    : '- En FULL no debes congelarte por duda leve; elige la mejor lectura disponible.',
-                '- Solo si detectas una estrategia reusable nueva, agrega strategy_name y strategy_note al JSON.',
-                '',
-                'SAFE = auditor conservador y selectivo. FULL = operador libre, pero aun asi tecnico.',
-                'Responde solo JSON valido.'
+                autoMode === 'SAFE' ? 'Eres auditor SAFE de ROULETTE-CLASSIC.' : 'Eres motor FULL de ROULETTE-CLASSIC.',
+                'Responde solo JSON valido. Elige exclusivamente entre las medidas dadas. No inventes numeros.',
+                'SMALL=1-9, BIG=10-18. Analiza dominancia, momentum, W/L, hit rate, bloque/farol/turbulencia.',
+                autoMode === 'SAFE' ? 'Si hay duda fuerte, contradiccion o fatiga, responde ESPERAR.' : 'En FULL elige la mejor opcion relativa disponible.'
             ].join('\n')
-            : 'Eres un motor de prediccion. RESPONDE SOLO JSON. PROHIBIDO texto extra.';
+            : 'Eres un motor de prediccion. RESPONDE SOLO JSON.';
+        const estimatedPromptTokens = estimateTokens(systemPrompt) + estimateTokens(userPrompt);
 
         const llm = await callPreferredLlm({
             systemPrompt,
-            userPrompt: autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest, learningDigest) : prompt,
+            userPrompt,
             temperature: 0.15,
-            maxTokens: autoAiContext ? 140 : 60,
+            maxTokens: autoAiContext ? 90 : 60,
             jsonMode: true
         });
 
@@ -1363,7 +1166,13 @@ app.post('/api/ai/groq', async (req, res) => {
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 const normalized = normalizeAutoAiResponse(parsed, autoAiContext, fallback);
                 persistAiPredictionRecord(tableId || 0, autoAiContext, normalized, parsed, { ...predictionMeta, provider: llm.provider });
-                return res.json({ ...normalized, provider: llm.provider });
+                return res.json({
+                    ...normalized,
+                    provider: llm.provider,
+                    model: GROQ_MODEL,
+                    usage: llm.usage || {},
+                    estimatedPromptTokens
+                });
             }
 
             let n9 = String(parsed.n9 || '').replace(/[^0-9]/g, '');
@@ -1386,15 +1195,20 @@ app.post('/api/ai/groq', async (req, res) => {
         const autoAiContext = req.body.autoAiContext || null;
         const isRateLimit = markLlmRateLimit(error);
         const unavailableDecision = buildAiUnavailableDecision(isRateLimit ? 'rate_limit' : 'unavailable');
-        if (autoAiContext) {
+        if (autoAiContext && !isRateLimit) {
             persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { provider: unavailableDecision.provider });
         }
         if (isRateLimit) {
-            console.warn('LLM predictor rate limited (429). AI decision paused; stored skip for audit trail.');
+            console.warn('LLM predictor rate limited (429). AI decision paused; no prediction stored.');
         } else {
             console.error('LLM predictor error:', error.response?.status || error.message);
         }
-        res.json(unavailableDecision);
+        res.json({
+            ...unavailableDecision,
+            rateLimited: isRateLimit,
+            model: GROQ_MODEL,
+            rateLimitedUntil: isRateLimit ? new Date(llmRateLimitedUntil).toISOString() : null
+        });
     }
 });
 
