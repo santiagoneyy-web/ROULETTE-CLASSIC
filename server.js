@@ -1156,7 +1156,7 @@ app.post('/api/ai/groq', async (req, res) => {
             systemPrompt,
             userPrompt,
             temperature: 0.15,
-            maxTokens: autoAiContext ? 90 : 60,
+            maxTokens: autoAiContext ? 250 : 100,
             jsonMode: true
         });
 
