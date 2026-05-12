@@ -356,7 +356,9 @@ function buildTableStateSnapshot({ metricSnapshot, tableId, tableCode = 'AUTO', 
     const dirRun = getRunInfo(events, event => event.dir);
     const zoneRun = getRunInfo(events, event => event.zone);
     const turbulence = classifyTurbulence(dirRun, zoneRun);
-    const dominantSide = String(metricSnapshot.dominant_signal || 'NONE').toUpperCase() || 'NONE';
+    const VALID_DOMINANCE_SIDES = ['CW', 'CCW', 'BIG', 'SMALL', 'NONE'];
+    const rawSide = String(metricSnapshot.dominant_signal || 'NONE').toUpperCase();
+    const dominantSide = VALID_DOMINANCE_SIDES.includes(rawSide) ? rawSide : 'NONE';
     const dominanceStrength = Number(metricSnapshot.dominance_score || 0);
 
     let dominanceState = 'none';

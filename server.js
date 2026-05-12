@@ -387,7 +387,8 @@ async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTo
         max_tokens: maxTokens
     };
 
-    if (jsonMode) requestBody.response_format = { type: 'json_object' };
+    // Note: json_object response_format only supported by some Groq models (not 8b-instant).
+    // JSON output is enforced via system prompt instead.
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', requestBody, {
         timeout: 20000,
