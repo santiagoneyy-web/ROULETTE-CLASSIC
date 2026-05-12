@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css?v=1017" />
+    <link rel="stylesheet" href="styles.css?v=1018" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
     /* Compact travel table */
@@ -38,7 +38,7 @@
              <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                     <button class="tab-btn" id="tab-btn-sup">ZONA</button>
+                     <button class="tab-btn" id="tab-btn-sup" style="display:none !important;" hidden>ZONA</button>
                      <button class="tab-btn" id="tab-btn-scatter">📊</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
                      <button class="tab-btn" id="tab-btn-chat">CHAT</button>
@@ -122,7 +122,7 @@
             </section>
 
             <!-- 2. SUP (ZONE SUPPORT) -->
-            <section class="shadow-panel" id="panel-sup" style="display: none;">
+            <section class="shadow-panel" id="panel-sup" style="display: none !important;" hidden>
                 <!-- SMALL BLOCK -->
                 <div class="dual-block">
                     <div class="agent-strategy-label" id="sup-s-strat" style="display:flex; justify-content:space-between; align-items:center;">
@@ -309,7 +309,7 @@
 
 <script src="predictor.js?v=999"></script>
 <script src="ai_chat.js?v=5"></script>
-<script src="app.js?v=1034"></script>
+<script src="app.js?v=1036"></script>
 </body>
 </html>
 

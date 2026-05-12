@@ -457,8 +457,7 @@ html, body {
   opacity: 0.95;
 }
 .compact-perf .perf-w,
-.compact-perf .perf-l,
-.compact-perf .perf-s {
+.compact-perf .perf-l {
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
@@ -473,8 +472,7 @@ html, body {
   padding: 2px 10px 4px;
   border-bottom: 1px solid rgba(30,45,69,0.4);
 }
-#panel-dir .performance-string,
-#panel-sup .performance-string {
+#panel-dir .performance-string {
   display: flex;
 }
 .perf-w {
@@ -489,13 +487,6 @@ html, body {
   font-weight: 900;
   color: var(--red);
 }
-.perf-s {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--muted);
-}
-
 /* Inline switch button (next to title) */
 .btn-switch-inline {
   background: transparent;

@@ -17,6 +17,56 @@ let lastAiPredN9 = null;
 let lastAiPredN4 = null;
 let lastAiPredMode = 'SAFE';
 
+const OBSOLETE_PANEL_TEXTS = ['DOCENAS', 'ZONA 26'];
+
+function isResolvedAiOutcome(value) {
+    return value === 'win' || value === 'loss';
+}
+
+function removeObsoleteUiPanels() {
+    const candidates = document.querySelectorAll('.shadow-panel, .agent-card, .dual-block, section, [class*="panel"], [class*="card"]');
+    candidates.forEach(el => {
+        const text = (el.textContent || '').toUpperCase();
+        if (OBSOLETE_PANEL_TEXTS.some(label => text.includes(label))) {
+            el.remove();
+        }
+    });
+}
+
+function sanitizeAiHistoryElements() {
+    ['ai-hist-list-n9', 'ai-hist-list-n4'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.querySelectorAll('.perf-s').forEach(node => node.remove());
+        const text = (el.textContent || '').trim();
+        if (/E|\d+E\b/i.test(text)) {
+            const validMarks = Array.from(el.querySelectorAll('.perf-w, .perf-l'))
+                .map(node => node.classList.contains('perf-w') ? 'win' : 'loss');
+            if (validMarks.length) {
+                const wins = validMarks.filter(item => item === 'win').length;
+                const losses = validMarks.length - wins;
+                const rate = Math.round((wins / validMarks.length) * 100);
+                el.innerHTML = getPerfHtml(validMarks, 50) +
+                    `<span style="margin-left:8px; color:var(--accent); font-weight:700;">${rate}%</span>` +
+                    `<span style="margin-left:4px; color:var(--muted);">(${wins}W/${losses}L)</span>`;
+                return;
+            }
+            el.innerHTML = '<span style="opacity:0.5">Sin datos</span><span style="margin-left:8px; color:var(--muted);">0%</span>';
+        }
+    });
+}
+
+function enforceCleanUi() {
+    removeObsoleteUiPanels();
+    sanitizeAiHistoryElements();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    enforceCleanUi();
+    const uiObserver = new MutationObserver(enforceCleanUi);
+    uiObserver.observe(document.body, { childList: true, subtree: true });
+});
+
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
@@ -195,37 +245,31 @@ function toggleDirMetricHistory(metricId, btn) {
 }
 
 function getPerfHtml(items, limit = 12) {
-    const recent = items.slice(-limit);
+    const recent = items.filter(isResolvedAiOutcome).slice(-limit);
     if (!recent.length) return '<span style="opacity:0.5">Sin datos</span>';
     return recent.map(r => {
-        if (r === 'skip') return '<span class="perf-s">E</span>';
         return `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`;
     }).join('');
 }
 function getAiModeStats(rows, metricKey) {
     const outcomes = rows
-        .map(item => item[metricKey] || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null))
-        .filter(item => item === 'win' || item === 'loss' || item === 'skip');
-    const resolved = outcomes.filter(item => item === 'win' || item === 'loss');
-    const skips = outcomes.filter(item => item === 'skip').length;
-    const wins = resolved.filter(item => item === 'win').length;
-    const losses = resolved.length - wins;
-    const rate = resolved.length ? Math.round((wins / resolved.length) * 100) : 0;
-    return { wins, losses, skips, total: resolved.length, records: outcomes.length, rate };
+        .map(item => item[metricKey] || (isResolvedAiOutcome(item.result) ? item.result : null))
+        .filter(isResolvedAiOutcome);
+    const wins = outcomes.filter(item => item === 'win').length;
+    const losses = outcomes.length - wins;
+    const rate = outcomes.length ? Math.round((wins / outcomes.length) * 100) : 0;
+    return { wins, losses, total: outcomes.length, records: outcomes.length, rate };
 }
 function getAiPerfHtml(items, stats, limit = 50) {
     const marks = getPerfHtml(items, limit);
     const summary = stats && stats.total > 0
         ? `<span style="margin-left:8px; color:var(--accent); font-weight:700;">${stats.rate}%</span><span style="margin-left:4px; color:var(--muted);">(${stats.wins}W/${stats.losses}L)</span>`
         : '<span style="margin-left:8px; color:var(--muted);">0%</span>';
-    const skipSummary = stats && stats.skips > 0
-        ? `<span style="margin-left:4px; color:var(--muted);">${stats.skips}E</span>`
-        : '';
-    return marks + summary + skipSummary;
+    return marks + summary;
 }
 
 function getPerfText(items, limit = 8) {
-    const recent = items.slice(-limit);
+    const recent = items.filter(isResolvedAiOutcome).slice(-limit);
     if (!recent.length) return 'Sin datos';
     return recent.map(r => r === 'win' ? 'W' : 'L').join('');
 }
@@ -247,10 +291,10 @@ async function syncAiPredictionState() {
         lastAiPredN4 = null;
 
         predictions.forEach(item => {
-            const n9Result = item.n9_result || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null);
-            const n4Result = item.n4_result || ((item.result === 'win' || item.result === 'loss' || item.result === 'skip') ? item.result : null);
-            if (n9Result === 'win' || n9Result === 'loss' || n9Result === 'skip') aiN9History.push(n9Result);
-            if (n4Result === 'win' || n4Result === 'loss' || n4Result === 'skip') aiN4History.push(n4Result);
+            const n9Result = item.n9_result || (isResolvedAiOutcome(item.result) ? item.result : null);
+            const n4Result = item.n4_result || (isResolvedAiOutcome(item.result) ? item.result : null);
+            if (isResolvedAiOutcome(n9Result)) aiN9History.push(n9Result);
+            if (isResolvedAiOutcome(n4Result)) aiN4History.push(n4Result);
         });
         if (aiN9History.length > 50) aiN9History.splice(0, aiN9History.length - 50);
         if (aiN4History.length > 50) aiN4History.splice(0, aiN4History.length - 50);
@@ -280,6 +324,7 @@ async function syncAiPredictionState() {
         }
 
         renderDirMetricHistories();
+        enforceCleanUi();
     } catch (e) {
         console.error('syncAiPredictionState:', e);
     }
@@ -497,9 +542,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-sup', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-sup', 'panel-scatter', 'panel-auto', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-sup': 'panel-sup', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-scatter', 'panel-auto', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
