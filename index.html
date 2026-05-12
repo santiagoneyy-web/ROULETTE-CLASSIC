@@ -24,7 +24,7 @@
     <!-- ═══ THREE-COLUMN BODY ═══ -->
     <div class="three-col-body">
  
-         <!-- ── COL 1: VISUAL & DOCENAS ── -->
+         <!-- ── COL 1: VISUAL ── -->
          <div class="col-visual">
 
             <!-- Visual Panel (Table Image + Mini History) -->
@@ -35,51 +35,6 @@
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
  
-             <!-- Moved Panel Dozens here (under visual) -->
-             <section class="shadow-panel" id="panel-dozens">
-                 <div class="agent-card-header" style="justify-content: space-between;">
-                     <div>
-                         <span class="agent-icon">👑</span>
-                         <span class="agent-card-name">DOCENAS</span>
-                     </div>
-                     <div>
-                         <button class="wipe-btn dz-mini-btn" id="dz-hist-btn" onclick="toggleDzHistory(this)" title="Historial docenas" aria-expanded="false">&#9662;</button>
-                         <button class="wipe-btn dz-mini-btn" id="wipe-btn" onclick="wipeData()" title="Borrar datos">&#9003;</button>
-                     </div>
-                 </div>
-                 
-                 <!-- Hidden History Panel -->
-                 <div id="dz-hist-panel" class="dz-history-dropdown">
-                     <div class="dz-hist-header">Últimas 8 Situaciones</div>
-                     <div id="dz-hist-list" class="dz-hist-list"></div>
-                 </div>
-
-                 <div class="dozens-tracker">
-                     <div class="dozen-ball" id="dz-1">1st<br>1-12</div>
-                     <div class="dozen-ball" id="dz-2">2nd<br>13-24</div>
-                     <div class="dozen-ball" id="dz-3">3rd<br>25-36</div>
-                 </div>
-                 <div class="dozens-transition-row" style="flex-wrap: wrap;">
-                     <span class="transition-label">PREV:</span>
-                     <span class="transition-badge" id="doc-memory-badge">--</span>
-                     <span class="transition-arrow" id="doc-transition-arrow">→</span>
-                     <span class="transition-badge active" id="doc-current-badge">--</span>
-                     <span class="transition-status" id="doc-transition-status" style="margin-left:auto;">ESTABLE</span>
-                     <div id="doc-weak-warning" style="width:100%; text-align:center; margin-top:5px; font-size:10px; color:#ff8c40; font-weight:bold; display:none;"></div>
-                 </div>
-                 <div class="dozens-info" id="doc-info" style="display:none;">Cargando...</div>
-             </section>
-
-             <!-- Panel N9: Zona 26 -->
-             <section class="shadow-panel" id="panel-zone26" style="margin-top: 8px; padding: 8px;">
-                 <div class="agent-card-header" style="background: transparent; border: none; padding: 0; margin-bottom: 5px;">
-                     <span class="agent-icon" style="font-size: 14px;">🎯</span>
-                     <span class="agent-card-name" style="font-size: 11px;">ZONA 26 (N9)</span>
-                     <span class="side-badge" id="z26-rate" style="font-size: 10px;">0%</span>
-                 </div>
-                 <div id="z26-string" class="performance-string" style="background:#111; padding: 5px; min-height: 20px; border-radius: 4px; overflow:hidden;"></div>
-             </section>
-
              <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>

@@ -44,23 +44,14 @@ let lastUnderHitCCW = false;
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ ZONE STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const zoneOverHistory = [];   
 const zoneUnderHistory = [];
-const zone26History = [];
 let lastZoneOverHit   = false;
 let lastZoneUnderHit = false;
-let lastZone26Hit    = false;
 
 // Dynamic Reference Lines
 let currentAvgCW = 9;
 let currentAvgCCW = -9;
 let predictorOffset = 0; // CALIBRACION MANUAL DEL PREDICTOR (+/- casillas)
 let manualAvgOffset = 0; // CALIBRACION MANUAL DEL TRAVEL CHART
-
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DOZENS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DOZENS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-let dzCurrent = [];
-let dzPrevious = [];
-let dzSpinsSinceChange = 0;
-const dzHistoryList = []; // Para almacenar las ÃÂ­ÃÂºltimas 8 situaciones
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ JUGADAS STATE Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 let jugView = { magnitude: 'UNDER', direction: 'CW', confidence: 0 };
@@ -126,10 +117,9 @@ function calcDist(from, to) {
 }
 
 
-// HELPERS: WHEEL NEIGHBORS + DOZEN FILTER
+// HELPERS: WHEEL NEIGHBORS
 const RED_NUMS_SET = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-function numToDozClass(n) { return n===0?'fn-zero':(RED_NUMS_SET.has(n)?'fn-red':'fn-black'); }
-function numToDoz(n) { return n>=1&&n<=12?1:(n>=13&&n<=24?2:(n>=25&&n<=36?3:0)); }
+function numColorClass(n) { return n===0?'fn-zero':(RED_NUMS_SET.has(n)?'fn-red':'fn-black'); }
 function getNeighbors(target, radius) {
     const idx = WHEEL_NUMS.indexOf(target);
     if (idx === -1) return [];
@@ -140,10 +130,8 @@ function getNeighbors(target, radius) {
 function getFilteredNeighborsHTML(target, radius) {
     if (target===undefined||target===null||target==='--') return '';
     const all = getNeighbors(Number(target), radius);
-    const hasFilt = dzCurrent && dzCurrent.length > 0;
     return all
-        .filter(n => !hasFilt || dzCurrent.includes(numToDoz(n)) || n===0)
-        .map(n => `<span class="fn-ball ${numToDozClass(n)}">${n}</span>`)
+        .map(n => `<span class="fn-ball ${numColorClass(n)}">${n}</span>`)
         .join('');
 }
 function renderShadowPanelNeighborsOnly() {
@@ -177,22 +165,11 @@ function wipeData() {
             aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
             aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
             lastAiPredN9 = null; lastAiPredN4 = null;
-            zoneOverHistory.length=0; zoneUnderHistory.length=0; zone26History.length=0;
-            dzCurrent=[]; dzPrevious=[]; dzSpinsSinceChange=0; dzHistoryList.length=0; lastSignal=null;
+            zoneOverHistory.length=0; zoneUnderHistory.length=0;
+            lastSignal=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
         }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
-}
-
-function toggleDzHistory(btn) {
-    const panel = document.getElementById('dz-hist-panel');
-    if (!panel) return;
-    panel.classList.toggle('show');
-    const opened = panel.classList.contains('show');
-    if (btn) {
-        btn.innerHTML = opened ? '&#9652;' : '&#9662;';
-        btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
-    }
 }
 
 function toggleAiHist(metricId, btn) {
@@ -456,211 +433,13 @@ function renderShadowPanel() {
         document.getElementById('sup-b-c-balls').innerHTML = '';
         document.getElementById('sup-b-l-balls').innerHTML = '';
         document.getElementById('sup-b-r-balls').innerHTML = '';
-        // --- ZONE 26 STATS ---
-        const last10z26 = zone26History.slice(-10);
-        const winsZ26 = last10z26.filter(x => x === 'win').length;
-        const rateZ26 = last10z26.length > 0 ? ((winsZ26 / last10z26.length) * 100).toFixed(0) : '0';
-        document.getElementById('z26-rate').innerText = rateZ26 + '%';
-        document.getElementById('z26-string').innerHTML = last10z26.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
-
-        renderDozens();
     } } catch (err) { 
         document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:50px">${err.stack}</div>`;
         console.error('Error in renderShadowPanel:', err); 
     }
 }
 
-function renderDozens() {
-    try {
-        if (history.length < 12) {
-            // Not enough data yet Ã¢ÂÂ refresh neighbor balls with unfiltered view
-            renderShadowPanelNeighborsOnly();
-            return;
-        }
 
-        // Map everything to dozens first.
-        const dozens = history.map(n => {
-            if (n === 0) return 0;
-            if (n >= 1 && n <= 12) return 1;
-            if (n >= 13 && n <= 24) return 2;
-            return 3;
-        });
-
-        let cur = [];
-        let prev = [];
-        let spins = 0;
-
-        // Replay history to build accurate State Machine for Dozens
-        for (let i = 12; i <= dozens.length; i++) {
-            const window = dozens.slice(i - 12, i).filter(d => d !== 0);
-            if (window.length === 0) continue;
-
-            const counts = {1:0, 2:0, 3:0};
-            window.forEach(d => counts[d]++);
-            
-            // STABLE SORT: Si hay empate en conteo, priorizar la docena que YA es dominante.
-            // Esto evita que salte a otra docena solo por un reordenamiento interno de Javascript.
-            const sorted = [1,2,3].sort((a,b) => {
-                if (counts[b] !== counts[a]) return counts[b] - counts[a];
-                const aIsDom = cur.includes(a);
-                const bIsDom = cur.includes(b);
-                if (aIsDom && !bIsDom) return -1;
-                if (!aIsDom && bIsDom) return 1;
-                // Si ninguna es dominante (o ambas lo son), priorizamos la que haya salido mÃÂ¡s recientemente
-                const lastIdxA = window.lastIndexOf(a);
-                const lastIdxB = window.lastIndexOf(b);
-                return lastIdxB - lastIdxA;
-            });
-            
-            let top2 = [sorted[0], sorted[1]].sort();
-
-            if (cur.length === 0) {
-                cur = top2;
-                spins = 0;
-            } else {
-                // STICKY LOGIC: Only switch if the "outsider" has a CLEAR lead (+2)
-                const outsider = [1,2,3].find(d => !cur.includes(d));
-                const dom1 = cur[0]; 
-                const dom2 = cur[1];
-                
-                const shouldSwitch = (counts[outsider] > counts[dom1] + 1) || (counts[outsider] > counts[dom2] + 1);
-
-                if (shouldSwitch && JSON.stringify(top2) !== JSON.stringify(cur)) {
-                    // Guardar en historial si hubo estabilidad previa
-                    if (spins > 5 && cur.length > 0) {
-                        dzHistoryList.unshift({ dozens: [...cur], duration: spins });
-                        if (dzHistoryList.length > 8) dzHistoryList.length = 8;
-                    }
-                    // Start TRANSITION
-                    prev = [...cur];
-                    cur = top2;
-                    spins = 0;
-                } else {
-                    spins++;
-                }
-            }
-        }
-        
-        // Sync to global vars
-        dzCurrent = cur;
-        dzPrevious = prev;
-        dzSpinsSinceChange = spins;
-
-        // UI: Dozen balls highlight logic (REFINED)
-        [1,2,3].forEach(dz => {
-            const el = document.getElementById(`dz-${dz}`);
-            if(!el) return;
-            
-            el.classList.remove('dominant', 'dominant-transition');
-            
-            if (spins > 10) {
-                // STABLE MODE: Highlight the current (new) dominants
-                if (cur.includes(dz)) el.classList.add('dominant');
-            } else {
-                // TRANSITION/CONSOLIDATION MODE:
-                // Special case: blink the PREVIOUS dominants until stability is reached
-                if (prev.length > 0) {
-                   if (prev.includes(dz)) el.classList.add('dominant-transition');
-                } else {
-                   // Initial state (no previous) -> just highlight current
-                   if (cur.includes(dz)) el.classList.add('dominant');
-                }
-            }
-        });
-
-        // UI: Transition row
-        const prevBadge    = document.getElementById('doc-memory-badge');
-        const currBadge    = document.getElementById('doc-current-badge');
-        const arrow        = document.getElementById('doc-transition-arrow');
-        const statusEl     = document.getElementById('doc-transition-status');
-        const infoEl       = document.getElementById('doc-info');
-
-        const fmtDoz = arr => arr.length > 0 ? arr.map(d => d + 'ÃÂ°').join(' & ') : '--';
-
-        if (prevBadge) prevBadge.innerText = fmtDoz(prev);
-        if (currBadge) currBadge.innerText = fmtDoz(cur);
-
-        // Transition status indicator
-        if (statusEl) {
-            statusEl.className = 'transition-status'; // reset
-            if (spins <= 5 && prev.length > 0) {
-                statusEl.innerText = `Ã¢ÂÂ Ã¯Â¸Â TRANSICIÃÂN (+${spins}t)`;
-                statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'Ã¢ÂÂ';
-            } else if (spins <= 10) {
-                statusEl.innerText = `CONSOLIDANDO (+${spins}t)`;
-                statusEl.classList.add('warning');
-                if (arrow) arrow.innerText = 'Ã¢ÂÂ';
-            } else {
-                statusEl.innerText = `Ã¢ÂÂ ESTABLE (${spins}t)`;
-                statusEl.classList.add('stable');
-                if (arrow) arrow.innerText = '\u{2022}';
-            }
-        }
-
-        if (infoEl) {
-            infoEl.innerText = `Ventana 18: Dom.ÃÂ° ${fmtDoz(cur)}`;
-        }
-
-        // DetecciÃÂ³n de debilitamiento: Revisamos las ÃÂºltimas 18 tiradas.
-        let weakWarning = '';
-        if (spins > 8 && cur.length === 2 && history.length >= 18) {
-             const recentDozens = dozens.slice(-18).filter(d => d !== 0);
-             let iso1 = 0, iso2 = 0;
-             let c1 = 0, c2 = 0;
-             for (let i = 0; i < recentDozens.length; i++) {
-                 if (recentDozens[i] === cur[0]) {
-                     c1++;
-                     if (recentDozens[i-1] !== cur[0] && recentDozens[i+1] !== cur[0]) iso1++;
-                 }
-                 if (recentDozens[i] === cur[1]) {
-                     c2++;
-                     if (recentDozens[i-1] !== cur[1] && recentDozens[i+1] !== cur[1]) iso2++;
-                 }
-             }
-             // DÃÂ©bil si: aparece al menos 2 veces, y casi todas o todas sus apariciones estÃÂ¡n aisladas (separadas)
-             const weak1 = (iso1 >= 2 && c1 > 0 && iso1 >= c1 - 1) || (c1 <= 2 && c1 > 0);
-             const weak2 = (iso2 >= 2 && c2 > 0 && iso2 >= c2 - 1) || (c2 <= 2 && c2 > 0);
-             
-             if (weak1 && weak2) weakWarning = 'Ã¢ÂÂ Ã¯Â¸Â AMBAS DOCENAS DEBILITADAS';
-             else if (weak1) weakWarning = `Ã¢ÂÂ ${cur[0]}ÃÂª DOCENA DEBILITADA (AISLADA)`;
-             else if (weak2) weakWarning = `Ã¢ÂÂ ${cur[1]}ÃÂª DOCENA DEBILITADA (AISLADA)`;
-        }
-        
-        const weakEl = document.getElementById('doc-weak-warning');
-        if (weakEl) {
-             if (weakWarning) {
-                 weakEl.innerText = weakWarning;
-                 weakEl.style.display = 'block';
-             } else {
-                 weakEl.style.display = 'none';
-             }
-        }
-        
-        // Render history list
-        if (histEl) {
-             if (dzHistoryList.length === 0) {
-                 histEl.innerHTML = '<div class="dz-hist-item" style="opacity:0.5;justify-content:center">Sin datos aÃÂºn</div>';
-             } else {
-                 histEl.innerHTML = dzHistoryList.map(h => {
-                     const chips = h.dozens.map(d => `<span style="background:var(--accent); color:#111; padding:0 4px; border-radius:2px; font-weight:bold; margin:0 2px;">${d}ÃÂ°</span>`).join('');
-                     return `
-                        <div class="dz-hist-item" style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center;">${chips}</div>
-                            <span class="dur" style="font-size:9px; color:var(--muted)">duro ${Number(h.duration || 0)}t</span>
-                        </div>
-                     `;
-                 }).join('');
-             }
-        }
-
-        // Refresh neighbor balls now that dzCurrent is updated
-        renderShadowPanelNeighborsOnly();
-
-    } catch (err) { 
-        console.error('Error in renderDozens:', err); 
-    }
-}
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ WHEEL DRAW Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function drawWheel(highlightNum = null) {
@@ -788,11 +567,6 @@ function submitNumber(val, silent = false, batch = false) {
             }
         }
 
-        // Evaluate Zone 26 (Dist <= 9 to 26)
-        const d26 = Math.abs(calcDist(n, 26));
-        lastZone26Hit = (d26 <= 9);
-        zone26History.push(lastZone26Hit ? 'win' : 'loss');
-
         // Evaluate JUGADAS prediction Ã¢ÂÂ only when ACTIVE (not charging)
         if (history.length >= 1 && jugView.isCharging === false) {
             const jump = calcDist(history[history.length - 1], n);
@@ -849,12 +623,7 @@ function submitNumber(val, silent = false, batch = false) {
 
                 // Master Sniper AI calculation (CONFLUENCE)
                 if (typeof analyzeMasterConfluence === 'function') {
-                    // Extract sector stats for 26
-                    const last20 = zone26History.slice(-20);
-                    const z26Wins = last20.filter(x => x === 'win').length;
-                    const z26Rate = (z26Wins / (last20.length || 1)) * 100;
-                    
-                    masterView = analyzeMasterConfluence(history, analystView, jugView, { z26Rate });
+                    masterView = analyzeMasterConfluence(history, analystView, jugView, {});
 
                     // V5 Neural Overlay: If Agent 5 has Expert knowledge, it overrides
                     if (jugView.agent5_top_new && jugView.agent5_top_new.dnaMatch) {
@@ -1305,7 +1074,7 @@ function renderTravelChart() {
         var _lvl = (typeof getStabilityLevel === "function") ? getStabilityLevel(_pat, _evts) : "red";
         var _bgMap = {
             green:  '#0C3824', // Puro verde atenuado (sin mezcla azul)
-            yellow: '#3C3010', // Puro oro/amarillo atenuado (como DOCENAS)
+            yellow: '#3C3010',
             red:    '#3C1018'  // Puro rojo atenuado
         };
         ctx.fillStyle = _bgMap[_lvl] || _bgMap.red;
@@ -1647,12 +1416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 lastAiPredN4 = null;
                 lastSignal = null;
                 renderWheelAndHistory();
-                
-                const infoEl = document.getElementById('doc-info');
-                if (infoEl) infoEl.innerText = 'Sincronizando...';
-                
                 await syncData();
-                if (infoEl) infoEl.innerText = 'Listo';
                 connectSSE(currentTableId);
             };
 

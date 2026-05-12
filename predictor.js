@@ -532,11 +532,6 @@ function analyzeMasterConfluence(history, travelView, zoneView, sectorStats = {}
     if (zoneView.direction === 'CW') scoreCW += 1;
     if (zoneView.direction === 'CCW') scoreCCW += 1;
 
-    // Factor D: Sector Bias (26/N9 side)
-    const z26Rate = sectorStats.z26Rate || 50;
-    if (z26Rate > 65) { scoreCW += 1.5; reasons.push('ZONA 26 CALIENTE'); }
-    if (z26Rate < 35) { scoreCCW += 1.5; reasons.push('ZONA 26 FRÍA'); }
-
     // Result compilation
     const diff = Math.abs(scoreCW - scoreCCW);
     const confidence = Math.min(98, Math.round((diff / 7.5) * 100)); // Adjusted denominator

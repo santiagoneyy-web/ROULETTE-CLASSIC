@@ -181,9 +181,6 @@ html, body {
     width: 100% !important;
     max-width: 100% !important;
   }
-  #panel-dozens .agent-card-header {
-    padding: 4px 8px;
-  }
   .travel-section { border-radius: 8px; }
 }
 
@@ -720,83 +717,6 @@ html, body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-/* ══════════ DOZENS TRACKER ══════════ */
-.dozens-tracker {
-  display: flex;
-  justify-content: space-around;
-  padding: 6px 0 4px;
-}
-.dozen-ball {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #111;
-    border: 2px solid #333;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    font-weight: 700;
-    color: #555;
-    text-align: center;
-    line-height: 1.1;
-    transition: all 0.3s;
-}
-.dozen-ball.dominant {
-    background: #c090ff;
-    color: #000;
-    border-color: #d1abff;
-    box-shadow: 0 0 10px rgba(192, 144, 255, 0.4);
-    transform: scale(1.1);
-}
-.dozen-ball.dominant-transition {
-    border-color: #f5c842;
-    color: #f5c842;
-    animation: pulseBorder 1s infinite alternate;
-}
-@keyframes pulseBorder {
-    0% { box-shadow: 0 0 5px rgba(245, 200, 66, 0.2); }
-    100% { box-shadow: 0 0 15px rgba(245, 200, 66, 0.8); }
-}
-.dozens-transition-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-}
-
-/* ── DZ HISTORY DROPDOWN ── */
-.dz-history-dropdown {
-    display: none; /* hidden by default */
-    background: rgba(0,0,0,0.8);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
-    padding: 8px;
-    margin-bottom: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-}
-.dz-history-dropdown.show {
-    display: block;
-}
-.dz-hist-header {
-    text-align: center;
-    color: var(--text2);
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-.dz-hist-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 3px 0;
-    color: var(--text1);
-}
-.dz-hist-item .dur {
-    color: var(--gold);
-}
 .dir-hist-item {
   display: grid;
   grid-template-columns: 78px 38px 1fr;
@@ -834,67 +754,6 @@ html, body {
 .dir-metric-history.show {
   display: block;
 }
-.dozens-info {
-  text-align: center;
-  font-size: 11px;
-  color: var(--text2);
-  padding: 4px 14px 8px;
-}
-
-/* Dozen Transition Row */
-.dozens-transition-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 4px 14px 6px;
-  border-top: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-.transition-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.transition-badge {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.transition-badge.active {
-  color: var(--accent);
-  border-color: rgba(0,229,200,0.35);
-  background: rgba(0,229,200,0.08);
-}
-.transition-arrow {
-  font-size: 12px;
-  color: var(--gold);
-}
-.transition-status {
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.transition-status.warning {
-  background: rgba(255, 193, 7, 0.15);
-  color: #ffc107;
-}
-.transition-status.stable {
-  background: rgba(40, 167, 69, 0.15);
-  color: #28a745;
-}
-
-/* Wipe button in dozens header */
 .wipe-btn {
   background: rgba(127,29,29,0.5);
   color: #fca5a5;
@@ -907,15 +766,6 @@ html, body {
   font-weight: 700;
   transition: all 0.18s;
   margin-left: 4px;
-}
-.dz-mini-btn {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
 }
 .wipe-btn:hover {
   background: rgba(185,28,28,0.5);
@@ -954,8 +804,6 @@ html, body {
 /* Shrink p-val and p-val-main to make room for balls */
 .p-val      { font-size: 12px !important; }
 .p-val-main { font-size: 18px !important; }
-
-.doc-memory { background: rgba(255,255,255,0.1); color: #aaa; font-size: 10px; }
 
 /* ─── TRAVEL BADGES ─── */
 .compact-btn { background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--accent); padding: 2px 6px; font-size: 9px; cursor: pointer; border-radius: 3px; }
