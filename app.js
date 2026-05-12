@@ -239,9 +239,8 @@ async function syncAiPredictionState() {
 
         aiN9History.length = 0;
         aiN4History.length = 0;
-        const recent50 = predictions.slice(-50);
-        aiN9Stats = getAiModeStats(recent50, 'n9_result');
-        aiN4Stats = getAiModeStats(recent50, 'n4_result');
+        aiN9Stats = getAiModeStats(predictions, 'n9_result');
+        aiN4Stats = getAiModeStats(predictions, 'n4_result');
         lastAiPredN9 = null;
         lastAiPredN4 = null;
 
