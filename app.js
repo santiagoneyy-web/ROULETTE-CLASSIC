@@ -250,8 +250,8 @@ async function syncAiPredictionState() {
             if (isResolvedAiOutcome(n9Result)) aiN9History.push(n9Result);
             if (isResolvedAiOutcome(n4Result)) aiN4History.push(n4Result);
         });
-        if (aiN9History.length > 50) aiN9History.splice(0, aiN9History.length - 50);
-        if (aiN4History.length > 50) aiN4History.splice(0, aiN4History.length - 50);
+        if (aiN9History.length > 25) aiN9History.splice(0, aiN9History.length - 25);
+        if (aiN4History.length > 25) aiN4History.splice(0, aiN4History.length - 25);
 
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
@@ -292,9 +292,9 @@ function renderDirMetricHistories() {
     ];
 
     const aiN9List = document.getElementById('ai-hist-list-n9');
-    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 50);
+    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 25);
     const aiN4List = document.getElementById('ai-hist-list-n4');
-    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 50);
+    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 25);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
