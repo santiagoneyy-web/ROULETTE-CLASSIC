@@ -1043,10 +1043,12 @@ function buildAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
 function normalizeAutoAiResponse(parsed, context, fallback) {
     const cw = context.routes.cw;
     const ccw = context.routes.ccw;
-    const allowedN9 = [String(cw.n9), String(ccw.n9)];
+    const small = context.routes.small || {};
+    const big = context.routes.big || {};
+    const allowedN9 = [String(cw.n9), String(ccw.n9), String(small.n9), String(big.n9)].filter(v => v && v !== 'undefined' && v !== 'null');
     const allowedN4 = [String(cw.n4Small), String(cw.n4Big), String(ccw.n4Small), String(ccw.n4Big)];
 
-    let route = String(parsed.route || parsed.direccion || '').toUpperCase();
+    let route = normalizeAiRoute(parsed.route || parsed.direccion || '', cleanAutoNumber(parsed.n9), context);
     let zone = String(parsed.zone || parsed.zona || '').toUpperCase();
     let n9 = cleanAutoNumber(parsed.n9);
     let n4 = cleanAutoNumber(parsed.n4);
@@ -1055,6 +1057,8 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     if (!allowedN9.includes(n9)) {
         if (route === 'CW') n9 = String(cw.n9);
         else if (route === 'CCW') n9 = String(ccw.n9);
+        else if (route === 'SMALL') n9 = String(small.n9);
+        else if (route === 'BIG') n9 = String(big.n9);
         else n9 = fallback.n9;
     }
 
@@ -1063,24 +1067,29 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         else if (route === 'CW' && zone === 'BIG') n4 = String(cw.n4Big);
         else if (route === 'CCW' && zone === 'SMALL') n4 = String(ccw.n4Small);
         else if (route === 'CCW' && zone === 'BIG') n4 = String(ccw.n4Big);
+        else if (route === 'SMALL' || route === 'BIG') n4 = 'ESPERAR';
         else n4 = fallback.n4;
     }
 
     if (!allowedN9.includes(n9)) n9 = fallback.n9;
-    if (!allowedN4.includes(n4)) n4 = fallback.n4;
+    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') n4 = fallback.n4;
 
     if (!route || route === 'ESPERAR') {
         if (n9 === String(cw.n9)) route = 'CW';
         else if (n9 === String(ccw.n9)) route = 'CCW';
+        else if (n9 === String(small.n9)) route = 'SMALL';
+        else if (n9 === String(big.n9)) route = 'BIG';
     }
     if (!zone || zone === 'ESPERAR') {
         if (route === 'CW' && n4 === String(cw.n4Small)) zone = 'SMALL';
         else if (route === 'CW' && n4 === String(cw.n4Big)) zone = 'BIG';
         else if (route === 'CCW' && n4 === String(ccw.n4Small)) zone = 'SMALL';
         else if (route === 'CCW' && n4 === String(ccw.n4Big)) zone = 'BIG';
+        else if (route === 'SMALL') zone = 'SMALL';
+        else if (route === 'BIG') zone = 'BIG';
     }
 
-    if (n9 === 'ESPERAR' || n4 === 'ESPERAR') {
+    if (n9 === 'ESPERAR') {
         return {
             reply: formatAutoReply('ESPERAR', 'ESPERAR'),
             route: 'ESPERAR',
@@ -1094,10 +1103,10 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     }
 
     return {
-        reply: formatAutoReply(n9, n4),
+        reply: formatAutoReply(n9, n4 || 'ESPERAR'),
         route,
         zone,
-        analysis: buildHumanAutoAiAnalysis(context, { route, zone, n9, n4 }, rawAnalysis || fallback.analysis)
+        analysis: buildHumanAutoAiAnalysis(context, { route, zone, n9, n4: n4 || 'ESPERAR' }, rawAnalysis || fallback.analysis)
     };
 }
 
