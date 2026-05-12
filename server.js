@@ -1161,6 +1161,9 @@ app.post('/api/ai/groq', async (req, res) => {
         });
 
         let result = llm.content;
+        // Extract first JSON object from response (small LLMs often wrap JSON in text)
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) result = jsonMatch[0];
         try {
             const parsed = JSON.parse(result);
             if (autoAiContext) {
@@ -1191,6 +1194,8 @@ app.post('/api/ai/groq', async (req, res) => {
             }
 
             res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
+        } catch(e) {
+            console.warn('[AI] JSON parse failed after regex extraction. Raw:', String(result || '').slice(0, 120));
         }
     } catch (error) {
         const autoAiContext = req.body.autoAiContext || null;
