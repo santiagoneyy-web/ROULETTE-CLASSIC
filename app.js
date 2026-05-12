@@ -17,55 +17,9 @@ let lastAiPredN9 = null;
 let lastAiPredN4 = null;
 let lastAiPredMode = 'SAFE';
 
-const OBSOLETE_PANEL_TEXTS = ['DOCENAS', 'ZONA 26'];
-
 function isResolvedAiOutcome(value) {
     return value === 'win' || value === 'loss';
 }
-
-function removeObsoleteUiPanels() {
-    const candidates = document.querySelectorAll('.shadow-panel, .agent-card, .dual-block, section, [class*="panel"], [class*="card"]');
-    candidates.forEach(el => {
-        const text = (el.textContent || '').toUpperCase();
-        if (OBSOLETE_PANEL_TEXTS.some(label => text.includes(label))) {
-            el.remove();
-        }
-    });
-}
-
-function sanitizeAiHistoryElements() {
-    ['ai-hist-list-n9', 'ai-hist-list-n4'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.querySelectorAll('.perf-s').forEach(node => node.remove());
-        const text = (el.textContent || '').trim();
-        if (/E|\d+E\b/i.test(text)) {
-            const validMarks = Array.from(el.querySelectorAll('.perf-w, .perf-l'))
-                .map(node => node.classList.contains('perf-w') ? 'win' : 'loss');
-            if (validMarks.length) {
-                const wins = validMarks.filter(item => item === 'win').length;
-                const losses = validMarks.length - wins;
-                const rate = Math.round((wins / validMarks.length) * 100);
-                el.innerHTML = getPerfHtml(validMarks, 50) +
-                    `<span style="margin-left:8px; color:var(--accent); font-weight:700;">${rate}%</span>` +
-                    `<span style="margin-left:4px; color:var(--muted);">(${wins}W/${losses}L)</span>`;
-                return;
-            }
-            el.innerHTML = '<span style="opacity:0.5">Sin datos</span><span style="margin-left:8px; color:var(--muted);">0%</span>';
-        }
-    });
-}
-
-function enforceCleanUi() {
-    removeObsoleteUiPanels();
-    sanitizeAiHistoryElements();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    enforceCleanUi();
-    const uiObserver = new MutationObserver(enforceCleanUi);
-    uiObserver.observe(document.body, { childList: true, subtree: true });
-});
 
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
@@ -324,7 +278,6 @@ async function syncAiPredictionState() {
         }
 
         renderDirMetricHistories();
-        enforceCleanUi();
     } catch (e) {
         console.error('syncAiPredictionState:', e);
     }
@@ -430,55 +383,7 @@ function renderShadowPanel() {
         document.getElementById('dir-ccw-l-balls').innerHTML = '';
         document.getElementById('dir-ccw-r-balls').innerHTML = '';
     }
-
-    // 2. SUP (ZONE SUPPORT)
-    if (history.length >= 2) {
-        const lastNum  = history[history.length - 1];
-        const prevNum  = history[history.length - 2];
-        const dVal = calcDist(prevNum, lastNum);
-        const lastAbsDist = Math.abs(dVal);
-        const idx = WHEEL_NUMS.indexOf(lastNum);
-
-        // Classification Logic V5 (Dynamic OVER/UNDER - Vertical Position)
-        // Over is ALWAYS physically above the reference line on the chart.
-        let phaseLabel = "UNDER";
-        if (dVal >= 0) phaseLabel = (dVal >= currentAvgCW) ? "OVER" : "UNDER";
-        else          phaseLabel = (dVal >= currentAvgCCW) ? "OVER" : "UNDER";
-
-        // --- UNDER BLOCK (Dynamic Logic) ---
-        const underTarget = lastSignal ? lastSignal.targetUnderCW : WHEEL_NUMS[(idx + 4 + 37) % 37];
-        document.getElementById('sup-s-c-val').innerText = underTarget;
-        document.getElementById('sup-s-l-hit').innerText = lastZoneUnderHit ? 'Ã¢ÂÂ HIT' : '';
-        document.getElementById('sup-s-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
-
-        const last10s = zoneUnderHistory.slice(-10);
-        const winsS = last10s.filter(x => x === 'win').length;
-        document.getElementById('sup-s-w').innerText = winsS;
-        document.getElementById('sup-s-l').innerText = last10s.length - winsS;
-        document.getElementById('sup-s-rate').innerText = last10s.length > 0 ? ((winsS / last10s.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-s-perf').innerHTML = last10s.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
-
-        // --- OVER BLOCK (Dynamic Logic) ---
-        const overTarget = lastSignal ? lastSignal.targetOverCW : WHEEL_NUMS[(idx + 14 + 37) % 37];
-        document.getElementById('sup-b-c-val').innerText = overTarget;
-        document.getElementById('sup-b-l-hit').innerText = lastZoneOverHit ? 'Ã¢ÂÂ HIT' : '';
-        document.getElementById('sup-b-trend').innerText = `LAST: ${phaseLabel} (${dVal}p)`;
-
-        const last10b = zoneOverHistory.slice(-10);
-        const winsB = last10b.filter(x => x === 'win').length;
-        document.getElementById('sup-b-w').innerText = winsB;
-        document.getElementById('sup-b-l').innerText = last10b.length - winsB;
-        document.getElementById('sup-b-rate').innerText = last10b.length > 0 ? ((winsB / last10b.length) * 100).toFixed(1) + '%' : '0.0%';
-        document.getElementById('sup-b-perf').innerHTML = last10b.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
-
-        // --- NEIGHBOR BALLS: DISABLED (Per user request) ---
-        document.getElementById('sup-s-c-balls').innerHTML = '';
-        document.getElementById('sup-s-l-balls').innerHTML = '';
-        document.getElementById('sup-s-r-balls').innerHTML = '';
-        document.getElementById('sup-b-c-balls').innerHTML = '';
-        document.getElementById('sup-b-l-balls').innerHTML = '';
-        document.getElementById('sup-b-r-balls').innerHTML = '';
-    } } catch (err) { 
+    } catch (err) {
         document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:50px">${err.stack}</div>`;
         console.error('Error in renderShadowPanel:', err); 
     }

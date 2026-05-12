@@ -38,7 +38,6 @@
              <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                     <button class="tab-btn" id="tab-btn-sup" style="display:none !important;" hidden>ZONA</button>
                      <button class="tab-btn" id="tab-btn-scatter">📊</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
                      <button class="tab-btn" id="tab-btn-chat">CHAT</button>
@@ -121,62 +120,6 @@
                 </div>
             </section>
 
-            <!-- 2. SUP (ZONE SUPPORT) -->
-            <section class="shadow-panel" id="panel-sup" style="display: none !important;" hidden>
-                <!-- SMALL BLOCK -->
-                <div class="dual-block">
-                    <div class="agent-strategy-label" id="sup-s-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DIRECCION</span>
-                        <span class="side-badge" style="padding:1px 6px;">UNDER 🔻</span>
-                    </div>
-                    <div class="prediction-grid-3">
-                        <div class="p-box pb-left">
-                            <span class="p-label" id="sup-s-l-lbl"></span><span class="p-val" id="sup-s-l-val">--</span><span class="p-sub" id="sup-s-l-sub"></span><span class="hit-text" id="sup-s-l-hit"></span>
-                            <div class="filtered-neighbors" id="sup-s-l-balls"></div>
-                        </div>
-                        <div class="p-box pb-center">
-                            <div class="p-val-main" id="sup-s-c-val">--</div><div class="p-sub-main" id="sup-s-c-sub">DIR</div><div class="p-tendency" id="sup-s-trend">LAST: --</div>
-                            <div class="filtered-neighbors" id="sup-s-c-balls"></div>
-                        </div>
-                        <div class="p-box pb-right">
-                            <span class="p-label" id="sup-s-r-lbl"></span><span class="p-val" id="sup-s-r-val">--</span><span class="p-sub" id="sup-s-r-sub"></span><span class="hit-text" id="sup-s-r-hit"></span>
-                            <div class="filtered-neighbors" id="sup-s-r-balls"></div>
-                        </div>
-                    </div>
-                    <div class="agent-footer-stats">
-                        <span class="st wl-hidden">W:<span id="sup-s-w">0</span> L:<span id="sup-s-l">0</span></span>
-                        <span class="status-msg compact-rate"><span id="sup-s-rate">0.0%</span></span>
-                        <span class="compact-perf" id="sup-s-perf">--</span>
-                    </div>
-                </div>
-
-                <!-- BIG BLOCK -->
-                <div class="dual-block" style="border-top: 2px solid rgba(0,229,200,0.15);">
-                    <div class="agent-strategy-label" id="sup-b-strat" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>DIRECCION</span>
-                        <span class="side-badge" style="padding:1px 6px;">OVER 🔺</span>
-                    </div>
-                    <div class="prediction-grid-3">
-                        <div class="p-box pb-left">
-                            <span class="p-label" id="sup-b-l-lbl"></span><span class="p-val" id="sup-b-l-val">--</span><span class="p-sub" id="sup-b-l-sub"></span><span class="hit-text" id="sup-b-l-hit"></span>
-                            <div class="filtered-neighbors" id="sup-b-l-balls"></div>
-                        </div>
-                        <div class="p-box pb-center">
-                            <div class="p-val-main" id="sup-b-c-val">--</div><div class="p-sub-main" id="sup-b-c-sub">DIR</div><div class="p-tendency" id="sup-b-trend">LAST: --</div>
-                            <div class="filtered-neighbors" id="sup-b-c-balls"></div>
-                        </div>
-                        <div class="p-box pb-right">
-                            <span class="p-label" id="sup-b-r-lbl"></span><span class="p-val" id="sup-b-r-val">--</span><span class="p-sub" id="sup-b-r-sub"></span><span class="hit-text" id="sup-b-r-hit"></span>
-                            <div class="filtered-neighbors" id="sup-b-r-balls"></div>
-                        </div>
-                    </div>
-                    <div class="agent-footer-stats">
-                        <span class="st wl-hidden">W:<span id="sup-b-w">0</span> L:<span id="sup-b-l">0</span></span>
-                        <span class="status-msg compact-rate"><span id="sup-b-rate">0.0%</span></span>
-                        <span class="compact-perf" id="sup-b-perf">--</span>
-                    </div>
-                </div>
-            </section>
 
             <!-- 3. SCATTER CHART (Direction Dispersion) -->
             <section class="shadow-panel" id="panel-scatter" style="display: none;">
@@ -309,7 +252,7 @@
 
 <script src="predictor.js?v=999"></script>
 <script src="ai_chat.js?v=5"></script>
-<script src="app.js?v=1036"></script>
+<script src="app.js?v=1037"></script>
 </body>
 </html>
 
