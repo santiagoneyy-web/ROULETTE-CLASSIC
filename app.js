@@ -605,7 +605,12 @@ function submitNumber(val, silent = false, batch = false) {
             renderAnalystUI();
             renderMasterUI();
             if (history.length > 0) fetchPatternMemory(history);
-            if (document.getElementById('panel-auto') && document.getElementById('panel-auto').style.display !== 'none') { setTimeout(requestAutoAI, 800); }
+            
+            // 🔥 Sync AI history to update W/L counters automatically
+            if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
+            
+            // Trigger new AI prediction (always, even in background)
+            setTimeout(requestAutoAI, 800);
         }
     }
 }
