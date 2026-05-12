@@ -1183,6 +1183,7 @@ app.post('/api/ai/groq', async (req, res) => {
             let n4 = String(parsed.n4 || '').replace(/[^0-9]/g, '');
             res.json({ reply: formatAutoReply(n9 || 'ESPERAR', n4 || 'ESPERAR'), provider: llm.provider });
         } catch(e) {
+            console.warn('[AI] JSON parse failed. Raw:', String(result || '').slice(0, 120));
             if (autoAiContext) {
                 const unavailableDecision = {
                     ...buildAiUnavailableDecision('unavailable'),
@@ -1192,10 +1193,7 @@ app.post('/api/ai/groq', async (req, res) => {
                 persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
                 return res.json(unavailableDecision);
             }
-
             res.json({ reply: 'N9: ESPERAR | N4: ESPERAR' });
-        } catch(e) {
-            console.warn('[AI] JSON parse failed after regex extraction. Raw:', String(result || '').slice(0, 120));
         }
     } catch (error) {
         const autoAiContext = req.body.autoAiContext || null;
