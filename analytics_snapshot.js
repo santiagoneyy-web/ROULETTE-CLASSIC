@@ -41,6 +41,14 @@ function getRoutes(lastNumber) {
             n4Small: wheelNumberAt(lastNumber, -4),
             n4Big: wheelNumberAt(lastNumber, -14),
             hitRate: 0
+        },
+        small: {
+            n9: wheelNumberAt(lastNumber, 0),
+            hitRate: 0
+        },
+        big: {
+            n9: wheelNumberAt(lastNumber, 19),
+            hitRate: 0
         }
     };
 }
@@ -138,6 +146,12 @@ function getRouteTargets(previousNumber) {
             n9: wheelNumberAt(previousNumber, -9),
             n4Small: wheelNumberAt(previousNumber, -4),
             n4Big: wheelNumberAt(previousNumber, -14)
+        },
+        small: {
+            n9: wheelNumberAt(previousNumber, 0)
+        },
+        big: {
+            n9: wheelNumberAt(previousNumber, 19)
         }
     };
 }
@@ -202,7 +216,9 @@ function buildMetricSnapshot({ tableId, tableCode = 'AUTO', spinId = null, histo
             ccwN4: [
                 buildPerformance(cleanHistory, 'ccw', 'n4Small'),
                 buildPerformance(cleanHistory, 'ccw', 'n4Big')
-            ].join('/')
+            ].join('/'),
+            sN9: buildPerformance(cleanHistory, 'small', 'n9'),
+            bN9: buildPerformance(cleanHistory, 'big', 'n9')
         },
         routes,
         context: {

@@ -802,10 +802,14 @@ function normalizeAiRoute(value, n9, context) {
     const raw = String(value || '').trim().toUpperCase();
     if (raw === 'CW' || raw === 'DER' || raw === 'DERECHA' || raw === 'RIGHT') return 'CW';
     if (raw === 'CCW' || raw === 'IZQ' || raw === 'IZQUIERDA' || raw === 'LEFT') return 'CCW';
+    if (raw === 'SMALL' || raw === 'S' || raw === 'MISMA') return 'SMALL';
+    if (raw === 'BIG' || raw === 'B' || raw === 'OPUESTA') return 'BIG';
     const routes = context?.routes || {};
     if (n9 !== 'ESPERAR') {
         if (String(routes.cw?.n9) === String(n9)) return 'CW';
         if (String(routes.ccw?.n9) === String(n9)) return 'CCW';
+        if (String(routes.small?.n9) === String(n9)) return 'SMALL';
+        if (String(routes.big?.n9) === String(n9)) return 'BIG';
     }
     return 'ESPERAR';
 }
@@ -1007,16 +1011,17 @@ function buildAutoAiPromptLines(context, strategyDigest, learningDigest = '', mo
         `ESTABILIDAD=${String(context.stabilityLevel || 'red').toUpperCase()} PATRON=${context.patternLabel || 'Sin patron'}`,
         `DOM8 CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
         `MOM15 CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
-        `WL CW_N9=${perf8.cwN9 || '-'} CW_N4=${perf8.cwN4 || '-'} CCW_N9=${perf8.ccwN9 || '-'} CCW_N4=${perf8.ccwN4 || '-'}`,
+        `WL CW_N9=${perf8.cwN9 || '-'} CW_N4=${perf8.cwN4 || '-'} CCW_N9=${perf8.ccwN9 || '-'} CCW_N4=${perf8.ccwN4 || '-'} S_N9=${perf8.sN9 || '-'} B_N9=${perf8.bN9 || '-'}`,
         `DIR15=${context.sequence15?.dir || '-'} ZON15=${context.sequence15?.zone || '-'}`,
-        `CW n9=${cw.n9} n4S=${cw.n4Small} n4B=${cw.n4Big} hit=${cw.hitRate}%`,
-        `CCW n9=${ccw.n9} n4S=${ccw.n4Small} n4B=${ccw.n4Big} hit=${ccw.hitRate}%`,
+        `CW n9=${context.routes.cw?.n9} n4S=${context.routes.cw?.n4Small} n4B=${context.routes.cw?.n4Big}`,
+        `CCW n9=${context.routes.ccw?.n9} n4S=${context.routes.ccw?.n4Small} n4B=${context.routes.ccw?.n4Big}`,
+        `S_N9=${context.routes.small?.n9} B_N9=${context.routes.big?.n9}`,
         `NUMS=${(context.recentNumbers || []).slice(-12).join(',') || '-'}`,
         `MEM=${compactDigest(learningDigest || 'sin memoria', 280)}`,
         `ESTR=${compactDigest(strategyDigest || 'sin estrategias', 260)}`,
         'Reglas: SMALL=1-9, BIG=10-18. No inventes numeros. Patrones W/L: racha, alternancia, ola, bambu, pico, trampa, bloque, turbulencia, farol, mixto.',
         safeMode ? 'Bloquea por contradiccion, fatiga, mezcla o W/L peligroso.' : 'Prioriza dominancia viva, momentum, W/L e hit rate; si hay mezcla elige la opcion menos mala.',
-        'JSON exacto: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
+        'JSON exacto: {"route":"CW|CCW|SMALL|BIG|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras","strategy_name":"opcional","strategy_note":"opcional"}.'
     ];
 }
 
