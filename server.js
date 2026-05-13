@@ -1650,6 +1650,19 @@ app.delete('/api/history/:tableId', (req, res) => {
     });
 });
 
+app.get('/api/history/:tableId', async (req, res) => {
+    const tableId = req.params.tableId;
+    const limit = parseInt(req.query.limit) || 100;
+    try {
+        db.getHistory(tableId, limit, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Real-time prediction endpoint (called at page load)
 app.get('/api/predict/:tableId', async (req, res) => {
     const tableId = req.params.tableId;
