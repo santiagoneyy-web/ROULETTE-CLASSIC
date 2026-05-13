@@ -1753,8 +1753,6 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`   API ready at:          http://0.0.0.0:${PORT}/api/\n`);
     console.log(`[AI] Provider preference: ${getPreferredLlmProvider()} | Ollama: ${hasOllamaConfigured() ? OLLAMA_BASE_URL : 'not configured'} | Auto remote analysis: ${AUTO_AI_REMOTE_ANALYSIS}`);
     
-    // 🔥 MongoDB sync disabled by user request (using JSON only)
-    /*
     if (db.getUseMongo()) {
         try {
             const Table = require('./models/Table');
@@ -1765,7 +1763,6 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
             console.error('❌ [BOOT] Table sync error:', e.message);
         }
     }
-    */
 
     if (String(process.env.DISABLE_BOTS || '').toLowerCase() === 'true') {
         console.log('[BOOT] Automatic casino.org crawler disabled by DISABLE_BOTS=true.');

@@ -9,10 +9,10 @@ const clArgs = process.argv.slice(2).reduce((acc, arg, i, arr) => {
     return acc;
 }, {});
 
-const PORT = clArgs.port || process.env.PORT || 3000;
-const API_URL = clArgs.api || `http://127.0.0.1:${PORT}/api/spin`;
-const POLL_MS = Number(clArgs.interval || process.env.CRAWLER_INTERVAL_MS || 1500);
-const STALE_MS = Number(process.env.CRAWLER_STALE_MS || 90000);
+const POLL_MS = Number(clArgs.interval || process.env.CRAWLER_INTERVAL_MS || 2000);
+const STALE_MS = Number(process.env.CRAWLER_STALE_MS || 120000);
+const PORT = process.env.PORT || 3000;
+const API_URL = clArgs.api || `http://localhost:${PORT}/api/spin`;
 
 const TABLE = {
     id: 1,
@@ -150,8 +150,10 @@ async function startCrawler() {
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
                 '--no-zygote',
+                '--single-process',
+                '--disable-extensions',
                 '--disable-blink-features=AutomationControlled',
-                '--window-size=1280,800'
+                '--window-size=800,600'
             ]
         });
 
