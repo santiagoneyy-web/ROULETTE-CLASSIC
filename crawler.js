@@ -118,18 +118,20 @@ function extractHistory() {
 
 async function createPage(browser) {
     const page = await browser.newPage();
-    await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-        '(KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-    );
-    await page.setViewport({ width: 1280, height: 720 });
-    page.setDefaultTimeout(60000);
-
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-        if (['image', 'media'].includes(req.resourceType())) req.abort();
-        else req.continue();
+    
+    // Stealth: Ocultar que somos un bot
+    await page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        window.chrome = { runtime: {} };
+        Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en'] });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
+
+    await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+    );
+    await page.setViewport({ width: 1366, height: 768 });
+    page.setDefaultTimeout(60000);
 
     return page;
 }
