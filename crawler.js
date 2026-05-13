@@ -104,16 +104,24 @@ function extractHistory() {
         } catch (e) {}
     }
 
-    const containers = document.querySelectorAll(
-        'div.flex-nowrap, div[class*="overflow-x"], div[class*="history"], ul'
-    );
-
-    for (const container of containers) {
-        const nums = readNumberRow(container);
-        if (nums.length >= 8) return nums.slice(0, 10);
+    // Estrategia: Buscar elementos con clases que suelan contener numeros (ball, circle, number, item)
+    // o simplemente buscar texto dentro de celdas de tabla.
+    const results = [];
+    const elements = document.querySelectorAll('span, div, td, li');
+    
+    for (const el of elements) {
+        const txt = el.innerText.trim();
+        if (txt.length > 0 && txt.length <= 2) {
+            const n = parseInt(txt);
+            if (!isNaN(n) && n >= 0 && n <= 36) {
+                results.push(n);
+            }
+        }
     }
 
-    return [];
+    // Filtrar secuencias de numeros que parezcan un historial (al menos 5 seguidos)
+    const finalHistory = results.slice(0, 15);
+    return finalHistory.length >= 5 ? finalHistory : [];
 }
 
 async function createPage(browser) {
