@@ -12,13 +12,13 @@ const clArgs = process.argv.slice(2).reduce((acc, arg, i, arr) => {
 const POLL_MS = Number(clArgs.interval || process.env.CRAWLER_INTERVAL_MS || 2000);
 const STALE_MS = Number(process.env.CRAWLER_STALE_MS || 120000);
 const PORT = process.env.PORT || 3000;
-const API_URL = clArgs.api || `http://localhost:${PORT}/api/spin`;
+const API_URL = clArgs.api || `http://127.0.0.1:${PORT}/api/spin`;
 
-const TABLE = {
+let TABLE = {
     id: 1,
-    code: 'AUTO',
     name: 'Auto Roulette',
-    url: 'https://www.casino.org/casinoscores/es/auto-roulette/'
+    code: 'AUTO',
+    url: 'https://gamblingcounting.com/evolution-auto-roulette'
 };
 
 function tableLabel() {
@@ -148,6 +148,20 @@ async function startCrawler() {
     console.log(`[CRAWLER] Starting casino.org scraper for ${TABLE.name}`);
     console.log(`[CRAWLER] Poll interval: ${POLL_MS}ms`);
 
+    // Intentar obtener la mesa configurada del servidor antes de empezar
+    try {
+        const response = await axios.get(API_URL.replace('/spin', '/tables'), { timeout: 5000 });
+        if (response.data && response.data.length > 0) {
+            const serverTable = response.data.find(t => t.id == (clArgs.id || 1));
+            if (serverTable && serverTable.url) {
+                TABLE.url = serverTable.url;
+                console.log(`[CRAWLER] URL actualizada desde servidor: ${TABLE.url}`);
+            }
+        }
+    } catch (e) {
+        console.log(`[CRAWLER] Usando URL por defecto (Servidor no disponible todavia)`);
+    }
+
     let browser = null;
 
     try {
@@ -173,7 +187,7 @@ async function startCrawler() {
         let isReloading = false;
         let isPolling = false;
 
-        console.log(`[${tableLabel()}] Opening ${TABLE.url}`);
+        console.log(`[${tableLabel()}] ABRIENDO URL: ${TABLE.url}`);
         try {
             await page.goto(TABLE.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
         } catch (err) {
