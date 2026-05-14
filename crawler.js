@@ -145,7 +145,7 @@ async function createPage(browser) {
 }
 
 async function startCrawler() {
-    console.log(`[CRAWLER] Starting casino.org scraper for ${TABLE.name}`);
+    console.log(`[CRAWLER] Starting GamblingCounting scraper for ${TABLE.name}`);
     console.log(`[CRAWLER] Poll interval: ${POLL_MS}ms`);
 
     // Intentar obtener la mesa configurada del servidor antes de empezar
