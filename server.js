@@ -1721,15 +1721,18 @@ app.get('/api/predict/:tableId', async (req, res) => {
     }
 });
 
-// Admin endpoint to wipe DB without shell (Free tier Render doesn't have shell)
-app.get('/api/admin/wipe-all-spins-securely', async (req, res) => {
+app.get('/api/admin/fix-urls', async (req, res) => {
     try {
-        db.wipeAllSpins((err) => {
-            if (err) return res.status(500).send('Error en el wipe: ' + err.message);
-            res.send('Base operativa borrada: spins, patterns, metric snapshots, AI predictions y table states.');
-        });
+        if (db.getUseMongo()) {
+            const Table = require('./models/Table');
+            await Table.updateOne({ id: 1 }, { $set: { url: 'https://gamblingcounting.com/evolution-auto-roulette' } });
+            await Table.updateOne({ id: 2 }, { $set: { url: 'https://gamblingcounting.com/evolution-immersive-roulette' } });
+            res.send('✅ URLs de MongoDB Atlas actualizadas a GamblingCounting.');
+        } else {
+            res.send('⚠️ No se está usando MongoDB, cambio ignorado.');
+        }
     } catch (e) {
-        res.status(500).send('Error en el wipe: ' + e.message);
+        res.status(500).send('❌ Error: ' + e.message);
     }
 });
 
