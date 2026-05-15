@@ -46,13 +46,36 @@ async function postSpin(number) {
 }
 
 // Runs inside the browser page. Keep it dependency-free.
-function extractHistory() {
+async function extractHistory() {
     const toNum = (text) => {
         const n = parseInt((text || '').trim(), 10);
         return Number.isInteger(n) && n >= 0 && n <= 36 ? n : null;
     };
 
-    // Estrategia 1: Selector especifico para CasinoScores / Casino.org
+    // Estrategia Suprema: Extraer directamente de la API de Casino.org usando el token de la sesión activa
+    try {
+        const pathSegments = window.location.pathname.split('/').filter(Boolean);
+        let tableEndpoint = 'autoroulette'; // default
+        for (const seg of pathSegments) {
+            if (seg.includes('roulette')) {
+                tableEndpoint = seg.replace(/-/g, '');
+            }
+        }
+        
+        const res = await fetch(`https://api-cs.casino.org/svc-evolution-game-events/api/${tableEndpoint}?page=0&size=15&sort=data.settledAt,desc&duration=6`);
+        if (res.ok) {
+            const json = await res.json();
+            if (Array.isArray(json) && json.length > 0) {
+                const apiHistory = json.map(item => item?.data?.result?.outcome?.number)
+                                       .filter(n => n !== null && n !== undefined && !isNaN(n));
+                if (apiHistory.length >= 5) {
+                    return apiHistory;
+                }
+            }
+        }
+    } catch(e) {}
+
+    // Estrategia 1: Selector especifico para CasinoScores / Casino.org DOM
     try {
         const badges = Array.from(document.querySelectorAll('span[data-slot="badge"]'));
         if (badges.length >= 5) {
