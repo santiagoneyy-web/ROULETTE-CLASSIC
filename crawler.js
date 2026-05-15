@@ -52,6 +52,15 @@ function extractHistory() {
         return Number.isInteger(n) && n >= 0 && n <= 36 ? n : null;
     };
 
+    // Estrategia 1: Selector especifico para CasinoScores / Casino.org
+    try {
+        const badges = Array.from(document.querySelectorAll('span[data-slot="badge"]'));
+        if (badges.length >= 5) {
+            const history = badges.map(el => parseInt(el.innerText || el.textContent)).filter(n => !isNaN(n));
+            if (history.length >= 5) return history.slice(0, 15);
+        }
+    } catch(e) {}
+
     const readNumberRow = (container) => {
         const children = Array.from(container.children || []);
         if (children.length < 5 || children.length > 30) return [];
@@ -75,7 +84,7 @@ function extractHistory() {
         return nums.length >= 5 && garbageCount <= 4 ? nums : [];
     };
 
-    const labels = ['Historial', 'History', 'Results', 'Last', 'Tiradas'];
+    const labels = ['Historial', 'History', 'Results', 'Last', 'Tiradas', 'Resultados', 'Últimos'];
     for (const label of labels) {
         try {
             const result = document.evaluate(
@@ -104,13 +113,12 @@ function extractHistory() {
         } catch (e) {}
     }
 
-    // Estrategia: Buscar elementos con clases que suelan contener numeros (ball, circle, number, item)
-    // o simplemente buscar texto dentro de celdas de tabla.
+    // Estrategia 3: Brute force
     const results = [];
     const elements = document.querySelectorAll('span, div, td, li');
     
     for (const el of elements) {
-        const txt = el.innerText.trim();
+        const txt = (el.innerText || el.textContent || '').trim();
         if (txt.length > 0 && txt.length <= 2) {
             const n = parseInt(txt);
             if (!isNaN(n) && n >= 0 && n <= 36) {
@@ -119,7 +127,6 @@ function extractHistory() {
         }
     }
 
-    // Filtrar secuencias de numeros que parezcan un historial (al menos 5 seguidos)
     const finalHistory = results.slice(0, 15);
     return finalHistory.length >= 5 ? finalHistory : [];
 }
