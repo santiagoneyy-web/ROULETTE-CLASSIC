@@ -24,8 +24,8 @@ let fallbackData = {
             code: 'AUTO',
             name: 'Auto Roulette',
             provider: 'Evolution',
-            url: 'https://tracksino.com/auto-roulette',
-            source_type: 'tracksino',
+            url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+            source_type: 'casino_org',
             status: 'active'
         }
     ],
@@ -107,8 +107,8 @@ async function initDB() {
                             code: 'AUTO',
                             name: 'Auto Roulette',
                             provider: 'Evolution',
-                            url: 'https://tracksino.com/auto-roulette',
-                            source_type: 'tracksino',
+                            url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+                            source_type: 'casino_org',
                             status: 'active'
                         }
                     },
