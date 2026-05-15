@@ -1725,9 +1725,9 @@ app.get('/api/admin/fix-urls', async (req, res) => {
     try {
         if (db.getUseMongo()) {
             const Table = require('./models/Table');
-            await Table.updateOne({ id: 1 }, { $set: { url: 'https://gamblingcounting.com/evolution-auto-roulette' } });
-            await Table.updateOne({ id: 2 }, { $set: { url: 'https://gamblingcounting.com/evolution-immersive-roulette' } });
-            res.send('✅ URLs de MongoDB Atlas actualizadas a GamblingCounting.');
+            await Table.updateOne({ id: 1 }, { $set: { url: 'https://tracksino.com/auto-roulette' } });
+            await Table.updateOne({ id: 2 }, { $set: { url: 'https://tracksino.com/immersive-roulette' } });
+            res.send('✅ URLs de MongoDB Atlas actualizadas a Tracksino.');
         } else {
             res.send('⚠️ No se está usando MongoDB, cambio ignorado.');
         }
@@ -1772,8 +1772,8 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     if (db.getUseMongo()) {
         try {
             const Table = require('./models/Table');
-            await Table.updateOne({ id: 1 }, { $set: { name: 'Auto Roulette', url: 'https://gamblingcounting.com/evolution-auto-roulette' } });
-            await Table.updateOne({ id: 2 }, { $set: { name: 'Inmersive Roulette', url: 'https://gamblingcounting.com/evolution-immersive-roulette' } });
+            await Table.updateOne({ id: 1 }, { $set: { name: 'Auto Roulette', url: 'https://tracksino.com/auto-roulette' } });
+            await Table.updateOne({ id: 2 }, { $set: { name: 'Inmersive Roulette', url: 'https://tracksino.com/immersive-roulette' } });
             console.log('✅ [BOOT] Table names synchronized with focused config.');
         } catch (e) {
             console.error('❌ [BOOT] Table sync error:', e.message);
