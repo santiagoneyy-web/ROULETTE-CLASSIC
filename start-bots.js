@@ -1,15 +1,17 @@
 const concurrently = require('concurrently');
 
 module.exports = function startBots(port) {
-    console.log("🚀 Server live! Starting Single-Browser DOM Scraper...");
+    const source = process.env.CRAWLER_SOURCE || 'casinoorg';
+    const apiUrl = `http://127.0.0.1:${port}/api/spin`;
+    console.log("🚀 Server live! Starting Crawler...");
+    console.log(`   API URL: ${apiUrl}`);
+    console.log(`   Source : ${source}`);
 
-    // Un SOLO proceso crawler que maneja TODAS las tablas internamente
-    // Esto evita el OOM de tener 2 instancias de Chrome separadas
-    const crawlerCmd = `node crawler.js --api http://127.0.0.1:${port}/api/spin`;
+    const crawlerCmd = `node crawler_v2.js --api "${apiUrl}" --source ${source}`;
 
     const { result } = concurrently(
-        [{ command: crawlerCmd, name: 'BOT-1', prefixColor: 'magenta' }],
+        [{ command: crawlerCmd, name: 'BOT', prefixColor: 'magenta' }],
         { prefix: 'name', restartTries: 10 }
     );
-    result.catch(() => {}); // Prevenir UnhandledPromiseRejection
+    result.catch(() => {});
 };

@@ -70,10 +70,18 @@ async function extractHistory() {
                                        .filter(n => n !== null && n !== undefined && !isNaN(n));
                 if (apiHistory.length >= 5) {
                     return apiHistory;
+                } else {
+                    return ['API_ERROR: Too few numbers: ' + apiHistory.length];
                 }
+            } else {
+                return ['API_ERROR: Empty json array'];
             }
+        } else {
+            return ['API_ERROR: Fetch failed with status ' + res.status];
         }
-    } catch(e) {}
+    } catch(e) {
+        return ['API_ERROR: Exception ' + e.message];
+    }
 
     // Estrategia 1: Selector especifico para CasinoScores / Casino.org DOM
     try {
@@ -219,7 +227,7 @@ async function startCrawler() {
 
         console.log(`[${tableLabel()}] ABRIENDO URL: ${TABLE.url}`);
         try {
-            await page.goto(TABLE.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await page.goto(TABLE.url, { waitUntil: 'networkidle2', timeout: 90000 });
         } catch (err) {
             console.log(`[${tableLabel()}] Page load warning: ${err.message}`);
         }
@@ -230,7 +238,10 @@ async function startCrawler() {
 
         await sleep(8000);
 
-        const initialHistory = await page.evaluate(extractHistory).catch(() => []);
+        const initialHistory = await page.evaluate(extractHistory).catch((err) => {
+            console.log(`[${tableLabel()}] eval error: ${err.message}`);
+            return [];
+        });
         console.log(`[${tableLabel()}] Initial history: [${initialHistory.join(', ')}]`);
 
         if (initialHistory.length > 0) {
