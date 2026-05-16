@@ -25,6 +25,8 @@ const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
 const AUTO_AI_REMOTE_ANALYSIS = String(process.env.AUTO_AI_REMOTE_ANALYSIS ?? 'true').toLowerCase() !== 'false';
 const GROQ_MODEL = process.env.GROQ_MODEL || process.env.AUTO_AI_GROQ_MODEL || 'llama-3.1-8b-instant';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 let llmRateLimitedUntil = 0;
 let lastLlmRateLimit = null;
 const llmUsage = {
@@ -130,6 +132,8 @@ app.get('/api/ai/predictions/:tableId', (req, res) => {
 app.get('/api/ai/status', (req, res) => {
     res.json({
         provider: getPreferredLlmProvider(),
+        deepseekConfigured: Boolean(DEEPSEEK_API_KEY),
+        deepseekModel: DEEPSEEK_MODEL,
         ollamaConfigured: hasOllamaConfigured(),
         ollamaBaseUrl: OLLAMA_BASE_URL,
         ollamaModel: OLLAMA_MODEL,
@@ -284,10 +288,12 @@ function hasOllamaConfigured() {
 
 function getPreferredLlmProvider() {
     const explicit = String(process.env.LLM_PROVIDER || '').toLowerCase();
-    if (explicit === 'ollama' && hasOllamaConfigured()) return 'ollama';
+    if (explicit === 'deepseek' && DEEPSEEK_API_KEY) return 'deepseek';
     if (explicit === 'groq' && process.env.GROQ_API_KEY) return 'groq';
-    if (hasOllamaConfigured()) return 'ollama';
+    if (explicit === 'ollama' && hasOllamaConfigured()) return 'ollama';
+    if (DEEPSEEK_API_KEY) return 'deepseek';
     if (process.env.GROQ_API_KEY) return 'groq';
+    if (hasOllamaConfigured()) return 'ollama';
     return 'none';
 }
 
@@ -402,6 +408,38 @@ async function callGroqChat({ systemPrompt, userPrompt, temperature = 0.3, maxTo
     };
 }
 
+async function callDeepSeekChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
+    if (!DEEPSEEK_API_KEY) throw new Error('DEEPSEEK_API_KEY missing');
+
+    const requestBody = {
+        model: DEEPSEEK_MODEL,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ],
+        temperature,
+        max_tokens: maxTokens
+    };
+
+    if (jsonMode) {
+        requestBody.response_format = { type: 'json_object' };
+    }
+
+    const response = await axios.post('https://api.deepseek.com/v1/chat/completions', requestBody, {
+        timeout: 30000,
+        headers: {
+            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    return {
+        content: String(response.data?.choices?.[0]?.message?.content || '').trim(),
+        usage: response.data?.usage || {},
+        headers: response.headers || {}
+    };
+}
+
 async function callOllamaChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 180, jsonMode = false }) {
     const payload = {
         model: OLLAMA_MODEL,
@@ -435,6 +473,20 @@ async function callOllamaChat({ systemPrompt, userPrompt, temperature = 0.3, max
 
 async function callPreferredLlm(options) {
     const provider = getPreferredLlmProvider();
+    if (provider === 'deepseek') {
+        try {
+            const result = await callDeepSeekChat(options);
+            recordLlmUsage(provider, result.usage, result.headers);
+            return { provider, content: result.content, usage: result.usage };
+        } catch (error) {
+            if (process.env.GROQ_API_KEY) {
+                const result = await callGroqChat(options);
+                recordLlmUsage('groq-fallback', result.usage, result.headers);
+                return { provider: 'groq-fallback', content: result.content, usage: result.usage };
+            }
+            throw error;
+        }
+    }
     if (provider === 'ollama') {
         try {
             const result = await callOllamaChat(options);
@@ -1170,7 +1222,7 @@ app.post('/api/ai/groq', async (req, res) => {
             persistAiPredictionRecord(tableId || 0, autoAiContext, localDecision, fallback, { ...predictionMeta, provider: 'local-dominance' });
             return res.json(localDecision);
         }
-        if (!groqKey && !hasOllamaConfigured()) {
+        if (!groqKey && !hasOllamaConfigured() && !DEEPSEEK_API_KEY) {
             const unavailableDecision = buildAiUnavailableDecision('unavailable');
             persistAiPredictionRecord(tableId || 0, autoAiContext, unavailableDecision, unavailableDecision, { ...predictionMeta, provider: unavailableDecision.provider });
             return res.json(unavailableDecision);
