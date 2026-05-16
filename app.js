@@ -461,9 +461,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-scatter', 'panel-auto', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-metricas', 'panel-scatter', 'panel-auto', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -473,9 +473,179 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
+        if (e.target.id === 'tab-btn-metricas') { renderMetricasPanel(); loadForestDiscoveries(); }
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
     }
 });
+
+// ─── METRICAS PANEL ───────────────────────────────────────
+function renderMetricasPanel() {
+    if (!lastSignal || history.length < 2) {
+        document.getElementById('metricas-stability').innerText = 'Sin datos';
+        return;
+    }
+    
+    const cw = lastSignal.targetCW;
+    const ccw = lastSignal.targetCCW;
+    const cwN4s = lastSignal.targetUnderCW;
+    const cwN4b = lastSignal.targetOverCW;
+    const ccwN4s = lastSignal.targetOverCCW;
+    const ccwN4b = lastSignal.targetUnderCCW;
+    
+    // Dominance calc (from existing data)
+    const der = cwHistory.filter(x => x === 'win').length;
+    const izq = ccwHistory.filter(x => x === 'win').length;
+    const derTotal = cwHistory.length || 1;
+    const izqTotal = ccwHistory.length || 1;
+    const cwRate = Math.round((der / derTotal) * 100);
+    const ccwRate = Math.round((izq / izqTotal) * 100);
+    
+    const der15 = zoneOverHistory.length >= 15 ? zoneOverHistory.slice(-15).filter(x => x === 'win').length : 0;
+    const izq15 = zoneUnderHistory.length >= 15 ? zoneUnderHistory.slice(-15).filter(x => x === 'win').length : 0;
+    const big15 = zoneOverHistory.length >= 15 ? zoneOverHistory.slice(-15).filter(x => x === 'win').length : 0;
+    const small15 = zoneUnderHistory.length >= 15 ? zoneUnderHistory.slice(-15).filter(x => x === 'win').length : 0;
+    
+    // DOM8 from recent history
+    let domCW = 0, domCCW = 0, domBig = 0, domSmall = 0;
+    for (let i = 1; i < Math.min(history.length, 9); i++) {
+        const d = calcDist(history[i-1], history[i]);
+        if (d >= 0) domCW++; else domCCW++;
+        if (Math.abs(d) >= 9) domBig++; else domSmall++;
+    }
+    const momCW = der15;
+    const momCCW = izq15;
+    
+    document.getElementById('met-dom-cw').innerText = domCW;
+    document.getElementById('met-dom-ccw').innerText = domCCW;
+    document.getElementById('met-dom-big').innerText = domBig;
+    document.getElementById('met-dom-small').innerText = domSmall;
+    document.getElementById('met-mom-cw').innerText = momCW;
+    document.getElementById('met-mom-ccw').innerText = momCCW;
+    document.getElementById('met-mom-big').innerText = big15;
+    document.getElementById('met-mom-small').innerText = small15;
+    
+    // Stability
+    const diff = Math.abs(domCW - domCCW);
+    let stability, stabColor;
+    if (diff >= 4) { stability = 'VERDE'; stabColor = '#00ff88'; }
+    else if (diff >= 2) { stability = 'AMARILLA'; stabColor = '#f0c040'; }
+    else { stability = 'ROJA'; stabColor = '#f55'; }
+    document.getElementById('metricas-stability').innerText = stability;
+    document.getElementById('metricas-stability').style.color = stabColor;
+    
+    // Score each metric
+    const scores = {
+        'cw_n9': (domCW * 3) + (momCW * 2) + cwRate / 10,
+        'ccw_n9': (domCCW * 3) + (momCCW * 2) + ccwRate / 10,
+        'cw_n4s': (domCW * 2) + (domSmall * 2) + cwRate / 10,
+        'cw_n4b': (domCW * 2) + (domBig * 2) + cwRate / 10,
+        'ccw_n4s': (domCCW * 2) + (domSmall * 2) + ccwRate / 10,
+        'ccw_n4b': (domCCW * 2) + (domBig * 2) + ccwRate / 10
+    };
+    
+    // Apply forest boosts
+    if (typeof forestBoost !== 'undefined' && forestBoost) {
+        Object.keys(forestBoost).forEach(k => {
+            if (scores[k] !== undefined) scores[k] += forestBoost[k];
+        });
+    }
+    
+    // Update metric cards
+    const cards = [
+        { id: 'cw_n9', el: 'met-cw-n9-val', wl: 'met-cw-n9-wl', sc: 'met-cw-n9-score', val: cw, wlData: cwHistory, color: '#00e5c8' },
+        { id: 'ccw_n9', el: 'met-ccw-n9-val', wl: 'met-ccw-n9-wl', sc: 'met-ccw-n9-score', val: ccw, wlData: ccwHistory, color: '#f55' },
+        { id: 'cw_n4s', el: 'met-cw-n4s-val', wl: null, sc: 'met-cw-n4s-score', val: cwN4s, wlData: null, color: '#8ff' },
+        { id: 'cw_n4b', el: 'met-cw-n4b-val', wl: null, sc: 'met-cw-n4b-score', val: cwN4b, wlData: null, color: '#8ff' },
+        { id: 'ccw_n4s', el: 'met-ccw-n4s-val', wl: null, sc: 'met-ccw-n4s-score', val: ccwN4s, wlData: null, color: '#f88' },
+        { id: 'ccw_n4b', el: 'met-ccw-n4b-val', wl: null, sc: 'met-ccw-n4b-score', val: ccwN4b, wlData: null, color: '#f88' }
+    ];
+    
+    let bestScore = -1;
+    let bestCard = null;
+    
+    cards.forEach(c => {
+        const el = document.getElementById(c.el);
+        const scEl = document.getElementById(c.sc);
+        const score = scores[c.id] || 0;
+        if (el) el.innerText = c.val != null ? c.val : '--';
+        if (scEl) scEl.innerText = 's:' + score.toFixed(1);
+        if (c.wl && document.getElementById(c.wl)) {
+            document.getElementById(c.wl).innerText = getPerfText(c.wlData);
+        }
+        
+        // Highlight best
+        const card = document.getElementById('met-' + c.id);
+        if (card) {
+            if (score > bestScore) { bestScore = score; bestCard = card; }
+            card.style.borderColor = 'rgba(255,255,255,0.08)';
+            card.style.boxShadow = 'none';
+        }
+    });
+    
+    // Best pick
+    if (bestCard) {
+        bestCard.style.borderColor = 'var(--gold)';
+        bestCard.style.boxShadow = '0 0 8px rgba(240,192,64,0.2)';
+        
+        const bestMetric = cards.find(c => scores[c.id] === bestScore);
+        if (bestMetric) {
+            document.getElementById('met-pick-text').innerText = 'N9: ' + (bestMetric.id.includes('n9') ? bestMetric.val : (bestMetric.id.includes('cw') ? cw : ccw)) + ' | N4: ' + (bestMetric.id.includes('n4') ? bestMetric.val : cwN4s);
+            document.getElementById('met-pick-reason').innerText = bestMetric.id.toUpperCase() + ' domina (score: ' + bestScore.toFixed(1) + ')';
+        }
+    }
+    
+    // Apply color coding to cards
+    cards.forEach(c => {
+        const card = document.getElementById('met-' + c.id);
+        if (card) {
+            const inner = card.querySelector('[style*="font-size: 1"]');
+            if (inner) inner.style.color = c.color;
+        }
+    });
+}
+
+let forestBoost = {};
+
+async function loadForestDiscoveries() {
+    try {
+        const resp = await fetch('/api/forest/discoveries');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        
+        forestBoost = {};
+        if (data.discoveries && data.discoveries.length > 0) {
+            const discDiv = document.getElementById('metricas-discoveries');
+            const listDiv = document.getElementById('metricas-discoveries-list');
+            if (discDiv) discDiv.style.display = 'block';
+            
+            let html = '';
+            data.discoveries.slice(0, 5).forEach(d => {
+                forestBoost[d.metricId] = (forestBoost[d.metricId] || 0) + (d.score / 100) * 2;
+                html += '<div style="margin:2px 0; font-size:8px;">' +
+                    '<span style="color:var(--accent);">' + d.metricId.toUpperCase() + '</span> ' +
+                    '<span style="color:var(--text-dim);">en</span> ' +
+                    '<span style="color:var(--gold);">' + (d.context?.stability || '?').toUpperCase() + '</span>: ' +
+                    '<strong>' + d.score + '%</strong> (' + d.wins + 'W/' + d.losses + 'L)' +
+                    '</div>';
+            });
+            
+            if (data.rlBestContexts && data.rlBestContexts.length > 0) {
+                html += '<div style="margin-top:6px; font-size:9px; color:var(--accent);">RL: MEJORES CONTEXTOS</div>';
+                data.rlBestContexts.forEach(c => {
+                    html += '<div style="font-size:8px; color:var(--gold);">' +
+                        c.winRate + '% en ' + c.total + ' spins → ' + c.topMetric.toUpperCase() +
+                        '</div>';
+                });
+            }
+            
+            if (listDiv) listDiv.innerHTML = html || '--';
+        }
+        
+        if (document.getElementById('panel-metricas')?.style.display !== 'none') {
+            renderMetricasPanel();
+        }
+    } catch (e) { /* non-critical */ }
+}
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ SUBMIT NUMBER Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function submitNumber(val, silent = false, batch = false) {
@@ -625,6 +795,12 @@ function submitNumber(val, silent = false, batch = false) {
             
             // Trigger new AI prediction (always, even in background)
             setTimeout(requestAutoAI, 800);
+            
+            // Update metricas panel if visible
+            if (document.getElementById('panel-metricas')?.style.display !== 'none') {
+                renderMetricasPanel();
+                loadForestDiscoveries();
+            }
         }
     }
 }

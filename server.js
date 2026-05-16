@@ -19,6 +19,8 @@ const {
     evaluatePredictionHit
 } = require('./analytics_snapshot');
 
+const forest = require('./forest_engine');
+
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
 const OLLAMA_BASE_URL = String(process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
@@ -1688,10 +1690,52 @@ app.post('/api/spin', async (req, res) => {
                         client.write(`data: ${JSON.stringify({ type: 'new_spin', number, spin_id: savedSpinId, ready: true })}\n\n`);
                     });
                 }
+                
+                // Forest engine: observe which metrics predicted correctly
+                if (snapshot && snapshot.routes) {
+                    try {
+                        const fmem = forest.loadForest();
+                        const ctx = {
+                            stability: snapshot.stability_level || 'red',
+                            pattern: snapshot.pattern_label || 'unknown',
+                            dominant_axis: snapshot.dominant_axis || 'none'
+                        };
+                        const { wheelNeighbors } = require('./analytics_snapshot');
+                        const metrics = [
+                            { id: 'cw_n9', target: snapshot.routes.cw?.n9, radius: 9 },
+                            { id: 'cw_n4s', target: snapshot.routes.cw?.n4Small, radius: 2 },
+                            { id: 'cw_n4b', target: snapshot.routes.cw?.n4Big, radius: 2 },
+                            { id: 'ccw_n9', target: snapshot.routes.ccw?.n9, radius: 9 },
+                            { id: 'ccw_n4s', target: snapshot.routes.ccw?.n4Small, radius: 2 },
+                            { id: 'ccw_n4b', target: snapshot.routes.ccw?.n4Big, radius: 2 }
+                        ];
+                        metrics.forEach(m => {
+                            if (m.target != null && Number.isInteger(m.target)) {
+                                const hit = wheelNeighbors(m.target, m.radius).includes(number);
+                                forest.observe(fmem, ctx, m.id, hit);
+                            }
+                        });
+                    } catch (fe) { /* forest observe non-critical */ }
+                }
             }
 
         } catch(e) { console.error('[Background Sync Err]', e); }
     })();
+});
+
+// ── Forest Engine API ────────────────────────────────────
+app.get('/api/forest/discoveries', (req, res) => {
+    try {
+        const fmem = forest.loadForest();
+        const promoted = forest.getPromotedDiscoveries(fmem);
+        const rlContexts = forest.getRlBestContexts(fmem);
+        res.json({
+            total: fmem.discoveries.length,
+            promoted: promoted.length,
+            discoveries: promoted,
+            rlBestContexts: rlContexts
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Batch import (for manual/automatic history sync)

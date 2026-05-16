@@ -38,7 +38,8 @@
              <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                     <button class="tab-btn" id="tab-btn-scatter">📊</button>
+                     <button class="tab-btn" id="tab-btn-metricas">METRICAS</button>
+                     <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
                      <button class="tab-btn" id="tab-btn-chat">CHAT</button>
                  </div>
@@ -116,6 +117,78 @@
                         <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
                         <span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
                         <span class="compact-perf" id="dir-ccw-perf">--</span>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 2. METRICAS PURAS (sin IA, solo matematica) -->
+            <section class="shadow-panel" id="panel-metricas" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x2211;</span>
+                    <span class="agent-card-name">METRICAS PURAS</span>
+                    <span class="side-badge" id="metricas-stability" style="padding:1px 6px;">--</span>
+                </div>
+                <div style="padding: 6px 8px;">
+                    <!-- Dominancia actual -->
+                    <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span style="color: var(--text-dim);">DOM8:</span>
+                            <span>CW=<strong id="met-dom-cw">0</strong> CCW=<strong id="met-dom-ccw">0</strong> BIG=<strong id="met-dom-big">0</strong> SMALL=<strong id="met-dom-small">0</strong></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">MOM15:</span>
+                            <span>CW=<strong id="met-mom-cw">0</strong> CCW=<strong id="met-mom-ccw">0</strong> BIG=<strong id="met-mom-big">0</strong> SMALL=<strong id="met-mom-small">0</strong></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 6 metricas -->
+                    <div id="metricas-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <div class="metrica-card" id="met-cw-n9" style="background: rgba(0,229,200,0.06); border: 1px solid rgba(0,229,200,0.15); border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 9px; color: var(--accent);">CW N9</div>
+                            <div style="font-size: 1.4rem; font-weight: 900; color: #fff; font-family: var(--mono);" id="met-cw-n9-val">--</div>
+                            <div style="font-size: 8px; color: var(--text-dim);">ult8: <span id="met-cw-n9-wl">--</span></div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-cw-n9-score">score: 0</div>
+                        </div>
+                        <div class="metrica-card" id="met-ccw-n9" style="background: rgba(255,100,100,0.06); border: 1px solid rgba(255,100,100,0.15); border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 9px; color: #f55;">CCW N9</div>
+                            <div style="font-size: 1.4rem; font-weight: 900; color: #fff; font-family: var(--mono);" id="met-ccw-n9-val">--</div>
+                            <div style="font-size: 8px; color: var(--text-dim);">ult8: <span id="met-ccw-n9-wl">--</span></div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-ccw-n9-score">score: 0</div>
+                        </div>
+                        <div class="metrica-card" id="met-cw-n4s" style="background: rgba(0,229,200,0.04); border: 1px solid rgba(0,229,200,0.1); border-radius: 8px; padding: 6px;">
+                            <div style="font-size: 8px; color: #8ff;">CW N4 SMALL</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-cw-n4s-val">--</div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-cw-n4s-score">s:0</div>
+                        </div>
+                        <div class="metrica-card" id="met-cw-n4b" style="background: rgba(0,229,200,0.04); border: 1px solid rgba(0,229,200,0.1); border-radius: 8px; padding: 6px;">
+                            <div style="font-size: 8px; color: #8ff;">CW N4 BIG</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-cw-n4b-val">--</div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-cw-n4b-score">s:0</div>
+                        </div>
+                        <div class="metrica-card" id="met-ccw-n4s" style="background: rgba(255,100,100,0.04); border: 1px solid rgba(255,100,100,0.1); border-radius: 8px; padding: 6px;">
+                            <div style="font-size: 8px; color: #f88;">CCW N4 SMALL</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-ccw-n4s-val">--</div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-ccw-n4s-score">s:0</div>
+                        </div>
+                        <div class="metrica-card" id="met-ccw-n4b" style="background: rgba(255,100,100,0.04); border: 1px solid rgba(255,100,100,0.1); border-radius: 8px; padding: 6px;">
+                            <div style="font-size: 8px; color: #f88;">CCW N4 BIG</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-ccw-n4b-val">--</div>
+                            <div style="font-size: 8px; color: var(--gold);" id="met-ccw-n4b-score">s:0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- PICK -->
+                    <div id="metricas-pick" style="margin-top: 10px; padding: 8px; background: linear-gradient(135deg, rgba(240,192,64,0.1), transparent); border: 1px solid var(--gold); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 9px; color: var(--gold); font-family: var(--mono);">MEJOR LECTURA</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #fff; margin: 4px 0;" id="met-pick-text">Esperando datos...</div>
+                        <div style="font-size: 9px; color: var(--text-dim);" id="met-pick-reason">--</div>
+                    </div>
+                    
+                    <!-- Mini-forest discoveries -->
+                    <div id="metricas-discoveries" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 9px; color: var(--text-dim); display: none;">
+                        <div style="font-size: 10px; color: var(--accent); margin-bottom: 4px;">HALLAZGOS (+3 aciertos)</div>
+                        <div id="metricas-discoveries-list">--</div>
                     </div>
                 </div>
             </section>
