@@ -48,6 +48,7 @@
                      <button id="btn-pred-dec" title="Bajar DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">-</button>
                      <span id="pred-offset-badge" style="font-family:var(--mono); font-size:9px; color:var(--accent); background:rgba(0,229,200,0.08); border:1px solid rgba(0,229,200,0.2); border-radius:4px; padding:1px 4px; white-space:nowrap;">0</span>
                      <button id="btn-pred-inc" title="Subir DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">+</button>
+                     <button id="btn-wipe" title="Reiniciar todo" onclick="wipeData()" style="background:rgba(255,59,92,0.1); border:1px solid rgba(255,59,92,0.3); color:#f55; font-size:8px; border-radius:4px; padding:1px 6px; cursor:pointer; font-weight:700; white-space:nowrap; margin-left:4px;">WIPE</button>
                  </div>
              </div>
 
@@ -208,7 +209,7 @@
                     <div id="raw-pred-n9" style="background: rgba(100,149,237,0.08); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.25); margin-bottom: 6px; position: relative;">
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
                             <div><strong style="color:#6495ED;">&#x26A1; N9:</strong>&nbsp;<span id="raw-pred-n9-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
-                            <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                            <button onclick="toggleRawHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
                         </div>
                         <div id="raw-hist-n9" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
                             <div id="raw-hist-list-n9" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
@@ -218,22 +219,16 @@
                     <div id="raw-pred-n4" style="background: rgba(100,149,237,0.05); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.2); margin-bottom: 6px; position: relative;">
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
                             <div><strong style="color:#8ab0ff;">&#x26A1; N4:</strong>&nbsp;<span id="raw-pred-n4-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
-                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                            <button onclick="toggleRawHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
                         </div>
                         <div id="raw-hist-n4" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
                             <div id="raw-hist-list-n4" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
                         </div>
                     </div>
                     
-                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                        <div style="flex:1; font-size:8px; color:var(--text-dim); font-family:var(--mono);">
-                            W:<span id="raw-n9-w" style="color:#0f0;">0</span> L:<span id="raw-n9-l" style="color:#f55;">0</span> |
-                            N4 W:<span id="raw-n4-w" style="color:#0f0;">0</span> L:<span id="raw-n4-l" style="color:#f55;">0</span>
-                        </div>
-                        <div style="font-size:9px; font-family:var(--mono);">
-                            <span id="raw-n9-rate" style="color:var(--gold);">0%</span>
-                            <span style="color:var(--text-dim);">N9</span>
-                        </div>
+                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; font-family:var(--mono); font-size:8px; color:var(--text-dim);">
+                        <span>N9: <span id="raw-stats-inline-n9">0% (0W/0L)</span></span>
+                        <span style="margin-left:8px;">N4: <span id="raw-stats-inline-n4">0% (0W/0L)</span></span>
                     </div>
                     
                     <div style="padding: 6px 10px; background: rgba(100,149,237,0.05); border-radius: 8px; border: 1px solid rgba(100,149,237,0.1);">

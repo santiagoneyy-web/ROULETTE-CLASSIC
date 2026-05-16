@@ -171,9 +171,12 @@ function wipeData() {
             lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0;
             lastSignal=null;
+            rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0;
+            rawN9History.length=0; rawN4History.length=0;
+            lastRawPredN9=null; lastRawPredN4=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0; rawN9History.length=0; rawN4History.length=0; lastRawPredN9=null; lastRawPredN4=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleAiHist(metricId, btn) {
@@ -1769,20 +1772,30 @@ let lastRawPredN9 = null, lastRawPredN4 = null;
 let rawAiInFlight = false;
 
 function updateRawStats() {
-    document.getElementById('raw-n9-w').innerText = rawN9Wins;
-    document.getElementById('raw-n9-l').innerText = rawN9Losses;
-    document.getElementById('raw-n4-w').innerText = rawN4Wins;
-    document.getElementById('raw-n4-l').innerText = rawN4Losses;
     const n9Total = rawN9Wins + rawN9Losses;
     const n4Total = rawN4Wins + rawN4Losses;
-    document.getElementById('raw-n9-rate').innerText = (n9Total ? Math.round((rawN9Wins / n9Total) * 100) : 0) + '%';
+    const eN9 = document.getElementById('raw-stats-inline-n9');
+    const eN4 = document.getElementById('raw-stats-inline-n4');
+    if (eN9) eN9.innerText = (n9Total ? Math.round((rawN9Wins / n9Total) * 100) : 0) + '% (' + rawN9Wins + 'W/' + rawN9Losses + 'L)';
+    if (eN4) eN4.innerText = (n4Total ? Math.round((rawN4Wins / n4Total) * 100) : 0) + '% (' + rawN4Wins + 'W/' + rawN4Losses + 'L)';
+}
+
+function toggleRawHist(side, btn) {
+    const panel = document.getElementById('raw-hist-' + side);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (btn) btn.innerHTML = panel.style.display === 'none' ? '&#9662;' : '&#9652;';
+    if (side === 'n9') {
+        const list = document.getElementById('raw-hist-list-n9');
+        if (list) list.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses, total: rawN9Wins + rawN9Losses, rate: rawN9Wins + rawN9Losses ? Math.round((rawN9Wins / (rawN9Wins + rawN9Losses)) * 100) : 0 }, 25);
+    } else {
+        const list = document.getElementById('raw-hist-list-n4');
+        if (list) list.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses, total: rawN4Wins + rawN4Losses, rate: rawN4Wins + rawN4Losses ? Math.round((rawN4Wins / (rawN4Wins + rawN4Losses)) * 100) : 0 }, 25);
+    }
 }
 
 function renderRawHist() {
-    const n9List = document.getElementById('raw-hist-list-n9');
-    const n4List = document.getElementById('raw-hist-list-n4');
-    if (n9List) n9List.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses }, 20);
-    if (n4List) n4List.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses }, 20);
+    // Keep for compatibility, toggleRawHist handles it now
 }
 
 function evaluateRawPredictions(number) {

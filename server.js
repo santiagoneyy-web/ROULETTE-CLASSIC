@@ -1097,9 +1097,12 @@ function buildRawAutoAiUserPrompt(context) {
     const perf8 = context.performance8 || {};
     const cw = context.routes.cw;
     const ccw = context.routes.ccw;
+    const strategyText = String(context.strategyDigest || buildStrategyDigest('global') || '').slice(0, 800);
     return [
-        'MODO RAW: trabajas SOLO con las metricas actuales, sin historial de aprendizaje ni memorias.',
-        'No tienes acceso a la base de datos ni a estrategias guardadas. Solo ves este instante de la mesa.',
+        'MODO RAW: trabajas con las metricas actuales + estrategias disenadas por el usuario.',
+        'Tienes acceso a las estrategias guardadas pero NO a la memoria RL ni al historial de aprendizaje.',
+        'Las estrategias del usuario son reglas que debes considerar en tu decision.',
+        `ESTRATEGIAS:\n${strategyText || '(sin estrategias guardadas)'}`,
         `DOM8 CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
         `MOM15 CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
         `WL CW_N9=${perf8.cwN9 || '-'} CW_N4=${perf8.cwN4 || '-'} CCW_N9=${perf8.ccwN9 || '-'} CCW_N4=${perf8.ccwN4 || '-'}`,
@@ -1107,8 +1110,9 @@ function buildRawAutoAiUserPrompt(context) {
         `CW n9=${cw.n9} n4S=${cw.n4Small} n4B=${cw.n4Big}`,
         `CCW n9=${ccw.n9} n4S=${ccw.n4Small} n4B=${ccw.n4Big}`,
         `NUMS=${(context.recentNumbers || []).slice(-12).join(',') || '-'}`,
-        'Elige el mejor entre CW/CCW basado SOLO en DOM8+MOM15+WL. Responde JSON.',
+        'Elige el mejor entre CW/CCW basado en DOM8+MOM15+WL+ESTRATEGIAS. Responde JSON.',
         'Si la diferencia entre rutas es < 3 y el hit rate < 40%, responde ESPERAR.',
+        'Aplica las estrategias del usuario: continuidad en bloques, zigzag en turbulencia, etc.',
         'JSON: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero","n4":"numero","analysis":"max 20 palabras"}'
     ].join('\n');
 }
@@ -1235,10 +1239,10 @@ app.post('/api/ai/groq', async (req, res) => {
         const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
         const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
-        const strategyDigest = autoMode === 'RAW' ? '' : buildStrategyDigest(tableId || 'global');
+        const strategyDigest = buildStrategyDigest(tableId || 'global');
         const learningSummary = (autoAiContext && autoMode !== 'RAW') ? await getLearningSummaryAsync(tableId || 0) : null;
         const learningDigest = (autoAiContext && autoMode !== 'RAW') ? buildLearningDigest(learningSummary, autoMode) : '';
-        const predictionMeta = { strategyDigest: autoMode === 'RAW' ? '' : strategyDigest, learningDigest: autoMode === 'RAW' ? '' : learningDigest, provider: 'llm-pending' };
+        const predictionMeta = { strategyDigest, learningDigest, provider: 'llm-pending' };
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1266,7 +1270,7 @@ app.post('/api/ai/groq', async (req, res) => {
             });
         }
 
-        const userPrompt = autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest, learningDigest) : prompt;
+        const userPrompt = autoAiContext ? buildAutoAiUserPrompt({ ...autoAiContext, strategyDigest }, strategyDigest, learningDigest) : prompt;
         
         let systemPrompt;
         if (autoAiContext) {
