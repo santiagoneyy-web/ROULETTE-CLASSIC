@@ -444,6 +444,8 @@ if (typeof window !== 'undefined') {
     window.predictZonePattern = predictZonePattern;
     window.analyzeTravelWave = analyzeTravelWave;
     window.analyzeMasterConfluence = analyzeMasterConfluence; // New
+    window.wheelNeighbors = getWheelNeighbors;
+    window.calcDist = calcDist;
     window.WHEEL_ORDER = WHEEL_ORDER;
     window.WHEEL_INDEX = WHEEL_INDEX;
 }

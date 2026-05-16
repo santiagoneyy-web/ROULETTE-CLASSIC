@@ -1832,20 +1832,46 @@ async function requestRawAI() {
     if (statusEl) statusEl.innerText = 'PENSANDO...';
     
     try {
+        // Calculate DOM8 and MOM15 properly (same as requestAutoAI)
+        let der=0, izq=0, big=0, small=0;
+        let der15=0, izq15=0, big15=0, small15=0;
+        let dirSeq15 = [], zoneSeq15 = [];
+        let lvl = 'red';
+        let pat = {label:'Estandar'};
+        
+        // DOM8: last 8 travel directions
+        const nCount = Math.min(history.length - 1, 8);
+        for (let i = history.length - nCount; i < history.length; i++) {
+            let d = calcDist(history[i-1], history[i]);
+            if (d >= 0) der++; else izq++;
+            if (Math.abs(d) >= 10) big++; else small++;
+        }
+        // MOM15: last 15
+        const nCount15 = Math.min(history.length - 1, 15);
+        for (let i = history.length - nCount15; i < history.length; i++) {
+            let d = calcDist(history[i-1], history[i]);
+            if (d >= 0) { der15++; dirSeq15.push('DER'); } else { izq15++; dirSeq15.push('IZQ'); }
+            if (Math.abs(d) >= 10) { big15++; zoneSeq15.push('BIG'); } else { small15++; zoneSeq15.push('SMALL'); }
+        }
+        
+        try {
+            pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'Estandar'};
+            lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(pat, []) : 'red';
+        } catch(e) {}
+        
         const cwRate = cwHistory.length ? Math.round((cwHistory.filter(x => x === 'win').length / cwHistory.length) * 100) : 0;
         const ccwRate = ccwHistory.length ? Math.round((ccwHistory.filter(x => x === 'win').length / ccwHistory.length) * 100) : 0;
-        const der = cwHistory.filter(x => x === 'win').length;
-        const izq = ccwHistory.filter(x => x === 'win').length;
-        const big = zoneOverHistory.filter(x => x === 'win').length;
-        const small = zoneUnderHistory.filter(x => x === 'win').length;
         
         const autoAiContext = lastSignal ? {
             mode: 'RAW',
-            stabilityLevel: 'red',
-            patternLabel: 'Estandar',
+            stabilityLevel: lvl,
+            patternLabel: pat.label || 'Estandar',
             dominance8: { cw: der, ccw: izq, big: big, small: small },
-            momentum15: { cw: der, ccw: izq, big: big, small: small },
-            sequence15: { dir: '', zone: '' },
+            momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
+            sequence15: {
+                dir: dirSeq15.join(' '),
+                zone: zoneSeq15.join(' ')
+            },
             performance8: {
                 cwN9: getPerfText(cwHistory),
                 cwN4: getPerfText(cwN4History),
