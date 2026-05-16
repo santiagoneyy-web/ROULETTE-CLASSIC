@@ -1239,14 +1239,35 @@ app.post('/api/ai/groq', async (req, res) => {
         }
 
         const userPrompt = autoAiContext ? buildAutoAiUserPrompt(autoAiContext, strategyDigest, learningDigest) : prompt;
-        const systemPrompt = autoAiContext
-            ? [
-                'Eres motor FULL de ROULETTE-CLASSIC.',
-                'Responde solo JSON valido. Elige exclusivamente entre las medidas dadas. No inventes numeros.',
-                'SMALL=1-9, BIG=10-18. Analiza dominancia, momentum, W/L, hit rate, bloque/farol/turbulencia.',
-                'En FULL elige la mejor opcion relativa disponible. SIEMPRE elige un numero, nunca ESPERAR.'
-            ].join('\n')
-            : 'Eres un motor de prediccion. RESPONDE SOLO JSON.';
+        
+        let systemPrompt;
+        if (autoAiContext) {
+            if (autoMode === 'SAFE') {
+                systemPrompt = [
+                    'Eres AUDITOR SAFE de ROULETTE-CLASSIC. Tu unico trabajo es decidir SI conviene entrar o esperar.',
+                    'Responde solo JSON valido. No inventes numeros fuera de las metricas dadas.',
+                    'Analiza estabilidad, dominancia, momentum, brechas ruta/zona, patron W/L, fatiga, faroles.',
+                    'REGLAS DEL AUDITOR:',
+                    '- Si la mesa esta VERDE (bloque estable): puedes entrar con confianza.',
+                    '- Si esta AMARILLA (transicion): entra solo si la brecha entre rutas >= 5 y la brecha entre zonas >= 3.',
+                    '- Si esta ROJA (caos/mixta): responde ESPERAR en n9 y n4.',
+                    '- Si hay fatiga (3+ L seguidos en la ruta dominante): responde ESPERAR.',
+                    '- Si hay farol activo: responde ESPERAR.',
+                    '- Si las seniales se contradicen (ruta dice CW pero zona dice SMALL y no concuerdan): responde ESPERAR.',
+                    'Cuando sea seguro entrar, dame los mismos numeros de las medidas (no inventes).',
+                    'JSON: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras explicando la decision"}'
+                ].join('\n');
+            } else {
+                systemPrompt = [
+                    'Eres motor FULL de ROULETTE-CLASSIC.',
+                    'Responde solo JSON valido. Elige exclusivamente entre las medidas dadas. No inventes numeros.',
+                    'SMALL=1-9, BIG=10-18. Analiza dominancia, momentum, W/L, hit rate, bloque/farol/turbulencia.',
+                    'En FULL elige la mejor opcion relativa disponible. SIEMPRE elige un numero, nunca ESPERAR.'
+                ].join('\n');
+            }
+        } else {
+            systemPrompt = 'Eres un motor de prediccion. RESPONDE SOLO JSON.';
+        }
         const estimatedPromptTokens = estimateTokens(systemPrompt) + estimateTokens(userPrompt);
 
         const llm = await callPreferredLlm({
@@ -1264,41 +1285,38 @@ app.post('/api/ai/groq', async (req, res) => {
         try {
             const parsed = JSON.parse(result);
             if (autoAiContext) {
-                persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
-                // Always normalize as FULL first (FULL always predicts)
-                const fullContext = { ...autoAiContext, mode: 'FULL' };
-                const normalizedFull = normalizeAutoAiResponse(parsed, fullContext, fallback);
-
-                // Derive SAFE from same response: block if signals are mixed/contradictory
-                const dom8 = autoAiContext.dominance8 || {};
-                const routeGap = Math.abs((dom8.cw || 0) - (dom8.ccw || 0));
-                const zoneGap = Math.abs((dom8.big || 0) - (dom8.small || 0));
-                const stability = String(autoAiContext.stabilityLevel || 'red').toLowerCase();
-                const isMixed = routeGap <= 1 && zoneGap <= 1;
-                const shouldSafeBlock = stability === 'red' || isMixed;
-
-                const safeContext = { ...autoAiContext, mode: 'SAFE' };
-                let normalizedSafe;
-                if (shouldSafeBlock) {
-                    normalizedSafe = {
-                        reply: formatAutoReply('ESPERAR', 'ESPERAR'),
-                        route: 'ESPERAR',
-                        zone: 'ESPERAR',
-                        analysis: `SAFE bloqueado: ${stability === 'red' ? 'estabilidad roja' : 'señales mixtas (ruta ${routeGap}, zona ${zoneGap})'}.`
-                    };
-                } else {
-                    normalizedSafe = normalizeAutoAiResponse(parsed, safeContext, fallback);
+                const modeContext = { ...autoAiContext, mode: autoMode };
+                
+                // SAFE auditor: if LLM says ESPERAR, trust it and block
+                if (autoMode === 'SAFE') {
+                    const safeN9 = cleanAutoNumber(parsed.n9);
+                    const safeRoute = normalizeAiRoute(parsed.route || parsed.direccion, safeN9, modeContext);
+                    
+                    if (safeN9 === 'ESPERAR' || safeRoute === 'ESPERAR' || String(parsed.n9 || '').toUpperCase().includes('ESPERAR')) {
+                        const safeDecision = {
+                            reply: formatAutoReply('ESPERAR', 'ESPERAR'),
+                            route: 'ESPERAR',
+                            zone: 'ESPERAR',
+                            analysis: String(parsed.analysis || 'Auditor SAFE: condiciones no optimas para entrar.').trim()
+                        };
+                        persistAiPredictionRecord(tableId || 0, modeContext, safeDecision, parsed, { ...predictionMeta, provider: llm.provider });
+                        return res.json({
+                            ...safeDecision,
+                            provider: llm.provider,
+                            model: GROQ_MODEL,
+                            usage: llm.usage || {},
+                            estimatedPromptTokens
+                        });
+                    }
                 }
+                
+                // FULL or SAFE-with-green-light: normalize prediction
+                const normalized = normalizeAutoAiResponse(parsed, modeContext, fallback);
+                persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
+                persistAiPredictionRecord(tableId || 0, modeContext, normalized, parsed, { ...predictionMeta, provider: llm.provider });
 
-                // Store FULL prediction
-                persistAiPredictionRecord(tableId || 0, fullContext, normalizedFull, parsed, { ...predictionMeta, provider: llm.provider });
-                // Store SAFE prediction
-                persistAiPredictionRecord(tableId || 0, safeContext, normalizedSafe, parsed, { ...predictionMeta, provider: llm.provider });
-
-                // Return whichever mode the user requested
-                const responseNormalized = autoMode === 'SAFE' ? normalizedSafe : normalizedFull;
                 return res.json({
-                    ...responseNormalized,
+                    ...normalized,
                     provider: llm.provider,
                     model: GROQ_MODEL,
                     usage: llm.usage || {},

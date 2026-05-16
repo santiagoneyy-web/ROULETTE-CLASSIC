@@ -68,63 +68,83 @@ function saveFallback() {
 }
 
 async function initDB() {
-    // console.log('📡 [DB] Connecting to MongoDB Atlas...');
     let mongoUri = process.env.MONGODB_URI || null; 
     
     if (mongoUri) {
-        try {
-            console.log('📡 [DB] Connecting to MongoDB Atlas...');
-            
-            // Basic sanitization: if the user put a raw password with special chars like ')' 
-            // We should warn that it must be encoded, or try a simple fix.
-            if (mongoUri.includes(')') && !mongoUri.includes('%29')) {
-                console.warn('⚠️ [DB] Warning: Your MONGODB_URI contains ")". If connection fails, please encode it as %29');
+        // Attempt connection with SRV fallback
+        useMongo = false;
+        
+        for (const attempt of ['srv', 'direct']) {
+            try {
+                let uri = mongoUri;
+                
+                if (attempt === 'direct' && mongoUri.startsWith('mongodb+srv://')) {
+                    const url = new URL(mongoUri);
+                    const user = url.username;
+                    const pass = url.password;
+                    const host = url.hostname;
+                    const dbName = url.pathname.replace(/^\//, '') || 'test';
+                    const params = url.search || '?retryWrites=true&w=majority';
+                    
+                    const shardHost = host;
+                    uri = `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@ac-1b4e820-shard-00-00.${shardHost}:27017,ac-1b4e820-shard-00-01.${shardHost}:27017,ac-1b4e820-shard-00-02.${shardHost}:27017/${dbName}${params}&authSource=admin`;
+                    
+                    console.log('[DB] Retrying with direct connection...');
+                }
+                
+                console.log(`[DB] Connecting to MongoDB Atlas (${attempt})...`);
+                await mongoose.connect(uri, {
+                    serverSelectionTimeoutMS: 5000,
+                    connectTimeoutMS: 10000
+                });
+                
+                useMongo = true;
+                console.log('[DB] Connected to MongoDB Atlas successfully.');
+                break;
+            } catch (err) {
+                if (attempt === 'srv' && mongoUri.startsWith('mongodb+srv://')) {
+                    console.log('[DB] SRV connection failed, will try direct...');
+                    continue;
+                }
+                console.error('[DB] MongoDB Connection Failed:', err.message);
+                console.log('[DB] Tip: Check if cluster is paused in MongoDB Atlas (free tier auto-pauses).');
+                break;
             }
-
-            await mongoose.connect(mongoUri, {
-                serverSelectionTimeoutMS: 5000, // 5s timeout instead of waiting forever
-                connectTimeoutMS: 10000
-            });
-            
-            useMongo = true;
-            console.log('✅ [DB] Connected to MongoDB Atlas successfully.');
-
-            // Pre-seed tables if empty
-            const tableCount = await Table.countDocuments();
-            if (tableCount === 0 && fallbackData.tables.length > 0) {
-                console.log('[DB] Seeding default tables in MongoDB...');
-                await Table.insertMany(fallbackData.tables);
-            } else {
-                await Table.updateOne(
-                    { id: 1 },
-                    {
-                        $setOnInsert: {
-                            schema_version: fallbackData.tables[0]?.schema_version || 2,
-                            id: 1,
-                            created_at: new Date()
+        }
+        
+        if (useMongo) {
+            try {
+                // Pre-seed tables
+                const tableCount = await Table.countDocuments();
+                if (tableCount === 0 && fallbackData.tables.length > 0) {
+                    console.log('[DB] Seeding default tables in MongoDB...');
+                    await Table.insertMany(fallbackData.tables);
+                } else {
+                    await Table.updateOne(
+                        { id: 1 },
+                        {
+                            $setOnInsert: { schema_version: 2, id: 1, created_at: new Date() },
+                            $set: {
+                                code: 'AUTO', name: 'Auto Roulette',
+                                provider: 'Evolution',
+                                url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
+                                source_type: 'casino_org', status: 'active'
+                            }
                         },
-                        $set: {
-                            code: 'AUTO',
-                            name: 'Auto Roulette',
-                            provider: 'Evolution',
-                            url: 'https://www.casino.org/casinoscores/es/auto-roulette/',
-                            source_type: 'casino_org',
-                            status: 'active'
-                        }
-                    },
-                    { upsert: true }
-                );
-                await Table.updateOne({ id: 2 }, { $set: { status: 'inactive' } });
+                        { upsert: true }
+                    );
+                    await Table.updateOne({ id: 2 }, { $set: { status: 'inactive' } });
+                }
+                console.log('[DB] MongoDB ready.');
+            } catch (seedErr) {
+                console.error('[DB] Seed error:', seedErr.message);
             }
-            console.log('✅ [DB] Fresh Session: Local JSON sync disabled.');
-        } catch (err) {
-            console.error('❌ [DB] MongoDB Connection Failed:', err.message);
-            console.log('ℹ️ [DB] Tip: Ensure your IP is whitelisted in MongoDB Atlas (Network Access -> Add IP Address -> Allow Access From Anywhere).');
-            useMongo = false;
+        } else {
+            console.log('[DB] Falling back to JSON storage.');
             loadFallback();
         }
     } else {
-        console.warn('⚠️ [DB] No MONGODB_URI found in .env file. Falling back to JSON storage.');
+        console.warn('[DB] No MONGODB_URI found in .env. Falling back to JSON storage.');
         useMongo = false;
         loadFallback();
     }
