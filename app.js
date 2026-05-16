@@ -463,7 +463,7 @@ document.addEventListener('click', (e) => {
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
         if (e.target.id === 'tab-btn-metricas') { renderMetricasPanel(); loadForestDiscoveries(); }
-        if (e.target.id === 'tab-btn-raw' && document.getElementById('raw-pred-n9-text')?.innerText === '--') { requestRawAI(); }
+        if (e.target.id === 'tab-btn-raw') { updateRawStats(); renderRawHist(); requestRawAI(); }
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
     }
 });
@@ -792,9 +792,11 @@ function submitNumber(val, silent = false, batch = false) {
                 loadForestDiscoveries();
             }
             
+            // Evaluate RAW predictions ALWAYS (even when panel hidden)
+            evaluateRawPredictions(n);
+            
             // Update RAW panel if visible
             if (document.getElementById('panel-raw')?.style.display !== 'none') {
-                evaluateRawPredictions(n);
                 setTimeout(requestRawAI, 1000);
             }
         }
