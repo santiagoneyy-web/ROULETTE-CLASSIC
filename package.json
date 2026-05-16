@@ -9,6 +9,7 @@
     "stack:v2": "node start_v2.js",
     "crawler": "node crawler.js --api http://127.0.0.1:3000/api/spin",
     "crawler:v2": "node crawler_v2.js",
+    "stack:render": "concurrently -n API,CASINO -c blue,green \"node server.js\" \"node crawler_v2.js --source casinoorg --interval 3000\"",
     "crawler:casinoorg": "node crawler_v2.js --source casinoorg",
     "crawler:gc": "node crawler_v2.js --source gamblingcounting",
     "diagnose": "node test_crawler_diagnosis.js",
