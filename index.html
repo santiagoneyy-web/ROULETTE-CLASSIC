@@ -39,6 +39,7 @@
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
                      <button class="tab-btn" id="tab-btn-metricas">METRICAS</button>
+                     <button class="tab-btn" id="tab-btn-raw">RAW</button>
                      <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
                      <button class="tab-btn" id="tab-btn-chat">CHAT</button>
@@ -194,6 +195,55 @@
             </section>
 
 
+            <!-- 2.5 RAW IA (sin memoria, sin estrategias) -->
+            <section class="shadow-panel" id="panel-raw" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x26A1;</span>
+                    <span class="agent-card-name">RAW IA</span>
+                    <span id="raw-status" style="padding:1px 6px; font-size:9px;">STANDBY</span>
+                </div>
+                <div style="padding: 6px 8px;">
+                    <div id="raw-mode-note" style="font-size: 9px; color: var(--muted); padding: 0 2px 6px 2px;">Solo metricas puras. Sin RL, sin DB, sin estrategias. Sin memoria.</div>
+                    
+                    <div id="raw-pred-n9" style="background: rgba(100,149,237,0.08); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.25); margin-bottom: 6px; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
+                            <div><strong style="color:#6495ED;">&#x26A1; N9:</strong>&nbsp;<span id="raw-pred-n9-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
+                            <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                        </div>
+                        <div id="raw-hist-n9" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
+                            <div id="raw-hist-list-n9" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
+                        </div>
+                    </div>
+                    
+                    <div id="raw-pred-n4" style="background: rgba(100,149,237,0.05); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.2); margin-bottom: 6px; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
+                            <div><strong style="color:#8ab0ff;">&#x26A1; N4:</strong>&nbsp;<span id="raw-pred-n4-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
+                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                        </div>
+                        <div id="raw-hist-n4" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
+                            <div id="raw-hist-list-n4" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+                        <div style="flex:1; font-size:8px; color:var(--text-dim); font-family:var(--mono);">
+                            W:<span id="raw-n9-w" style="color:#0f0;">0</span> L:<span id="raw-n9-l" style="color:#f55;">0</span> |
+                            N4 W:<span id="raw-n4-w" style="color:#0f0;">0</span> L:<span id="raw-n4-l" style="color:#f55;">0</span>
+                        </div>
+                        <div style="font-size:9px; font-family:var(--mono);">
+                            <span id="raw-n9-rate" style="color:var(--gold);">0%</span>
+                            <span style="color:var(--text-dim);">N9</span>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 6px 10px; background: rgba(100,149,237,0.05); border-radius: 8px; border: 1px solid rgba(100,149,237,0.1);">
+                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">LECTURA RAW</div>
+                        <div id="raw-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA RAW genera senales solo con metricas actuales.</div>
+                    </div>
+                </div>
+            </section>
+
+
             <!-- 3. SCATTER CHART (Direction Dispersion) -->
             <section class="shadow-panel" id="panel-scatter" style="display: none;">
                 <div class="agent-card-header" style="padding: 4px 10px;">
@@ -219,7 +269,6 @@
                         <h2 class="main-title">AUTO AI PREDICTOR</h2>
                     </div>
                     <button id="btn-ai-mode" onclick="toggleAIMode()" style="background: rgba(240,192,64,0.15); border: 1px solid #f0c040; color: #f0c040; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">SAFE FILTRA</button>
-                    <button id="btn-ai-mode-raw" onclick="toggleAIModeRaw()" style="background: rgba(100,149,237,0.12); border: 1px solid #6495ED; color: #6495ED; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">RAW</button>
                     <span id="ai-status" style="padding:1px 6px;">STANDBY</span>
                 </div>
                 <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">

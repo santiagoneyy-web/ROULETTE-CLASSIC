@@ -24,30 +24,16 @@ function isResolvedAiOutcome(value) {
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
-    const btnRaw = document.getElementById('btn-ai-mode-raw');
     const note = document.getElementById('auto-ai-mode-note');
     if (window.currentAIMode === 'SAFE') {
         window.currentAIMode = 'FULL';
         if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
-        if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.12)'; btnRaw.style.color = '#6495ED'; btnRaw.style.borderColor = '#6495ED'; }
         if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
     } else {
         window.currentAIMode = 'SAFE';
         if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
-        if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.12)'; btnRaw.style.color = '#6495ED'; btnRaw.style.borderColor = '#6495ED'; }
         if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
-    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
-};
-
-window.toggleAIModeRaw = function() {
-    const btn = document.getElementById('btn-ai-mode');
-    const btnRaw = document.getElementById('btn-ai-mode-raw');
-    const note = document.getElementById('auto-ai-mode-note');
-    window.currentAIMode = 'RAW';
-    if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
-    if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.22)'; btnRaw.style.color = '#fff'; btnRaw.style.borderColor = '#fff'; }
-    if(note) note.innerText = 'RAW: solo metricas puras. Sin RL, sin estrategias, sin memoria. Para comparar rendimiento.';
     if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
 };
 
@@ -461,9 +447,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-metricas', 'panel-scatter', 'panel-auto', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-metricas', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -474,6 +460,7 @@ document.addEventListener('click', (e) => {
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
         if (e.target.id === 'tab-btn-metricas') { renderMetricasPanel(); loadForestDiscoveries(); }
+        if (e.target.id === 'tab-btn-raw' && document.getElementById('raw-pred-n9-text')?.innerText === '--') { requestRawAI(); }
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
     }
 });
@@ -800,6 +787,12 @@ function submitNumber(val, silent = false, batch = false) {
             if (document.getElementById('panel-metricas')?.style.display !== 'none') {
                 renderMetricasPanel();
                 loadForestDiscoveries();
+            }
+            
+            // Update RAW panel if visible
+            if (document.getElementById('panel-raw')?.style.display !== 'none') {
+                evaluateRawPredictions(n);
+                setTimeout(requestRawAI, 1000);
             }
         }
     }
@@ -1762,27 +1755,123 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- AUTO AI PREDICTORS VIA GROQ ---
-window.currentAIMode = 'SAFE';
 let autoAiInFlight = false;
 let lastAutoAiRequestAt = 0;
 let lastAutoAiRequestKey = '';
 const AUTO_AI_MIN_INTERVAL_MS = 12000;
 
-window.toggleAIMode = function() {
-    const btn = document.getElementById('btn-ai-mode');
-    const note = document.getElementById('auto-ai-mode-note');
-    if (window.currentAIMode === 'SAFE') {
-        window.currentAIMode = 'FULL';
-        if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
-        if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
-    } else {
-        window.currentAIMode = 'SAFE';
-        if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
-        if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
+// --- RAW AI (separate panel, own counters) ---
+const rawN9History = [];
+const rawN4History = [];
+let rawN9Wins = 0, rawN9Losses = 0;
+let rawN4Wins = 0, rawN4Losses = 0;
+let lastRawPredN9 = null, lastRawPredN4 = null;
+let rawAiInFlight = false;
+
+function updateRawStats() {
+    document.getElementById('raw-n9-w').innerText = rawN9Wins;
+    document.getElementById('raw-n9-l').innerText = rawN9Losses;
+    document.getElementById('raw-n4-w').innerText = rawN4Wins;
+    document.getElementById('raw-n4-l').innerText = rawN4Losses;
+    const n9Total = rawN9Wins + rawN9Losses;
+    const n4Total = rawN4Wins + rawN4Losses;
+    document.getElementById('raw-n9-rate').innerText = (n9Total ? Math.round((rawN9Wins / n9Total) * 100) : 0) + '%';
+}
+
+function renderRawHist() {
+    const n9List = document.getElementById('raw-hist-list-n9');
+    const n4List = document.getElementById('raw-hist-list-n4');
+    if (n9List) n9List.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses }, 20);
+    if (n4List) n4List.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses }, 20);
+}
+
+function evaluateRawPredictions(number) {
+    let n9Hit = false, n4Hit = false;
+    if (lastRawPredN9 && lastRawPredN9 !== 'ESPERAR') {
+        n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
+        if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
+        else { rawN9Losses++; rawN9History.push('loss'); }
+        if (rawN9History.length > 25) rawN9History.shift();
     }
-    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
-    if (typeof requestAutoAI === 'function') requestAutoAI();
-};
+    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR') {
+        n4Hit = wheelNeighbors(Number(lastRawPredN4), 2).includes(number);
+        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
+        else { rawN4Losses++; rawN4History.push('loss'); }
+        if (rawN4History.length > 25) rawN4History.shift();
+    }
+    updateRawStats();
+    renderRawHist();
+    return n9Hit || n4Hit;
+}
+
+async function requestRawAI() {
+    if (rawAiInFlight || !lastSignal || history.length < 3) return;
+    if (Date.now() - lastAutoAiRequestAt < 8000) return;
+    
+    rawAiInFlight = true;
+    lastAutoAiRequestAt = Date.now();
+    
+    const n9El = document.getElementById('raw-pred-n9-text');
+    const n4El = document.getElementById('raw-pred-n4-text');
+    const statusEl = document.getElementById('raw-status');
+    const analysisEl = document.getElementById('raw-ai-analysis');
+    
+    if (statusEl) statusEl.innerText = 'PENSANDO...';
+    
+    try {
+        const cwRate = cwHistory.length ? Math.round((cwHistory.filter(x => x === 'win').length / cwHistory.length) * 100) : 0;
+        const ccwRate = ccwHistory.length ? Math.round((ccwHistory.filter(x => x === 'win').length / ccwHistory.length) * 100) : 0;
+        const der = cwHistory.filter(x => x === 'win').length;
+        const izq = ccwHistory.filter(x => x === 'win').length;
+        const big = zoneOverHistory.filter(x => x === 'win').length;
+        const small = zoneUnderHistory.filter(x => x === 'win').length;
+        
+        const autoAiContext = lastSignal ? {
+            mode: 'RAW',
+            stabilityLevel: 'red',
+            patternLabel: 'Estandar',
+            dominance8: { cw: der, ccw: izq, big: big, small: small },
+            momentum15: { cw: der, ccw: izq, big: big, small: small },
+            sequence15: { dir: '', zone: '' },
+            performance8: {
+                cwN9: getPerfText(cwHistory),
+                cwN4: getPerfText(cwN4History),
+                ccwN9: getPerfText(ccwHistory),
+                ccwN4: getPerfText(ccwN4History)
+            },
+            routes: {
+                cw: { n9: lastSignal.targetCW, n4Small: lastSignal.targetUnderCW, n4Big: lastSignal.targetOverCW, hitRate: Number(cwRate) },
+                ccw: { n9: lastSignal.targetCCW, n4Small: lastSignal.targetOverCCW, n4Big: lastSignal.targetUnderCCW, hitRate: Number(ccwRate) }
+            },
+            recentNumbers: history.slice(-15)
+        } : null;
+        
+        const resp = await fetch('/api/ai/groq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: '', tableId: currentTableId, autoAiContext })
+        });
+        const data = await resp.json();
+        
+        if (data.reply) {
+            const parts = data.reply.split('|');
+            const rawN9 = parts[0] ? parts[0].replace('N9:', '').trim() : 'ESPERAR';
+            const rawN4 = parts[1] ? parts[1].replace('N4:', '').trim() : 'ESPERAR';
+            
+            lastRawPredN9 = rawN9;
+            lastRawPredN4 = rawN4;
+            if (n9El) n9El.innerText = rawN9;
+            if (n4El) n4El.innerText = rawN4;
+            if (analysisEl) analysisEl.innerText = data.analysis || 'RAW: lectura solo con metricas actuales.';
+            if (statusEl) statusEl.innerText = rawN9 === 'ESPERAR' ? 'WAIT' : 'ONLINE';
+        }
+    } catch (e) {
+        console.error('RAW AI error:', e);
+        if (statusEl) statusEl.innerText = 'ERROR';
+    } finally {
+        rawAiInFlight = false;
+    }
+}
 
 async function requestAutoAI() {
     const n9El = document.getElementById('ai-pred-n9-text');
