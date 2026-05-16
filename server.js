@@ -1086,8 +1086,34 @@ function buildFullAutoAiUserPrompt(context, strategyDigest, learningDigest = '')
     return buildAutoAiPromptLines(context, strategyDigest, learningDigest, 'FULL').join('\n');
 }
 
+function buildRawAutoAiUserPrompt(context) {
+    if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
+        return 'RAW: sin contexto suficiente.';
+    }
+    const dom8 = context.dominance8 || {};
+    const mom15 = context.momentum15 || {};
+    const perf8 = context.performance8 || {};
+    const cw = context.routes.cw;
+    const ccw = context.routes.ccw;
+    return [
+        'MODO RAW: trabajas SOLO con las metricas actuales, sin historial de aprendizaje ni memorias.',
+        'No tienes acceso a la base de datos ni a estrategias guardadas. Solo ves este instante de la mesa.',
+        `DOM8 CW=${dom8.cw || 0} CCW=${dom8.ccw || 0} BIG=${dom8.big || 0} SMALL=${dom8.small || 0}`,
+        `MOM15 CW=${mom15.cw || 0} CCW=${mom15.ccw || 0} BIG=${mom15.big || 0} SMALL=${mom15.small || 0}`,
+        `WL CW_N9=${perf8.cwN9 || '-'} CW_N4=${perf8.cwN4 || '-'} CCW_N9=${perf8.ccwN9 || '-'} CCW_N4=${perf8.ccwN4 || '-'}`,
+        `DIR15=${context.sequence15?.dir || '-'}`,
+        `CW n9=${cw.n9} n4S=${cw.n4Small} n4B=${cw.n4Big}`,
+        `CCW n9=${ccw.n9} n4S=${ccw.n4Small} n4B=${ccw.n4Big}`,
+        `NUMS=${(context.recentNumbers || []).slice(-12).join(',') || '-'}`,
+        'Elige el mejor entre CW/CCW basado SOLO en DOM8+MOM15+WL. Responde JSON.',
+        'Si la diferencia entre rutas es < 3 y el hit rate < 40%, responde ESPERAR.',
+        'JSON: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero","n4":"numero","analysis":"max 20 palabras"}'
+    ].join('\n');
+}
+
 function buildAutoAiUserPrompt(context, strategyDigest, learningDigest = '') {
     const mode = String(context?.mode || 'SAFE').toUpperCase();
+    if (mode === 'RAW') return buildRawAutoAiUserPrompt(context);
     return mode === 'SAFE'
         ? buildSafeAutoAiUserPrompt(context, strategyDigest, learningDigest)
         : buildFullAutoAiUserPrompt(context, strategyDigest, learningDigest);
@@ -1206,11 +1232,11 @@ app.post('/api/ai/groq', async (req, res) => {
             : null;
         const fallback = buildAutoAiFallback(autoAiContext);
         const groqKey = process.env.GROQ_API_KEY;
-        const strategyDigest = buildStrategyDigest(tableId || 'global');
         const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
-        const learningSummary = autoAiContext ? await getLearningSummaryAsync(tableId || 0) : null;
-        const learningDigest = autoAiContext ? buildLearningDigest(learningSummary, autoMode) : '';
-        const predictionMeta = { strategyDigest, learningDigest, provider: 'llm-pending' };
+        const strategyDigest = autoMode === 'RAW' ? '' : buildStrategyDigest(tableId || 'global');
+        const learningSummary = (autoAiContext && autoMode !== 'RAW') ? await getLearningSummaryAsync(tableId || 0) : null;
+        const learningDigest = (autoAiContext && autoMode !== 'RAW') ? buildLearningDigest(learningSummary, autoMode) : '';
+        const predictionMeta = { strategyDigest: autoMode === 'RAW' ? '' : strategyDigest, learningDigest: autoMode === 'RAW' ? '' : learningDigest, provider: 'llm-pending' };
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1257,6 +1283,16 @@ app.post('/api/ai/groq', async (req, res) => {
                     'Cuando sea seguro entrar, dame los mismos numeros de las medidas (no inventes).',
                     'JSON: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 25 palabras explicando la decision"}'
                 ].join('\n');
+            } else if (autoMode === 'RAW') {
+                systemPrompt = [
+                    'Eres motor RAW de ROULETTE-CLASSIC. Trabajas SIN memoria, SIN aprendizaje, SIN estrategias guardadas.',
+                    'Solo ves las metricas actuales de la mesa. Nada de historial RL ni patrones aprendidos.',
+                    'Responde solo JSON valido. Elige exclusivamente entre las medidas dadas.',
+                    'Si la brecha entre rutas (DOM8) es >= 4 y el hit rate >= 45%: elige la ruta dominante.',
+                    'Si la brecha es < 3 o el hit rate < 35%: responde ESPERAR (no hay ventaja clara).',
+                    'Entre 3-4 de brecha: decide segun el momentum de los ultimos 15 tiros.',
+                    'JSON: {"route":"CW|CCW|ESPERAR","zone":"SMALL|BIG|ESPERAR","n9":"numero o ESPERAR","n4":"numero o ESPERAR","analysis":"max 20 palabras"}'
+                ].join('\n');
             } else {
                 systemPrompt = [
                     'Eres motor FULL de ROULETTE-CLASSIC.',
@@ -1287,8 +1323,8 @@ app.post('/api/ai/groq', async (req, res) => {
             if (autoAiContext) {
                 const modeContext = { ...autoAiContext, mode: autoMode };
                 
-                // SAFE auditor: if LLM says ESPERAR, trust it and block
-                if (autoMode === 'SAFE') {
+                // SAFE auditor + RAW: if LLM says ESPERAR, trust it and block
+                if (autoMode === 'SAFE' || autoMode === 'RAW') {
                     const safeN9 = cleanAutoNumber(parsed.n9);
                     const safeRoute = normalizeAiRoute(parsed.route || parsed.direccion, safeN9, modeContext);
                     
@@ -1297,7 +1333,7 @@ app.post('/api/ai/groq', async (req, res) => {
                             reply: formatAutoReply('ESPERAR', 'ESPERAR'),
                             route: 'ESPERAR',
                             zone: 'ESPERAR',
-                            analysis: String(parsed.analysis || 'Auditor SAFE: condiciones no optimas para entrar.').trim()
+                            analysis: String(parsed.analysis || (autoMode === 'RAW' ? 'RAW: metricas insuficientes para entrar.' : 'Auditor SAFE: condiciones no optimas para entrar.')).trim()
                         };
                         persistAiPredictionRecord(tableId || 0, modeContext, safeDecision, parsed, { ...predictionMeta, provider: llm.provider });
                         return res.json({
@@ -1310,7 +1346,7 @@ app.post('/api/ai/groq', async (req, res) => {
                     }
                 }
                 
-                // FULL or SAFE-with-green-light: normalize prediction
+                // FULL / SAFE-green / RAW-green: normalize prediction
                 const normalized = normalizeAutoAiResponse(parsed, modeContext, fallback);
                 persistAutoAiStrategy(parsed, autoAiContext, tableId || 'global');
                 persistAiPredictionRecord(tableId || 0, modeContext, normalized, parsed, { ...predictionMeta, provider: llm.provider });

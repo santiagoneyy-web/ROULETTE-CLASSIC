@@ -24,16 +24,30 @@ function isResolvedAiOutcome(value) {
 window.currentAIMode = 'SAFE';
 window.toggleAIMode = function() {
     const btn = document.getElementById('btn-ai-mode');
+    const btnRaw = document.getElementById('btn-ai-mode-raw');
     const note = document.getElementById('auto-ai-mode-note');
     if (window.currentAIMode === 'SAFE') {
         window.currentAIMode = 'FULL';
         if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+        if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.12)'; btnRaw.style.color = '#6495ED'; btnRaw.style.borderColor = '#6495ED'; }
         if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
     } else {
         window.currentAIMode = 'SAFE';
         if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+        if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.12)'; btnRaw.style.color = '#6495ED'; btnRaw.style.borderColor = '#6495ED'; }
         if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
     }
+    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
+};
+
+window.toggleAIModeRaw = function() {
+    const btn = document.getElementById('btn-ai-mode');
+    const btnRaw = document.getElementById('btn-ai-mode-raw');
+    const note = document.getElementById('auto-ai-mode-note');
+    window.currentAIMode = 'RAW';
+    if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
+    if(btnRaw) { btnRaw.style.background = 'rgba(100,149,237,0.22)'; btnRaw.style.color = '#fff'; btnRaw.style.borderColor = '#fff'; }
+    if(note) note.innerText = 'RAW: solo metricas puras. Sin RL, sin estrategias, sin memoria. Para comparar rendimiento.';
     if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
 };
 
