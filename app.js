@@ -530,6 +530,11 @@ document.addEventListener('click', (e) => {
 });
 
 // ─── METRICAS PANEL ───────────────────────────────────────
+const metricaScoresHistory = {}; // { metricId: [score, score, ...] }
+let metricaLastScores = {}; // { metricId: lastScore }
+const metricaHitCounts = {}; // { metricId: { wins: 0, losses: 0 } }
+let lastEvalNumber = null;
+
 function renderMetricasPanel() {
     if (!lastSignal || history.length < 2) {
         document.getElementById('metricas-stability').innerText = 'Sin datos';
@@ -543,18 +548,12 @@ function renderMetricasPanel() {
     const ccwN4s = lastSignal.targetOverCCW;
     const ccwN4b = lastSignal.targetUnderCCW;
     
-    // Dominance calc (from existing data)
     const der = cwHistory.filter(x => x === 'win').length;
     const izq = ccwHistory.filter(x => x === 'win').length;
     const derTotal = cwHistory.length || 1;
     const izqTotal = ccwHistory.length || 1;
     const cwRate = Math.round((der / derTotal) * 100);
     const ccwRate = Math.round((izq / izqTotal) * 100);
-    
-    const der15 = zoneOverHistory.length >= 15 ? zoneOverHistory.slice(-15).filter(x => x === 'win').length : 0;
-    const izq15 = zoneUnderHistory.length >= 15 ? zoneUnderHistory.slice(-15).filter(x => x === 'win').length : 0;
-    const big15 = zoneOverHistory.length >= 15 ? zoneOverHistory.slice(-15).filter(x => x === 'win').length : 0;
-    const small15 = zoneUnderHistory.length >= 15 ? zoneUnderHistory.slice(-15).filter(x => x === 'win').length : 0;
     
     // DOM8 from recent history
     let domCW = 0, domCCW = 0, domBig = 0, domSmall = 0;
@@ -563,17 +562,11 @@ function renderMetricasPanel() {
         if (d >= 0) domCW++; else domCCW++;
         if (Math.abs(d) >= 9) domBig++; else domSmall++;
     }
-    const momCW = der15;
-    const momCCW = izq15;
     
     document.getElementById('met-dom-cw').innerText = domCW;
     document.getElementById('met-dom-ccw').innerText = domCCW;
     document.getElementById('met-dom-big').innerText = domBig;
     document.getElementById('met-dom-small').innerText = domSmall;
-    document.getElementById('met-mom-cw').innerText = momCW;
-    document.getElementById('met-mom-ccw').innerText = momCCW;
-    document.getElementById('met-mom-big').innerText = big15;
-    document.getElementById('met-mom-small').innerText = small15;
     
     // Stability
     const diff = Math.abs(domCW - domCCW);
@@ -586,8 +579,8 @@ function renderMetricasPanel() {
     
     // Score each metric
     const scores = {
-        'cw_n9': (domCW * 3) + (momCW * 2) + cwRate / 10,
-        'ccw_n9': (domCCW * 3) + (momCCW * 2) + ccwRate / 10,
+        'cw_n9': (domCW * 3) + (der * 2) + cwRate / 10,
+        'ccw_n9': (domCCW * 3) + (izq * 2) + ccwRate / 10,
         'cw_n4s': (domCW * 2) + (domSmall * 2) + cwRate / 10,
         'cw_n4b': (domCW * 2) + (domBig * 2) + cwRate / 10,
         'ccw_n4s': (domCCW * 2) + (domSmall * 2) + ccwRate / 10,
@@ -601,22 +594,58 @@ function renderMetricasPanel() {
         });
     }
     
+    // Track history for trends
+    Object.keys(scores).forEach(k => {
+        if (!metricaScoresHistory[k]) metricaScoresHistory[k] = [];
+        metricaScoresHistory[k].push(scores[k]);
+        if (metricaScoresHistory[k].length > 10) metricaScoresHistory[k].shift();
+    });
+    
+    // Init hit counters
+    Object.keys(scores).forEach(k => {
+        if (!metricaHitCounts[k]) metricaHitCounts[k] = { wins: 0, losses: 0 };
+    });
+    
+    // Check which metrics hit the last number
+    const lastNum = history[history.length - 1];
+    if (lastNum !== lastEvalNumber) {
+        lastEvalNumber = lastNum;
+        const targets = {
+            'cw_n9': { target: cw, radius: 9 },
+            'ccw_n9': { target: ccw, radius: 9 },
+            'cw_n4s': { target: cwN4s, radius: 2 },
+            'cw_n4b': { target: cwN4b, radius: 2 },
+            'ccw_n4s': { target: ccwN4s, radius: 2 },
+            'ccw_n4b': { target: ccwN4b, radius: 2 }
+        };
+        Object.entries(targets).forEach(([id, t]) => {
+            if (t.target != null && typeof wheelNeighbors === 'function') {
+                const hit = wheelNeighbors(t.target, t.radius).includes(lastNum);
+                if (hit) metricaHitCounts[id].wins++;
+                else metricaHitCounts[id].losses++;
+            }
+        });
+    }
+    
     // Update metric cards
     const cards = [
-        { id: 'cw_n9', el: 'met-cw-n9-val', wl: 'met-cw-n9-wl', sc: 'met-cw-n9-score', val: cw, wlData: cwHistory, color: '#00e5c8' },
-        { id: 'ccw_n9', el: 'met-ccw-n9-val', wl: 'met-ccw-n9-wl', sc: 'met-ccw-n9-score', val: ccw, wlData: ccwHistory, color: '#f55' },
-        { id: 'cw_n4s', el: 'met-cw-n4s-val', wl: null, sc: 'met-cw-n4s-score', val: cwN4s, wlData: null, color: '#8ff' },
-        { id: 'cw_n4b', el: 'met-cw-n4b-val', wl: null, sc: 'met-cw-n4b-score', val: cwN4b, wlData: null, color: '#8ff' },
-        { id: 'ccw_n4s', el: 'met-ccw-n4s-val', wl: null, sc: 'met-ccw-n4s-score', val: ccwN4s, wlData: null, color: '#f88' },
-        { id: 'ccw_n4b', el: 'met-ccw-n4b-val', wl: null, sc: 'met-ccw-n4b-score', val: ccwN4b, wlData: null, color: '#f88' }
+        { id: 'cw_n9', el: 'met-cw-n9-val', wl: 'met-cw-n9-wl', sc: 'met-cw-n9-score', str: 'met-cw-n9-streak', tr: 'met-cw-n9-trend', val: cw, wlData: cwHistory, color: '#00e5c8' },
+        { id: 'ccw_n9', el: 'met-ccw-n9-val', wl: 'met-ccw-n9-wl', sc: 'met-ccw-n9-score', str: 'met-ccw-n9-streak', tr: 'met-ccw-n9-trend', val: ccw, wlData: ccwHistory, color: '#f55' },
+        { id: 'cw_n4s', el: 'met-cw-n4s-val', wl: null, sc: 'met-cw-n4s-score', str: 'met-cw-n4s-streak', tr: 'met-cw-n4s-trend', val: cwN4s, wlData: null, color: '#8ff' },
+        { id: 'cw_n4b', el: 'met-cw-n4b-val', wl: null, sc: 'met-cw-n4b-score', str: 'met-cw-n4b-streak', tr: 'met-cw-n4b-trend', val: cwN4b, wlData: null, color: '#8ff' },
+        { id: 'ccw_n4s', el: 'met-ccw-n4s-val', wl: null, sc: 'met-ccw-n4s-score', str: 'met-ccw-n4s-streak', tr: 'met-ccw-n4s-trend', val: ccwN4s, wlData: null, color: '#f88' },
+        { id: 'ccw_n4b', el: 'met-ccw-n4b-val', wl: null, sc: 'met-ccw-n4b-score', str: 'met-ccw-n4b-streak', tr: 'met-ccw-n4b-trend', val: ccwN4b, wlData: null, color: '#f88' }
     ];
     
     let bestScore = -1;
     let bestCard = null;
+    let bestId = null;
     
     cards.forEach(c => {
         const el = document.getElementById(c.el);
         const scEl = document.getElementById(c.sc);
+        const strEl = document.getElementById(c.str);
+        const trEl = document.getElementById(c.tr);
         const score = scores[c.id] || 0;
         if (el) el.innerText = c.val != null ? c.val : '--';
         if (scEl) scEl.innerText = 's:' + score.toFixed(1);
@@ -624,33 +653,115 @@ function renderMetricasPanel() {
             document.getElementById(c.wl).innerText = getPerfText(c.wlData);
         }
         
+        // Streak counter
+        const hc = metricaHitCounts[c.id] || { wins: 0, losses: 0 };
+        const hcTotal = hc.wins + hc.losses;
+        if (strEl) strEl.innerText = hcTotal ? Math.round((hc.wins / hcTotal) * 100) + '%' : '--';
+        if (strEl) strEl.style.color = hc.wins > hc.losses ? '#0f0' : hc.losses > hc.wins ? '#f55' : 'var(--text-dim)';
+        
+        // Trend arrow
+        const prev = metricaLastScores[c.id] || 0;
+        if (trEl) {
+            if (score > prev + 0.5) trEl.innerText = '\u2191';
+            else if (score < prev - 0.5) trEl.innerText = '\u2193';
+            else trEl.innerText = '\u2192';
+            trEl.style.color = score > prev + 0.5 ? '#0f0' : score < prev - 0.5 ? '#f55' : 'var(--text-dim)';
+        }
+        metricaLastScores[c.id] = score;
+        
         // Highlight best
         const card = document.getElementById('met-' + c.id);
         if (card) {
-            if (score > bestScore) { bestScore = score; bestCard = card; }
+            if (score > bestScore) { bestScore = score; bestCard = card; bestId = c.id; }
             card.style.borderColor = 'rgba(255,255,255,0.08)';
             card.style.boxShadow = 'none';
         }
     });
     
     // Best pick
-    if (bestCard) {
+    if (bestCard && bestId) {
         bestCard.style.borderColor = 'var(--gold)';
         bestCard.style.boxShadow = '0 0 8px rgba(240,192,64,0.2)';
-        
-        const bestMetric = cards.find(c => scores[c.id] === bestScore);
+        const bestMetric = cards.find(c => c.id === bestId);
         if (bestMetric) {
-            document.getElementById('met-pick-text').innerText = 'N9: ' + (bestMetric.id.includes('n9') ? bestMetric.val : (bestMetric.id.includes('cw') ? cw : ccw)) + ' | N4: ' + (bestMetric.id.includes('n4') ? bestMetric.val : cwN4s);
-            document.getElementById('met-pick-reason').innerText = bestMetric.id.toUpperCase() + ' domina (score: ' + bestScore.toFixed(1) + ')';
+            const pickN9 = bestId.includes('n9') ? bestMetric.val : (bestId.includes('cw') ? cw : ccw);
+            const pickN4 = bestId.includes('n4') ? bestMetric.val : (bestId.includes('cw') ? cwN4s : ccwN4s);
+            document.getElementById('met-pick-text').innerText = 'N9: ' + pickN9 + ' | N4: ' + pickN4;
+            document.getElementById('met-pick-reason').innerText = bestId.toUpperCase() + ' domina (s:' + bestScore.toFixed(1) + ')';
         }
     }
     
-    // Apply color coding to cards
+    // Confluence detector
+    renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability);
+}
+
+function renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability) {
+    const confDiv = document.getElementById('metricas-confluence');
+    const confSignal = document.getElementById('met-confluence-signal');
+    const confDetail = document.getElementById('met-confluence-detail');
+    if (!confDiv || !confSignal || !confDetail) return;
+    
+    // Group metrics by direction
+    const cwScore = (scores['cw_n9'] || 0) + (scores['cw_n4s'] || 0) + (scores['cw_n4b'] || 0);
+    const ccwScore = (scores['ccw_n9'] || 0) + (scores['ccw_n4s'] || 0) + (scores['ccw_n4b'] || 0);
+    const bigScore = (scores['cw_n4b'] || 0) + (scores['ccw_n4b'] || 0);
+    const smallScore = (scores['cw_n4s'] || 0) + (scores['ccw_n4s'] || 0);
+    
+    const cwDom = domCW >= 5;
+    const ccwDom = domCCW >= 5;
+    const cwN9Hot = (scores['cw_n9'] || 0) > (scores['ccw_n9'] || 0) + 3;
+    const ccwN9Hot = (scores['ccw_n9'] || 0) > (scores['cw_n9'] || 0) + 3;
+    
+    // Detect confluence types
+    let confType = '', confColor = 'var(--text-dim)', confDesc = '';
+    
+    if (cwDom && cwN9Hot && cwScore > ccwScore * 1.5) {
+        confType = 'FUERTE CW \u27A1';
+        confColor = '#00e5c8';
+        confDesc = 'DOM8 + Score + N9 coinciden en CW';
+    } else if (ccwDom && ccwN9Hot && ccwScore > cwScore * 1.5) {
+        confType = 'FUERTE CCW \u2B05';
+        confColor = '#f55';
+        confDesc = 'DOM8 + Score + N9 coinciden en CCW';
+    } else if (cwScore > ccwScore * 1.3 && cwN9Hot) {
+        confType = 'LEVE CW \u27A1';
+        confColor = '#8ff';
+        confDesc = 'Score CW domina con N9 caliente';
+    } else if (ccwScore > cwScore * 1.3 && ccwN9Hot) {
+        confType = 'LEVE CCW \u2B05';
+        confColor = '#f88';
+        confDesc = 'Score CCW domina con N9 caliente';
+    } else if (stability === 'ROJA') {
+        confType = 'SIN CONFLUENCIA';
+        confColor = 'var(--text-dim)';
+        confDesc = 'Mesa roja, esperar a que se defina';
+    } else {
+        confType = 'MIXTA';
+        confColor = 'var(--gold)';
+        confDesc = 'Metricas divididas. Observar.';
+    }
+    
+    confDiv.style.display = 'block';
+    confSignal.innerText = confType;
+    confSignal.style.color = confColor;
+    confDetail.innerText = confDesc + ' | CW:' + cwScore.toFixed(1) + ' vs CCW:' + ccwScore.toFixed(1);
+    
+    // Flash hit: highlight metric cards that just covered the last number
+    const lastN = history[history.length - 1];
     cards.forEach(c => {
         const card = document.getElementById('met-' + c.id);
-        if (card) {
-            const inner = card.querySelector('[style*="font-size: 1"]');
-            if (inner) inner.style.color = c.color;
+        if (!card || c.val == null) return;
+        const radius = c.id.includes('n4') ? 2 : 9;
+        if (typeof wheelNeighbors === 'function' && wheelNeighbors(c.val, radius).includes(lastN)) {
+            card.style.transition = 'all 0.15s';
+            card.style.boxShadow = '0 0 12px rgba(0,255,136,0.5)';
+            card.style.borderColor = '#00ff88';
+            setTimeout(() => {
+                if (card.id !== bestId) {
+                    card.style.boxShadow = 'none';
+                    card.style.borderColor = 'rgba(255,255,255,0.08)';
+                }
+            }, 1200);
         }
     });
 }
