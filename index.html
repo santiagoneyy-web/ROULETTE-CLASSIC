@@ -12,12 +12,17 @@
 <div class="app-shell">
     <div class="three-col-body">
          <div class="col-visual">
-            <section class="visual-panel-mini">
-                <div class="table-image-container">
-                    <img src="table-1.jpg" alt="Mesa de Ruleta">
-                </div>
-                <div id="history-strip-mini" class="history-strip-mini"></div>
-            </section>
+             <section class="visual-panel-mini">
+                 <div class="table-image-container">
+                     <img src="table-1.jpg" alt="Mesa de Ruleta">
+                 </div>
+                 <div id="history-strip-mini" class="history-strip-mini"></div>
+                 <div class="number-input-row" style="display:flex; gap:4px; margin-top:4px;">
+                     <input type="number" id="number-input" min="0" max="36" placeholder="Numero 0-36" style="flex:1; background:#111; border:1px solid #333; color:var(--accent); padding:4px 8px; border-radius:4px; font-size:12px;">
+                     <button onclick="submitNumber(document.getElementById('number-input').value)" style="background:rgba(0,229,200,0.15); border:1px solid var(--accent); color:var(--accent); padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:700;">ENVIAR</button>
+                     <button onclick="wipeData()" style="background:rgba(255,80,80,0.15); border:1px solid #f55; color:#f55; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;">WIPE</button>
+                 </div>
+             </section>
  
             <div class="strategy-tabs">
                 <button class="tab-btn active" id="tab-btn-dir">DIR</button>
@@ -101,18 +106,25 @@
             </section>
 
             <!-- ANALISIS -->
-            <section class="shadow-panel" id="panel-analisis" style="display: none;">
-                <div class="agent-card-header">
-                    <span class="agent-icon">📊</span>
-                    <span class="agent-card-name">SPIN METHOD</span>
-                    <button id="btn-analisis-run" onclick="runSpinAnalysis()">EJECUTAR</button>
-                </div>
-                <div id="analisis-content">
-                    <div id="analisis-status">Cargando analisis...</div>
-                    <div id="analisis-analyst"></div>
-                    <div id="analisis-sniper"></div>
-                </div>
-            </section>
+             <section class="shadow-panel" id="panel-analisis" style="display: none;">
+                 <div class="agent-card-header">
+                     <span class="agent-icon">📊</span>
+                     <span class="agent-card-name">SPIN METHOD</span>
+                     <button id="btn-analisis-run" onclick="runSpinAnalysis()">EJECUTAR</button>
+                 </div>
+                 <div id="analisis-content">
+                     <div id="analisis-status">Cargando analisis...</div>
+                     <div id="analisis-global" style="display:none;">
+                         <div style="display:flex; gap:12px; align-items:center; margin:4px 0;">
+                             <span id="analisis-rate" style="font-size:1.4rem; font-weight:900; color:#0f0;">--</span>
+                             <span id="analisis-counts" style="font-size:9px; color:var(--text-dim);">--</span>
+                         </div>
+                         <div id="analisis-golden" style="margin:4px 0;"></div>
+                     </div>
+                     <div id="analisis-analyst"></div>
+                     <div id="analisis-sniper"></div>
+                 </div>
+             </section>
 
             <!-- CHAT -->
             <section class="shadow-panel" id="panel-chat" style="display: none;">
