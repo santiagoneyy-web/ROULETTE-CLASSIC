@@ -780,6 +780,14 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
                 row.resolved_at = now;
                 await row.save();
                 resolved++;
+
+                const ctx = (row.context_snapshot || {});
+                brain.recordResult(normalized.result, {
+                    stability: ctx.stabilityLevel || 'unknown',
+                    pattern: ctx.patternLabel || 'unknown',
+                    route: row.route || 'ESPERAR',
+                    zone: row.zone || 'ESPERAR'
+                });
             }
 
             cb(null, { resolved });
@@ -797,6 +805,15 @@ async function resolvePendingAiPredictions(tableId, resolvedNumber, evaluator, c
             if (!['win', 'loss', 'skip'].includes(normalized.result)) return item;
             const reward = computeAiReward(normalized);
             resolved++;
+
+            const jsonCtx = (item.context_snapshot || {});
+            brain.recordResult(normalized.result, {
+                stability: jsonCtx.stabilityLevel || 'unknown',
+                pattern: jsonCtx.patternLabel || 'unknown',
+                route: item.route || 'ESPERAR',
+                zone: item.zone || 'ESPERAR'
+            });
+
             return {
                 ...item,
                 result: normalized.result,
@@ -1045,7 +1062,8 @@ async function getTableStateSnapshots(tableId, limit, cb) {
 async function getPatternStats(tableId, seqMag, seqDir, cb) {
     if (useMongo) {
         try {
-            const Pattern = require('./models/Pattern');
+const Pattern = require('./models/Pattern');
+const brain = require('./brain');
             const stats = await Pattern.aggregate([
                 { $match: { table_id: String(tableId), sequence_mag: seqMag, sequence_dir: seqDir } },
                 { $group: { _id: { mag: "$next_mag", dir: "$next_dir" }, count: { $sum: 1 } } },

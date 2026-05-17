@@ -978,6 +978,9 @@ function parseChatStrategyCommand(text, tableId) {
 }
 
 function buildAutoAiFallback(context) {
+    const brainState = brain.loadBrain();
+    const t = brainState.thresholds;
+
     if (!context || !context.routes || !context.routes.cw || !context.routes.ccw) {
         return {
             n9: 'ESPERAR',
@@ -1016,12 +1019,10 @@ function buildAutoAiFallback(context) {
     const unstablePattern = ['mixta', 'mixto', 'transicion', 'turbulencia', 'inest'].some(tag => patternLower.includes(tag));
 
     if (safeMode && (
-        routeGap < 10 ||
-        zoneGap < 6 ||
-        strongestHitRate < 55 ||
-        directionalPressure < 10 ||
-        zonePressure < 10 ||
-        unstablePattern
+        routeGap < t.minRouteDiff ||
+        strongestHitRate < t.minHitRate ||
+        directionalPressure < t.minRouteDiff ||
+        brainState.streakState.protected
     )) {
         return {
             n9: 'ESPERAR',
@@ -1247,7 +1248,9 @@ app.post('/api/ai/groq', async (req, res) => {
         const strategyDigest = buildStrategyDigest(tableId || 'global');
         const learningSummary = (autoAiContext && autoMode !== 'RAW') ? await getLearningSummaryAsync(tableId || 0) : null;
         const learningDigest = (autoAiContext && autoMode !== 'RAW') ? buildLearningDigest(learningSummary, autoMode) : '';
-        const predictionMeta = { strategyDigest, learningDigest, provider: 'llm-pending' };
+        const brainDigest = (autoAiContext && autoMode !== 'RAW') ? brain.buildBrainDigest(autoAiContext) : '';
+        const combinedDigest = [brainDigest, learningDigest].filter(Boolean).join('\n') || 'sin datos de aprendizaje';
+        const predictionMeta = { strategyDigest, learningDigest: combinedDigest, provider: 'llm-pending' };
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1275,7 +1278,7 @@ app.post('/api/ai/groq', async (req, res) => {
             });
         }
 
-        const userPrompt = autoAiContext ? buildAutoAiUserPrompt({ ...autoAiContext, strategyDigest }, strategyDigest, learningDigest) : prompt;
+        const userPrompt = autoAiContext ? buildAutoAiUserPrompt({ ...autoAiContext, strategyDigest }, strategyDigest, combinedDigest) : prompt;
         
         let systemPrompt;
         if (autoAiContext) {
