@@ -696,26 +696,27 @@ function buildSequenceContext(history) {
 function snapshotToAutoAiContext(snapshot, mode, clientContext = null) {
     if (!snapshot || !snapshot.routes || !snapshot.routes.cw || !snapshot.routes.ccw) return clientContext;
     const recentNumbers = Array.isArray(snapshot.recent_numbers) ? snapshot.recent_numbers : [];
+    const hasClientMetrics = clientContext && clientContext.dominance8 && clientContext.routes && clientContext.routes.cw;
     return {
         ...(clientContext || {}),
         mode: String(mode || clientContext?.mode || 'SAFE').toUpperCase(),
         tableCode: snapshot.table_code || 'AUTO',
         spinId: snapshot.spin_id ?? clientContext?.spinId ?? null,
         windowSize: snapshot.window_size || Math.max(0, recentNumbers.length - 1),
-        stabilityLevel: snapshot.stability_level || clientContext?.stabilityLevel || 'red',
-        patternLabel: snapshot.pattern_label || clientContext?.patternLabel || 'Estandar',
-        dominantAxis: snapshot.dominant_axis || clientContext?.dominantAxis || 'none',
-        dominantSignal: snapshot.dominant_signal || clientContext?.dominantSignal || '',
-        dominanceScore: Number(snapshot.dominance_score || clientContext?.dominanceScore || 0),
-        dominance8: snapshot.dominance8 || clientContext?.dominance8 || {},
-        momentum15: snapshot.momentum15 || clientContext?.momentum15 || {},
-        sequence15: buildSequenceContext(recentNumbers),
-        performance8: snapshot.performance8 || clientContext?.performance8 || {},
-        routes: snapshot.routes,
-        recentNumbers,
+        stabilityLevel: hasClientMetrics ? (clientContext.stabilityLevel || snapshot.stability_level || 'red') : (snapshot.stability_level || clientContext?.stabilityLevel || 'red'),
+        patternLabel: hasClientMetrics ? (clientContext.patternLabel || snapshot.pattern_label || 'Estandar') : (snapshot.pattern_label || clientContext?.patternLabel || 'Estandar'),
+        dominantAxis: hasClientMetrics ? (clientContext.dominantAxis || snapshot.dominant_axis || 'none') : (snapshot.dominant_axis || clientContext?.dominantAxis || 'none'),
+        dominantSignal: hasClientMetrics ? (clientContext.dominantSignal || snapshot.dominant_signal || '') : (snapshot.dominant_signal || clientContext?.dominantSignal || ''),
+        dominanceScore: Number(hasClientMetrics ? (clientContext.dominanceScore || snapshot.dominance_score || 0) : (snapshot.dominance_score || clientContext?.dominanceScore || 0)),
+        dominance8: hasClientMetrics ? (clientContext.dominance8 || snapshot.dominance8 || {}) : (snapshot.dominance8 || clientContext?.dominance8 || {}),
+        momentum15: hasClientMetrics ? (clientContext.momentum15 || snapshot.momentum15 || {}) : (snapshot.momentum15 || clientContext?.momentum15 || {}),
+        sequence15: hasClientMetrics && clientContext.sequence15?.dir ? clientContext.sequence15 : buildSequenceContext(recentNumbers),
+        performance8: hasClientMetrics ? (clientContext.performance8 || snapshot.performance8 || {}) : (snapshot.performance8 || clientContext?.performance8 || {}),
+        routes: hasClientMetrics && clientContext.routes?.cw?.n9 != null ? clientContext.routes : snapshot.routes,
+        recentNumbers: hasClientMetrics ? (clientContext.recentNumbers || recentNumbers) : recentNumbers,
         context: {
             source: 'server_mongo_context',
-            notes: 'Auto AI context rebuilt from saved spins/metric snapshot before prediction.'
+            notes: hasClientMetrics ? 'Client metrics preserved (frontend calculation)' : 'Auto AI context rebuilt from saved spins/metric snapshot before prediction.'
         }
     };
 }

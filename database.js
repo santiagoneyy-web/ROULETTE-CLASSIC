@@ -828,7 +828,7 @@ async function getAiPredictions(tableId, limit, modeOrCb, cb) {
     if (useMongo) {
         try {
             const query = { table_id: Number(tableId) };
-            if (['SAFE', 'FULL'].includes(mode)) query.mode = mode;
+            if (['SAFE', 'FULL', 'RAW'].includes(mode)) query.mode = mode;
             if (basis) query.basis = basis;
             const rows = await AiPrediction.find(query)
                 .sort({ created_at: -1 })
@@ -840,7 +840,7 @@ async function getAiPredictions(tableId, limit, modeOrCb, cb) {
     } else {
         const rows = fallbackData.aiPredictions
             .filter(item => item.table_id == tableId)
-            .filter(item => !['SAFE', 'FULL'].includes(mode) || String(item.mode || 'SAFE').toUpperCase() === mode)
+            .filter(item => !['SAFE', 'FULL', 'RAW'].includes(mode) || String(item.mode || 'SAFE').toUpperCase() === mode)
             .filter(item => !basis || item.basis === basis)
             .slice(-(limit || 100))
             .reverse();

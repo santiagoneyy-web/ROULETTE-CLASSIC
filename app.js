@@ -286,6 +286,67 @@ async function syncAiPredictionState() {
     }
 }
 
+async function syncRawPredictionState() {
+    if (!currentTableId) return;
+    try {
+        const resp = await fetch(`/api/ai/predictions/${currentTableId}?limit=5000&mode=RAW&basis=ai_analysis`);
+        if (!resp.ok) return;
+        const rows = await resp.json();
+        const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
+
+        rawN9History.length = 0;
+        rawN4History.length = 0;
+        rawN9Wins = 0;
+        rawN9Losses = 0;
+        rawN4Wins = 0;
+        rawN4Losses = 0;
+        lastRawPredN9 = null;
+        lastRawPredN4 = null;
+
+        predictions.forEach(item => {
+            const n9Result = item.n9_result || (isResolvedAiOutcome(item.result) ? item.result : null);
+            const n4Result = item.n4_result || (isResolvedAiOutcome(item.result) ? item.result : null);
+            if (isResolvedAiOutcome(n9Result)) {
+                rawN9History.push(n9Result);
+                if (n9Result === 'win') rawN9Wins++; else rawN9Losses++;
+            }
+            if (isResolvedAiOutcome(n4Result)) {
+                rawN4History.push(n4Result);
+                if (n4Result === 'win') rawN4Wins++; else rawN4Losses++;
+            }
+        });
+        if (rawN9History.length > 25) rawN9History.splice(0, rawN9History.length - 25);
+        if (rawN4History.length > 25) rawN4History.splice(0, rawN4History.length - 25);
+
+        const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
+        const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
+        const current = latestPending || latestAny;
+
+        const n9El = document.getElementById('raw-pred-n9-text');
+        const n4El = document.getElementById('raw-pred-n4-text');
+        const statusEl = document.getElementById('raw-status');
+        const analysisEl = document.getElementById('raw-ai-analysis');
+
+        if (current) {
+            lastRawPredN9 = current.n9 || null;
+            lastRawPredN4 = current.n4 || null;
+            if (n9El) n9El.innerText = current.n9 || 'Esperar';
+            if (n4El) n4El.innerText = current.n4 || 'Esperar';
+            if (analysisEl) analysisEl.innerText = current.analysis || 'RAW: lectura desde la base.';
+            if (statusEl) statusEl.innerText = latestPending ? 'ONLINE' : 'STANDBY';
+        } else {
+            if (n9El) n9El.innerText = 'Sin datos';
+            if (n4El) n4El.innerText = 'Sin datos';
+            if (analysisEl) analysisEl.innerText = 'RAW: sin historial todavia.';
+            if (statusEl) statusEl.innerText = 'STANDBY';
+        }
+
+        updateRawStats();
+    } catch (e) {
+        console.error('syncRawPredictionState:', e);
+    }
+}
+
 function renderDirMetricHistories() {
     const metrics = [
         { id: 'cw-n9', label: 'CW N9', items: cwHistory },
@@ -795,9 +856,12 @@ function submitNumber(val, silent = false, batch = false) {
             // Evaluate RAW predictions ALWAYS (even when panel hidden)
             evaluateRawPredictions(n);
             
+            // Always generate new RAW prediction in background
+            setTimeout(requestRawAI, 1000);
+            
             // Update RAW panel if visible
             if (document.getElementById('panel-raw')?.style.display !== 'none') {
-                setTimeout(requestRawAI, 1000);
+                updateRawStats();
             }
         }
     }
@@ -1801,22 +1865,8 @@ function renderRawHist() {
 }
 
 function evaluateRawPredictions(number) {
-    let n9Hit = false, n4Hit = false;
-    if (lastRawPredN9 && lastRawPredN9 !== 'ESPERAR') {
-        n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
-        if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
-        else { rawN9Losses++; rawN9History.push('loss'); }
-        if (rawN9History.length > 25) rawN9History.shift();
-    }
-    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR') {
-        n4Hit = wheelNeighbors(Number(lastRawPredN4), 2).includes(number);
-        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
-        else { rawN4Losses++; rawN4History.push('loss'); }
-        if (rawN4History.length > 25) rawN4History.shift();
-    }
-    updateRawStats();
-    renderRawHist();
-    return n9Hit || n4Hit;
+    // Now server-side: sync from DB like AUTO
+    if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
 }
 
 async function requestRawAI() {
@@ -1895,16 +1945,11 @@ async function requestRawAI() {
         const data = await resp.json();
         
         if (data.reply) {
-            const parts = data.reply.split('|');
-            const rawN9 = parts[0] ? parts[0].replace('N9:', '').trim() : 'ESPERAR';
-            const rawN4 = parts[1] ? parts[1].replace('N4:', '').trim() : 'ESPERAR';
-            
-            lastRawPredN9 = rawN9;
-            lastRawPredN4 = rawN4;
-            if (n9El) n9El.innerText = rawN9;
-            if (n4El) n4El.innerText = rawN4;
-            if (analysisEl) analysisEl.innerText = data.analysis || 'RAW: lectura solo con metricas actuales.';
-            if (statusEl) statusEl.innerText = rawN9 === 'ESPERAR' ? 'WAIT' : 'ONLINE';
+            // Always sync from DB for proper counting (server-side normalized)
+            if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
+        } else {
+            n9El.innerText = 'Error API';
+            n4El.innerText = 'Error API';
         }
     } catch (e) {
         console.error('RAW AI error:', e);
@@ -2083,46 +2128,8 @@ async function requestAutoAI() {
         }
         
         if (data.reply) {
-            let parts = data.reply.split('|');
-            let rawN9 = parts[0] ? parts[0].replace('N9:','').trim() : '';
-            let rawN4 = parts[1] ? parts[1].replace('N4:','').trim() : '';
-            const isWaitReply = /ESPERAR/i.test(rawN9) || /ESPERAR/i.test(rawN4);
-            
-            // === VALIDACION FRONTEND: FORZAR numeros de las 6 metricas ===
-            if (validMetrics.length > 0 && !isWaitReply) {
-                const n9Clean = rawN9.replace(/[^0-9]/g, '');
-                const n4Clean = rawN4.replace(/[^0-9]/g, '');
-                
-                if (!validN9Nums.includes(n9Clean)) {
-                    // IA alucino -> elegir basado en dominancia
-                    rawN9 = String(der >= izq ? validMetrics[0].num : validMetrics[3].num);
-                    console.log('AI hallucinated N9, forced to:', rawN9);
-                }
-                if (!validN4Nums.includes(n4Clean)) {
-                    // IA alucino -> elegir N4 basado en zona dominante
-                    if (big >= small) {
-                        rawN4 = String(der >= izq ? validMetrics[2].num : validMetrics[5].num);
-                    } else {
-                        rawN4 = String(der >= izq ? validMetrics[1].num : validMetrics[4].num);
-                    }
-                    console.log('AI hallucinated N4, forced to:', rawN4);
-                }
-            }
-
-            if (isWaitReply) {
-                rawN9 = 'ESPERAR';
-                rawN4 = 'ESPERAR';
-            }
-            
-            lastAiPredN9 = rawN9;
-lastAiPredN4 = rawN4;
-lastAiPredMode = String(window.currentAIMode || 'SAFE').toUpperCase();
-n9El.innerText = rawN9 || 'Esperar';
-            n4El.innerText = rawN4 || 'Esperar';
-            if (analysisEl) {
-                analysisEl.innerText = data.analysis || ('Mesa ' + lvl.toUpperCase() + ': sin lectura explicada todavia.');
-            }
-            if (statusEl) statusEl.innerText = 'ONLINE';
+            // Sync from DB for proper normalized numbers + counting
+            if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
         } else {
             n9El.innerText = 'Error API';
             n4El.innerText = 'Error API';
