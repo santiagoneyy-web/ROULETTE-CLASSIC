@@ -1,0 +1,24 @@
+{
+  "thresholds": {
+    "minRouteDiff": 3,
+    "minHitRate": 40,
+    "maxLossStreak": 4
+  },
+  "predictorWeights": {
+    "SAFE": 1,
+    "FULL": 1,
+    "RAW": 1,
+    "METRICS": 1,
+    "DIR": 1
+  },
+  "streakState": {
+    "currentLosses": 0,
+    "currentWins": 1,
+    "protected": false
+  },
+  "learnedRules": [
+    "WIN en green + bloques → CW/SMALL.",
+    "WIN en ? + ? → ?/?."
+  ],
+  "updatedAt": "2026-05-17T07:05:36.805Z"
+}

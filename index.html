@@ -4,403 +4,134 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css?v=1018" />
+    <link rel="stylesheet" href="styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <style>
-    /* Compact travel table */
-    .travel-section { width: 100%; max-width: 100%; }
-    .travel-table { width:100%; border-collapse:collapse; table-layout: fixed; }
-    .travel-table th, .travel-table td { padding:1px 3px; font-size:9px; }
-    .travel-table-wrap { max-height:140px; overflow-y:auto; overflow-x:hidden; }
-</style>
-
-
+</head>
 <body>
 <div class="resizable-wrapper">
 <div class="app-shell">
-
-    <!-- (Top bar removed as per user request) -->
-
-    <!-- ═══ THREE-COLUMN BODY ═══ -->
     <div class="three-col-body">
- 
-         <!-- ── COL 1: VISUAL ── -->
          <div class="col-visual">
-
-            <!-- Visual Panel (Table Image + Mini History) -->
             <section class="visual-panel-mini">
-                <div class="table-image-container" style="text-align: center; margin-bottom: 10px;">
-                    <img src="table-1.jpg" alt="Mesa de Ruleta" style="width: 100%; max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <div class="table-image-container">
+                    <img src="table-1.jpg" alt="Mesa de Ruleta">
                 </div>
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
  
-             <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
-                 <div class="strategy-tabs" style="flex:1; margin-top:0;">
-                     <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                     <button class="tab-btn" id="tab-btn-metricas">METRICAS</button>
-                     <button class="tab-btn" id="tab-btn-raw">RAW</button>
-                     <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
-                     <button class="tab-btn" id="tab-btn-auto">AUTO</button>
-                     <button class="tab-btn" id="tab-btn-analisis">ANALISIS</button>
-                     <button class="tab-btn" id="tab-btn-chat">CHAT</button>
-                 </div>
-                 <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-                     <button id="btn-pred-dec" title="Bajar DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">-</button>
-                     <span id="pred-offset-badge" style="font-family:var(--mono); font-size:9px; color:var(--accent); background:rgba(0,229,200,0.08); border:1px solid rgba(0,229,200,0.2); border-radius:4px; padding:1px 4px; white-space:nowrap;">0</span>
-                     <button id="btn-pred-inc" title="Subir DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">+</button>
-                     <button id="btn-wipe" title="Reiniciar todo" onclick="wipeData()" style="background:rgba(255,59,92,0.1); border:1px solid rgba(255,59,92,0.3); color:#f55; font-size:8px; border-radius:4px; padding:1px 6px; cursor:pointer; font-weight:700; white-space:nowrap; margin-left:4px;">WIPE</button>
-                 </div>
-             </div>
+            <div class="strategy-tabs">
+                <button class="tab-btn active" id="tab-btn-dir">DIR</button>
+                <button class="tab-btn" id="tab-btn-scatter">DIR CHART</button>
+                <button class="tab-btn" id="tab-btn-analisis">ANALISIS</button>
+                <button class="tab-btn" id="tab-btn-chat">CHAT</button>
+            </div>
 
-
-
-            <!-- 1. DIR (ANDROID 1717) -->
+            <!-- DIR Panel -->
             <section class="shadow-panel" id="panel-dir">
-                <!-- CW BLOCK -->
-                <div class="dual-block" style="padding-top: 5px;">
+                <div class="dual-block">
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-cw-l-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-cw-l-hit"></span>
+                                <span class="p-val" id="dir-cw-l-val">--</span><sup class="p-power">n4</sup>
+                                <span class="hit-text" id="dir-cw-l-hit"></span>
                             </div>
-                            <div class="filtered-neighbors" id="dir-cw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
                             <div class="val-row-main">
-                                <div class="p-val-main" id="dir-cw-c-val">--</div><sup class="p-power" style="font-size:10px;">n9</sup>
+                                <div class="p-val-main" id="dir-cw-c-val">--</div><sup class="p-power">n9</sup>
                             </div>
-                            <div class="p-sub-main">DIR CW &#8635;</div>
-                            <div class="p-tendency" id="dir-cw-trend" style="display:none !important;">MAIN PRED.</div>
-                            <div class="filtered-neighbors" id="dir-cw-c-balls"></div>
+                            <div class="p-sub-main">DIR CW</div>
                         </div>
                         <div class="p-box pb-right">
                             <span class="p-label">OVER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-cw-r-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-cw-r-hit"></span>
+                                <span class="p-val" id="dir-cw-r-val">--</span><sup class="p-power">n4</sup>
+                                <span class="hit-text" id="dir-cw-r-hit"></span>
                             </div>
-                            <div class="filtered-neighbors" id="dir-cw-r-balls"></div>
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st wl-hidden">W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
-                        <span class="status-msg compact-rate"><span id="dir-cw-rate">0.0%</span></span>
-                        <span class="compact-perf" id="dir-cw-perf">--</span>
+                        <span>W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
+                        <span id="dir-cw-rate">0.0%</span>
+                        <span id="dir-cw-perf">--</span>
                     </div>
                 </div>
 
-                <!-- CCW BLOCK -->
-                <div class="dual-block" style="border-top: 1px solid rgba(0,229,200,0.15); padding-top: 5px;">
+                <div class="dual-block" style="border-top: 1px solid rgba(0,229,200,0.15);">
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-ccw-l-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-ccw-l-hit"></span>
+                                <span class="p-val" id="dir-ccw-l-val">--</span><sup class="p-power">n4</sup>
+                                <span class="hit-text" id="dir-ccw-l-hit"></span>
                             </div>
-                            <div class="filtered-neighbors" id="dir-ccw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
                             <div class="val-row-main">
-                                <div class="p-val-main" id="dir-ccw-c-val">--</div><sup class="p-power" style="font-size:10px;">n9</sup>
+                                <div class="p-val-main" id="dir-ccw-c-val">--</div><sup class="p-power">n9</sup>
                             </div>
-                            <div class="p-sub-main">DIR CCW &#8634;</div>
-                            <div class="p-tendency" id="dir-ccw-trend" style="display:none !important;">MAIN PRED.</div>
-                            <div class="filtered-neighbors" id="dir-ccw-c-balls"></div>
+                            <div class="p-sub-main">DIR CCW</div>
                         </div>
                         <div class="p-box pb-right">
                             <span class="p-label">OVER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-ccw-r-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-ccw-r-hit"></span>
+                                <span class="p-val" id="dir-ccw-r-val">--</span><sup class="p-power">n4</sup>
+                                <span class="hit-text" id="dir-ccw-r-hit"></span>
                             </div>
-                            <div class="filtered-neighbors" id="dir-ccw-r-balls"></div>
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
-                        <span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
-                        <span class="compact-perf" id="dir-ccw-perf">--</span>
+                        <span>W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
+                        <span id="dir-ccw-rate">0.0%</span>
+                        <span id="dir-ccw-perf">--</span>
                     </div>
                 </div>
             </section>
 
-
-            <!-- 2. METRICAS PURAS (sin IA, solo matematica) -->
-            <section class="shadow-panel" id="panel-metricas" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">&#x2211;</span>
-                    <span class="agent-card-name">METRICAS PURAS</span>
-                    <span class="side-badge" id="metricas-stability" style="padding:1px 6px;">--</span>
-                </div>
-                <div style="padding: 6px 8px;">
-                    <!-- Dominancia actual -->
-                    <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 10px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span style="color: var(--text-dim);">DOM8:</span>
-                            <span>CW=<strong id="met-dom-cw">0</strong> CCW=<strong id="met-dom-ccw">0</strong> BIG=<strong id="met-dom-big">0</strong> SMALL=<strong id="met-dom-small">0</strong></span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">MOM15:</span>
-                            <span>CW=<strong id="met-mom-cw">0</strong> CCW=<strong id="met-mom-ccw">0</strong> BIG=<strong id="met-mom-big">0</strong> SMALL=<strong id="met-mom-small">0</strong></span>
-                        </div>
-                    </div>
-                    
-                    <!-- 6 metricas -->
-                    <div id="metricas-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                        <div class="metrica-card" id="met-cw-n9" style="background: rgba(0,229,200,0.06); border: 1px solid rgba(0,229,200,0.15); border-radius: 8px; padding: 8px; position: relative; transition: all 0.3s;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 9px; color: var(--accent);">CW N9</div>
-                                <span id="met-cw-n9-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.4rem; font-weight: 900; color: #fff; font-family: var(--mono);" id="met-cw-n9-val">--</div>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size: 8px; color: var(--text-dim);">ult8: <span id="met-cw-n9-wl">--</span></span>
-                                <span id="met-cw-n9-trend" style="font-size:10px;">--</span>
-                            </div>
-                            <div style="font-size: 8px; color: var(--gold);" id="met-cw-n9-score">s:0</div>
-                        </div>
-                        <div class="metrica-card" id="met-ccw-n9" style="background: rgba(255,100,100,0.06); border: 1px solid rgba(255,100,100,0.15); border-radius: 8px; padding: 8px; position: relative; transition: all 0.3s;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 9px; color: #f55;">CCW N9</div>
-                                <span id="met-ccw-n9-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.4rem; font-weight: 900; color: #fff; font-family: var(--mono);" id="met-ccw-n9-val">--</div>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size: 8px; color: var(--text-dim);">ult8: <span id="met-ccw-n9-wl">--</span></span>
-                                <span id="met-ccw-n9-trend" style="font-size:10px;">--</span>
-                            </div>
-                            <div style="font-size: 8px; color: var(--gold);" id="met-ccw-n9-score">s:0</div>
-                        </div>
-                        <div class="metrica-card" id="met-cw-n4s" style="background: rgba(0,229,200,0.04); border: 1px solid rgba(0,229,200,0.1); border-radius: 8px; padding: 6px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 8px; color: #8ff;">CW N4 SMALL</div>
-                                <span id="met-cw-n4s-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-cw-n4s-val">--</div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size: 8px; color: var(--gold);" id="met-cw-n4s-score">s:0</span>
-                                <span id="met-cw-n4s-trend" style="font-size:9px;">--</span>
-                            </div>
-                        </div>
-                        <div class="metrica-card" id="met-cw-n4b" style="background: rgba(0,229,200,0.04); border: 1px solid rgba(0,229,200,0.1); border-radius: 8px; padding: 6px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 8px; color: #8ff;">CW N4 BIG</div>
-                                <span id="met-cw-n4b-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-cw-n4b-val">--</div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size: 8px; color: var(--gold);" id="met-cw-n4b-score">s:0</span>
-                                <span id="met-cw-n4b-trend" style="font-size:9px;">--</span>
-                            </div>
-                        </div>
-                        <div class="metrica-card" id="met-ccw-n4s" style="background: rgba(255,100,100,0.04); border: 1px solid rgba(255,100,100,0.1); border-radius: 8px; padding: 6px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 8px; color: #f88;">CCW N4 SMALL</div>
-                                <span id="met-ccw-n4s-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-ccw-n4s-val">--</div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size: 8px; color: var(--gold);" id="met-ccw-n4s-score">s:0</span>
-                                <span id="met-ccw-n4s-trend" style="font-size:9px;">--</span>
-                            </div>
-                        </div>
-                        <div class="metrica-card" id="met-ccw-n4b" style="background: rgba(255,100,100,0.04); border: 1px solid rgba(255,100,100,0.1); border-radius: 8px; padding: 6px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 8px; color: #f88;">CCW N4 BIG</div>
-                                <span id="met-ccw-n4b-streak" style="font-size:7px; color:var(--text-dim);">--</span>
-                            </div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #ddd; font-family: var(--mono);" id="met-ccw-n4b-val">--</div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size: 8px; color: var(--gold);" id="met-ccw-n4b-score">s:0</span>
-                                <span id="met-ccw-n4b-trend" style="font-size:9px;">--</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- CONFLUENCIA -->
-                    <div id="metricas-confluence" style="margin-top: 8px; padding: 6px 8px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 9px; display: none;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="color: var(--accent); font-weight:700;">&#x2194; CONFLUENCIA</span>
-                            <span id="met-confluence-signal" style="font-weight:700;">--</span>
-                        </div>
-                        <div id="met-confluence-detail" style="font-size:8px; color:var(--text-dim); margin-top:2px;">--</div>
-                    </div>
-                    
-                    <!-- PICK -->
-                    <div id="metricas-pick" style="margin-top: 10px; padding: 8px; background: linear-gradient(135deg, rgba(240,192,64,0.1), transparent); border: 1px solid var(--gold); border-radius: 8px; text-align: center;">
-                        <div style="font-size: 9px; color: var(--gold); font-family: var(--mono);">MEJOR LECTURA</div>
-                        <div style="font-size: 1.1rem; font-weight: 900; color: #fff; margin: 4px 0;" id="met-pick-text">Esperando datos...</div>
-                        <div style="font-size: 9px; color: var(--text-dim);" id="met-pick-reason">--</div>
-                    </div>
-                    
-                    <!-- Mini-forest discoveries -->
-                    <div id="metricas-discoveries" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 9px; color: var(--text-dim); display: none;">
-                        <div style="font-size: 10px; color: var(--accent); margin-bottom: 4px;">HALLAZGOS (+3 aciertos)</div>
-                        <div id="metricas-discoveries-list">--</div>
-                    </div>
-                </div>
-            </section>
-
-
-            <!-- 2.5 RAW IA (sin memoria, sin estrategias) -->
-            <section class="shadow-panel" id="panel-raw" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">&#x26A1;</span>
-                    <span class="agent-card-name">RAW IA</span>
-                    <span id="raw-status" style="padding:1px 6px; font-size:9px;">STANDBY</span>
-                </div>
-                <div style="padding: 6px 8px;">
-                    <div id="raw-mode-note" style="font-size: 9px; color: var(--muted); padding: 0 2px 6px 2px;">Solo metricas puras. Sin RL, sin DB, sin estrategias. Sin memoria.</div>
-                    
-                    <div id="raw-pred-n9" style="background: rgba(100,149,237,0.08); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.25); margin-bottom: 6px; position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:#6495ED;">&#x26A1; N9:</strong>&nbsp;<span id="raw-pred-n9-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
-                            <button onclick="toggleRawHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
-                        </div>
-                        <div id="raw-hist-n9" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
-                            <div id="raw-hist-list-n9" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
-                        </div>
-                    </div>
-                    
-                    <div id="raw-pred-n4" style="background: rgba(100,149,237,0.05); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(100,149,237,0.2); margin-bottom: 6px; position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:#8ab0ff;">&#x26A1; N4:</strong>&nbsp;<span id="raw-pred-n4-text" style="font-size:1.2rem; font-weight:900;">--</span></div>
-                            <button onclick="toggleRawHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
-                        </div>
-                        <div id="raw-hist-n4" class="dir-hist-panel" style="width:100%; margin-top:8px; border-top:1px solid rgba(100,149,237,0.1); padding-top:6px; display:none; text-align:center;">
-                            <div id="raw-hist-list-n4" style="display:flex; gap:2px; justify-content:flex-start; overflow-x:auto; white-space:nowrap; padding-bottom:4px; width:100%;"><span style="opacity:0.5">Sin datos</span></div>
-                        </div>
-                    </div>
-                    
-                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; font-family:var(--mono); font-size:8px; color:var(--text-dim);">
-                        <span>N9: <span id="raw-stats-inline-n9">0% (0W/0L)</span></span>
-                        <span style="margin-left:8px;">N4: <span id="raw-stats-inline-n4">0% (0W/0L)</span></span>
-                    </div>
-                    
-                    <div style="padding: 6px 10px; background: rgba(100,149,237,0.05); border-radius: 8px; border: 1px solid rgba(100,149,237,0.1);">
-                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">LECTURA RAW</div>
-                        <div id="raw-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA RAW genera senales solo con metricas actuales.</div>
-                    </div>
-                </div>
-            </section>
-
-
-            <!-- 3. SCATTER CHART (Direction Dispersion) -->
+            <!-- SCATTER CHART -->
             <section class="shadow-panel" id="panel-scatter" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
+                <div class="agent-card-header">
                     <span class="agent-icon">📊</span>
                     <span class="agent-card-name">DIR CHART</span>
-                    <span class="side-badge" id="scatter-bias" style="padding:1px 6px;">--</span>
-                </div>
-                <div class="agent-strategy-label" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span id="scatter-trend-label" style="color: var(--gold); font-weight:bold;">TENDENCIA MMMM</span>
                 </div>
                 <div style="padding: 4px 8px;">
-                    <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
-                        <canvas id="scatterChart" height="200" style="min-width: 100%;"></canvas>
-                    </div>
+                    <canvas id="scatterChart" height="200"></canvas>
                 </div>
             </section>
 
-                    <!-- 4. AUTO AI PREDICTOR -->
-            <section class="shadow-panel" id="panel-auto" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="bot-icon">🤅</div>
-                        <h2 class="main-title">AUTO AI PREDICTOR</h2>
-                    </div>
-                    <button id="btn-ai-mode" onclick="toggleAIMode()" style="background: rgba(240,192,64,0.15); border: 1px solid #f0c040; color: #f0c040; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">SAFE FILTRA</button>
-                    <span id="ai-status" style="padding:1px 6px;">STANDBY</span>
-                </div>
-                <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">
-                    <div id="auto-ai-mode-note" style="font-size: 9px; color: var(--muted); padding: 0 2px 2px 2px;">SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.</div>
-                    <div id="ai-pred-n9" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(0,229,200,0.2); position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:var(--accent);">🎯 N9:</strong>&nbsp;<span id="ai-pred-n9-text">Analizando mesa en vivo...</span></div>
-                            <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
-                        </div>
-                        <div id="ai-hist-n9" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(0,229,200,0.1); padding-top: 6px; display: none; text-align: center;">
-                            <div id="ai-hist-list-n9" style="display:flex; gap:2px; justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
-                        </div>
-                    </div>
-                    <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(255,100,100,0.2); position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:#f55;">🔥 N4:</strong>&nbsp;<span id="ai-pred-n4-text">Esperando momentum...</span></div>
-                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
-                        </div>
-                        <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none; text-align: center;">
-                            <div id="ai-hist-list-n4" style="display:flex; gap:2px;/justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,229,200,0.04); border-radius: 8px; border: 1px solid rgba(0,229,200,0.1);">
-                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">LECTURA AI</div>
-                        <div id="auto-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA generará señales automáticamente cada giro.</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 5. ANALISIS (Spin Method Engine) -->
+            <!-- ANALISIS -->
             <section class="shadow-panel" id="panel-analisis" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">&#x1F4CA;</span>
-                    <span class="agent-card-name">SPIN METHOD ANALISIS</span>
-                    <button id="btn-analisis-run" onclick="runSpinAnalysis()" style="background:rgba(0,229,200,0.12); border:1px solid rgba(0,229,200,0.3); color:#00e5c8; font-size:8px; border-radius:4px; padding:2px 6px; cursor:pointer; font-weight:700; margin-left:auto;">EJECUTAR</button>
+                <div class="agent-card-header">
+                    <span class="agent-icon">📊</span>
+                    <span class="agent-card-name">SPIN METHOD</span>
+                    <button id="btn-analisis-run" onclick="runSpinAnalysis()">EJECUTAR</button>
                 </div>
-                <div style="padding: 6px 8px; max-height: 400px; overflow-y: auto;">
-                    <div id="analisis-status" style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Cargando ultimo analisis...</div>
-                    
-                    <!-- Global stats -->
-                    <div id="analisis-global" style="display:none; margin-bottom:10px; padding:6px; background:rgba(0,0,0,0.15); border-radius:6px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">TASA GLOBAL</div>
-                        <div style="font-size:1.3rem; font-weight:900;" id="analisis-rate">--%</div>
-                        <div style="font-size:9px; color:var(--text-dim);" id="analisis-counts">--</div>
-                    </div>
-                    
-                    <!-- Golden contexts -->
-                    <div style="font-size:10px; font-weight:700; color:var(--gold); margin-bottom:4px;">CONTEXTOS DORADOS (+55% en 20+ muestras)</div>
-                    <div id="analisis-golden" style="margin-bottom:8px;"></div>
-                    
-                    <!-- Mode comparison -->
-                    <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">MODOS</div>
-                    <div id="analisis-modes" style="margin-bottom:8px; display:flex; gap:6px;"></div>
-                    
-                    <!-- Signal analysis -->
-                    <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">SEÑALES</div>
-                    <div id="analisis-signals" style="margin-bottom:8px;"></div>
-                    
-                    <!-- Auto strategies -->
-                    <div style="font-size:10px; font-weight:700; color:#0f0; margin-bottom:4px;">ESTRATEGIAS GENERADAS</div>
-                    <div id="analisis-strategies"></div>
-                    
-                    <!-- Summary -->
-                    <div id="analisis-summary" style="margin-top:8px; padding:6px; background:rgba(0,229,200,0.05); border-radius:6px; font-size:9px; color:var(--text2);"></div>
+                <div id="analisis-content">
+                    <div id="analisis-status">Cargando analisis...</div>
+                    <div id="analisis-analyst"></div>
+                    <div id="analisis-sniper"></div>
                 </div>
             </section>
 
-
-            <!-- 6. CHAT (Conversacion con Llama via Groq) -->
+            <!-- CHAT -->
             <section class="shadow-panel" id="panel-chat" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
+                <div class="agent-card-header">
                     <span class="agent-icon">💬</span>
-                    <span class="agent-card-name">CHAT AI</span>
-                    <span class="side-badge" id="chat-status" style="padding:1px 6px;">ONLINE</span>
+                    <span class="agent-card-name">CHAT</span>
                 </div>
-                <div id="chat-messages" style="padding: 8px; min-height: 180px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-                    <div style="background: rgba(0,229,200,0.08); border-radius: 10px; padding: 6px 10px; font-size: 10px; color: var(--accent); max-width: 85%; align-self: flex-start;">Hola Santi, soy tu analista AI. Preguntame lo que quieras sobre la mesa.</div>
-                </div>
-                <div style="padding: 6px 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; align-items: center;">
-                    <input id="chat-input" type="text" placeholder="Escribe aqui..." style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-size: 10px; outline: none; font-family: var(--mono);" onkeydown="if(event.key==='Enter')sendChatMessage()">
-                    <button onclick="sendChatMessage()" style="background: var(--accent); border: none; border-radius: 8px; padding: 6px 12px; color: #000; font-size: 10px; font-weight: 700; ">Enviar</button>
+                <div id="chat-messages"></div>
+                <div class="chat-input-row">
+                    <input id="chat-input" type="text" placeholder="Escribe..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+                    <button onclick="sendChatMessage()">Enviar</button>
                 </div>
             </section>
 
-
-
-            <!-- MASTER SNIPER AI -->
+            <!-- MASTER SNIPER -->
             <section class="master-panel">
                 <div class="master-header">
-                    <span class="master-icon">&#x1F3AF;</span>
-                    <span class="master-name">SNIPER MASTER AI</span>
+                    <span class="master-icon">🎯</span>
+                    <span class="master-name">SNIPER MASTER</span>
                     <div class="master-conf-bar"><div class="master-conf-fill" id="master-conf-fill"></div></div>
                     <span class="master-conf-text" id="master-conf-text">0%</span>
                 </div>
@@ -408,23 +139,20 @@
                     <div class="master-main-signal" id="master-signal">SYNCHRONIZING...</div>
                     <div class="master-details">
                         <span class="master-target-badge" id="master-target">--</span>
-                        <span class="master-reason-text" id="master-reason">Analizando flujos...</span>
+                        <span class="master-reason-text" id="master-reason">--</span>
                     </div>
                 </div>
                 <div class="master-footer">
-                    <span class="master-stats" id="master-rate">0%</span>
-                    <span class="compact-perf" id="master-perf">--</span>
+                    <span id="master-rate">0%</span>
+                    <span id="master-perf">--</span>
                 </div>
             </section>
 
-            <!-- ANALYST BOX (Trading Style) -->
+            <!-- ANALYST BOX -->
             <div class="analyst-box" id="analyst-panel">
                 <div class="analyst-header">
-                    <span class="analyst-tag">&#x1F4C8; ANALYST AGENT</span>
-                    <div class="analyst-score">
-                        <span id="analyst-rate">0%</span>
-                        <span class="compact-perf" id="analyst-perf-string">--</span>
-                    </div>
+                    <span class="analyst-tag">📈 ANALYST</span>
+                    <span id="analyst-rate">0%</span>
                 </div>
                 <div class="analyst-main">
                     <span class="analyst-signal" id="analyst-signal">ANALIZANDO...</span>
@@ -435,68 +163,30 @@
                 </div>
                 <div class="analyst-reason" id="analyst-reason">-</div>
             </div>
-
-         </div><!-- /col-visual -->
- 
-         <!-- ── COL 3: TRAVEL DATA ── -->
+         </div>
+  
          <div class="col-travel">
             <section class="travel-section">
-                <div style="padding: 4px 8px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.12); display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="font-size: 10px; font-weight: 600; color: var(--accent); font-family: var(--mono);">&#x1F4CA; TRAVEL</span>
-                        <select id="table-select" class="compact-select" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); color: #00e5c8; font-size: 9px; padding: 1px 3px; border-radius: 3px; font-weight: 600; outline: none; "></select>
-                    </div>
-                    <span class="badge badge-zone" id="travel-last-zone" style="font-size: 8px; padding: 1px 4px;">Último: --</span>
+                <div class="travel-top-bar">
+                    <span>📊 TRAVEL</span>
+                    <select id="table-select"></select>
                 </div>
-
-                <!-- NEW: Travel Pattern Bar -->
-                <div style="background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); padding: 4px 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div id="travel-pattern-label" style="font-size: 10px; font-weight: 700; color: #fff;">Patr�n: Detectando...</div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 9px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 1px 4px; border-radius: 3px;">0t</div>
-                        <button id="travel-history-toggle" class="travel-history-toggle" title="Mostrar/Ocultar historial de patrones" aria-expanded="false">&#9662;</button>
-                    </div>
-                </div>
-                <div id="travel-pattern-hist" class="hidden" style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); padding: 2px 8px; max-height: 45px; overflow-y: auto;">
-                    <!-- Historial dinámico -->
-                </div>
-
-
-
-                <!-- Travel Chart Canvas (SCROLLABLE V5) -->
-                <div style="padding: 2px 0; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); overflow-x: hidden;">
-                    <canvas id="travelChart" height="140" style="width: 100%; min-width: 0; display: block;"></canvas>
-                </div>
-                
-                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 140px; overflow-y: auto; overflow-x: hidden;">
-                    <table style="width: 100%; border-collapse: collapse; font-family: var(--mono);">
+                <canvas id="travelChart" height="140"></canvas>
+                <div class="travel-table-wrap">
+                    <table>
                         <thead>
-                            <tr style="background: rgba(255,255,255,0.03);">
-                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">N</th>
-                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">D</th>
-                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">DIR</th>
-                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">ZON</th>
-                            </tr>
+                            <tr><th>N</th><th>D</th><th>DIR</th><th>ZON</th></tr>
                         </thead>
-                        <tbody id="travel-tbody">
-                            <tr><td colspan="4" style="padding: 10px; font-size: 9px; text-align: center; color: var(--muted);">Cargando datos...</td></tr>
-                        </tbody>
+                        <tbody id="travel-tbody"></tbody>
                     </table>
                 </div>
             </section>
-         </div><!-- /col-travel -->
- 
-     </div><!-- /three-col-body -->
-
+         </div>
+     </div>
 </div>
-</div>
-<div class="resizer"></div>
 </div>
 
-<script src="predictor.js?v=999"></script>
-<script src="ai_chat.js?v=5"></script>
-<script src="app.js?v=1037"></script>
+<script src="predictor.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
-
-

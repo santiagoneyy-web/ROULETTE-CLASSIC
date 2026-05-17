@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "discoveries": [
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "cw_n9",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 2,
+      "wins": 2,
+      "losses": 0,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 100,
+      "createdAt": "2026-05-16T09:15:43.440Z"
+    },
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "cw_n4s",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 2,
+      "wins": 1,
+      "losses": 1,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 50,
+      "createdAt": "2026-05-16T09:15:43.441Z"
+    },
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "cw_n4b",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 2,
+      "wins": 0,
+      "losses": 2,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 0,
+      "createdAt": "2026-05-16T09:15:43.442Z"
+    },
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "ccw_n9",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 1,
+      "wins": 1,
+      "losses": 0,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 100,
+      "createdAt": "2026-05-16T09:15:43.443Z"
+    },
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "ccw_n4s",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 2,
+      "wins": 1,
+      "losses": 1,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 50,
+      "createdAt": "2026-05-16T09:15:43.443Z"
+    },
+    {
+      "contextKey": "red|Cargando historial|none",
+      "metricId": "ccw_n4b",
+      "context": {
+        "stability": "red",
+        "pattern": "Cargando historial",
+        "dominant_axis": "none"
+      },
+      "observations": 2,
+      "wins": 0,
+      "losses": 2,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 0,
+      "createdAt": "2026-05-16T09:15:43.444Z"
+    },
+    {
+      "contextKey": "red|Mesa mixta|direction",
+      "metricId": "cw_n9",
+      "context": {
+        "stability": "red",
+        "pattern": "Mesa mixta",
+        "dominant_axis": "direction"
+      },
+      "observations": 1,
+      "wins": 1,
+      "losses": 0,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 100,
+      "createdAt": "2026-05-17T06:49:22.798Z"
+    },
+    {
+      "contextKey": "red|Mesa mixta|direction",
+      "metricId": "cw_n4s",
+      "context": {
+        "stability": "red",
+        "pattern": "Mesa mixta",
+        "dominant_axis": "direction"
+      },
+      "observations": 1,
+      "wins": 1,
+      "losses": 0,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 100,
+      "createdAt": "2026-05-17T06:49:22.799Z"
+    },
+    {
+      "contextKey": "red|Mesa mixta|direction",
+      "metricId": "cw_n4b",
+      "context": {
+        "stability": "red",
+        "pattern": "Mesa mixta",
+        "dominant_axis": "direction"
+      },
+      "observations": 1,
+      "wins": 0,
+      "losses": 1,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 0,
+      "createdAt": "2026-05-17T06:49:22.799Z"
+    },
+    {
+      "contextKey": "red|Mesa mixta|direction",
+      "metricId": "ccw_n4s",
+      "context": {
+        "stability": "red",
+        "pattern": "Mesa mixta",
+        "dominant_axis": "direction"
+      },
+      "observations": 1,
+      "wins": 1,
+      "losses": 0,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 100,
+      "createdAt": "2026-05-17T06:49:22.799Z"
+    },
+    {
+      "contextKey": "red|Mesa mixta|direction",
+      "metricId": "ccw_n4b",
+      "context": {
+        "stability": "red",
+        "pattern": "Mesa mixta",
+        "dominant_axis": "direction"
+      },
+      "observations": 1,
+      "wins": 0,
+      "losses": 1,
+      "promoted": false,
+      "promotedAt": null,
+      "score": 0,
+      "createdAt": "2026-05-17T06:49:22.799Z"
+    }
+  ],
+  "updatedAt": "2026-05-17T06:49:22.799Z"
+}
