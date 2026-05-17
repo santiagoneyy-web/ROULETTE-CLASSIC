@@ -73,7 +73,8 @@ function renderAnalystUI() {
     reasonEl.innerText = analystView.reason;
     const last10 = analystHistory.slice(-10), wins = last10.filter(x => x === 'win').length;
     rateEl.innerText = last10.length > 0 ? ((wins/last10.length)*100).toFixed(0) + '%' : '0%';
-    perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    if (perfEl) perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    if (document.getElementById('panel-analisis')?.style.display !== 'none') renderAgentAnalysisSummary();
 }
 
 function renderMasterUI() {
@@ -96,6 +97,67 @@ function renderMasterUI() {
     const last10 = masterHistory.slice(-10), wins = last10.filter(x => x === 'win').length;
     rateEl.innerText = last10.length > 0 ? ((wins/last10.length)*100).toFixed(0) + '%' : '0%';
     perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('');
+    if (document.getElementById('panel-analisis')?.style.display !== 'none') renderAgentAnalysisSummary();
+}
+
+function escapeAnalysisHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getAgentHistoryStats(items) {
+    const recent = (items || []).slice(-20);
+    const wins = recent.filter(x => x === 'win').length;
+    const losses = recent.filter(x => x === 'loss').length;
+    const total = wins + losses;
+    return {
+        wins,
+        losses,
+        total,
+        rate: total ? Math.round((wins / total) * 100) : 0
+    };
+}
+
+function renderAgentAnalysisSummary() {
+    const wrap = document.getElementById('analisis-agent-summary');
+    if (!wrap) return;
+
+    const masterStats = getAgentHistoryStats(masterHistory);
+    const analystStats = getAgentHistoryStats(analystHistory);
+    const masterTarget = masterView.target ? (masterView.target === 'CW' ? 'DERECHA' : 'IZQUIERDA') : '--';
+    const analystTarget = analystView.targetDir ? (analystView.targetDir === 'CW' ? 'DERECHA' : 'IZQUIERDA') : '--';
+
+    const card = (title, stats, target, signal, reason) => (
+        '<div class="analysis-agent-card">' +
+            '<div class="analysis-agent-head">' +
+                '<span>' + title + '</span>' +
+                '<b>' + stats.rate + '%</b>' +
+            '</div>' +
+            '<div class="analysis-agent-meta">Ultimas ' + stats.total + ' decisiones | Target: ' + target + '</div>' +
+            '<div class="analysis-agent-signal">' + escapeAnalysisHtml(signal) + '</div>' +
+            '<div class="analysis-agent-reason">' + escapeAnalysisHtml(reason) + '</div>' +
+        '</div>'
+    );
+
+    wrap.innerHTML =
+        card('SNIPER MASTER', masterStats, masterTarget, masterView.signal || '--', masterView.reasons || 'Analizando confluencia.') +
+        card('ANALYST AGENT', analystStats, analystTarget, analystView.signal || '--', analystView.reason || 'Analizando onda de travel.');
+}
+
+function loadSpinAnalysis() {
+    renderAgentAnalysisSummary();
+    const statusEl = document.getElementById('analisis-status');
+    if (statusEl) statusEl.innerText = 'Lectura de Sniper y Analyst Agent actualizada.';
+}
+
+function runSpinAnalysis() {
+    renderAgentAnalysisSummary();
+    const statusEl = document.getElementById('analisis-status');
+    if (statusEl) statusEl.innerText = 'Analisis de agentes ejecutado con la mesa actual.';
 }
 
 function renderTravelPanel() {
@@ -186,6 +248,7 @@ document.addEventListener('click', (e) => {
         document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');
         document.getElementById(tabMap[e.target.id]).style.display = 'flex';
+        if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
     }
 });
 

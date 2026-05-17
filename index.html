@@ -104,11 +104,12 @@
             <section class="shadow-panel" id="panel-analisis" style="display: none;">
                 <div class="agent-card-header">
                     <span class="agent-icon">📊</span>
-                    <span class="agent-card-name">SPIN METHOD</span>
+                    <span class="agent-card-name">SNIPER + ANALYST ANALISIS</span>
                     <button id="btn-analisis-run" onclick="runSpinAnalysis()">EJECUTAR</button>
                 </div>
                 <div id="analisis-content">
-                    <div id="analisis-status">Cargando analisis...</div>
+                    <div id="analisis-status">Cargando lectura de Sniper y Analyst Agent...</div>
+                    <div id="analisis-agent-summary"></div>
                     <div id="analisis-analyst"></div>
                     <div id="analisis-sniper"></div>
                 </div>
@@ -153,6 +154,7 @@
                 <div class="analyst-header">
                     <span class="analyst-tag">📈 ANALYST</span>
                     <span id="analyst-rate">0%</span>
+                    <span id="analyst-perf-string">--</span>
                 </div>
                 <div class="analyst-main">
                     <span class="analyst-signal" id="analyst-signal">ANALIZANDO...</span>
