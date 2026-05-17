@@ -253,8 +253,8 @@ async function syncAiPredictionState() {
             if (isResolvedAiOutcome(n9Result)) aiN9History.push(n9Result);
             if (isResolvedAiOutcome(n4Result)) aiN4History.push(n4Result);
         });
-        if (aiN9History.length > 25) aiN9History.splice(0, aiN9History.length - 25);
-        if (aiN4History.length > 25) aiN4History.splice(0, aiN4History.length - 25);
+        if (aiN9History.length > 20) aiN9History.splice(0, aiN9History.length - 25);
+        if (aiN4History.length > 20) aiN4History.splice(0, aiN4History.length - 25);
 
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
@@ -315,8 +315,8 @@ async function syncRawPredictionState() {
                 if (n4Result === 'win') rawN4Wins++; else rawN4Losses++;
             }
         });
-        if (rawN9History.length > 25) rawN9History.splice(0, rawN9History.length - 25);
-        if (rawN4History.length > 25) rawN4History.splice(0, rawN4History.length - 25);
+        if (rawN9History.length > 20) rawN9History.splice(0, rawN9History.length - 25);
+        if (rawN4History.length > 20) rawN4History.splice(0, rawN4History.length - 25);
 
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
@@ -356,9 +356,9 @@ function renderDirMetricHistories() {
     ];
 
     const aiN9List = document.getElementById('ai-hist-list-n9');
-    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 25);
+    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 20);
     const aiN4List = document.getElementById('ai-hist-list-n4');
-    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 25);
+    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 20);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
@@ -1964,10 +1964,10 @@ function toggleRawHist(side, btn) {
     if (btn) btn.innerHTML = panel.style.display === 'none' ? '&#9662;' : '&#9652;';
     if (side === 'n9') {
         const list = document.getElementById('raw-hist-list-n9');
-        if (list) list.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses, total: rawN9Wins + rawN9Losses, rate: rawN9Wins + rawN9Losses ? Math.round((rawN9Wins / (rawN9Wins + rawN9Losses)) * 100) : 0 }, 25);
+        if (list) list.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses, total: rawN9Wins + rawN9Losses, rate: rawN9Wins + rawN9Losses ? Math.round((rawN9Wins / (rawN9Wins + rawN9Losses)) * 100) : 0 }, 20);
     } else {
         const list = document.getElementById('raw-hist-list-n4');
-        if (list) list.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses, total: rawN4Wins + rawN4Losses, rate: rawN4Wins + rawN4Losses ? Math.round((rawN4Wins / (rawN4Wins + rawN4Losses)) * 100) : 0 }, 25);
+        if (list) list.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses, total: rawN4Wins + rawN4Losses, rate: rawN4Wins + rawN4Losses ? Math.round((rawN4Wins / (rawN4Wins + rawN4Losses)) * 100) : 0 }, 20);
     }
 }
 
@@ -1981,13 +1981,13 @@ function evaluateRawPredictions(number) {
         const n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
         if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
         else { rawN9Losses++; rawN9History.push('loss'); }
-        if (rawN9History.length > 25) rawN9History.shift();
+        if (rawN9History.length > 20) rawN9History.shift();
     }
     if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
         const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
         if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
         else { rawN4Losses++; rawN4History.push('loss'); }
-        if (rawN4History.length > 25) rawN4History.shift();
+        if (rawN4History.length > 20) rawN4History.shift();
     }
     updateRawStats();
     
