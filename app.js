@@ -511,9 +511,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-metricas', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-metricas', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -525,6 +525,7 @@ document.addEventListener('click', (e) => {
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
         if (e.target.id === 'tab-btn-metricas') { renderMetricasPanel(); loadForestDiscoveries(); }
         if (e.target.id === 'tab-btn-raw') { updateRawStats(); renderRawHist(); requestRawAI(); }
+        if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
     }
 });
@@ -2312,5 +2313,97 @@ async function sendChatMessage() {
     }
     if (statusEl) statusEl.innerText = 'ONLINE';
     msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+// ─── SPIN METHOD ANALYSIS ──────────────────────────────────
+async function loadSpinAnalysis() {
+    const statusEl = document.getElementById('analisis-status');
+    if (statusEl) statusEl.innerText = 'Cargando ultimo analisis...';
+    
+    try {
+        const resp = await fetch('/api/spin-method/results');
+        const data = await resp.json();
+        renderSpinAnalysis(data);
+    } catch (e) {
+        if (statusEl) statusEl.innerText = 'Error cargando analisis.';
+    }
+}
+
+async function runSpinAnalysis() {
+    const statusEl = document.getElementById('analisis-status');
+    const btn = document.getElementById('btn-analisis-run');
+    if (statusEl) statusEl.innerText = 'Ejecutando analisis...';
+    if (btn) { btn.innerText = '...'; btn.disabled = true; }
+    
+    try {
+        const tableId = document.getElementById('table-select')?.value || '1';
+        const resp = await fetch('/api/spin-method/analyze/' + tableId);
+        const data = await resp.json();
+        renderSpinAnalysis(data);
+        if (statusEl) statusEl.innerText = 'Analisis completado.';
+    } catch (e) {
+        if (statusEl) statusEl.innerText = 'Error ejecutando analisis.';
+    } finally {
+        if (btn) { btn.innerText = 'EJECUTAR'; btn.disabled = false; }
+    }
+}
+
+function renderSpinAnalysis(data) {
+    if (!data || data.status === 'insufficient_data' || data.status === 'no_data') {
+        document.getElementById('analisis-status').innerText = data?.message || 'Sin datos suficientes.';
+        document.getElementById('analisis-global').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('analisis-global').style.display = 'block';
+    document.getElementById('analisis-rate').innerText = data.overallHitRate + '%';
+    document.getElementById('analisis-counts').innerText = data.totalAnalyzed + ' predicciones | ' + data.totalWins + 'W / ' + data.totalLosses + 'L';
+    document.getElementById('analisis-rate').style.color = data.overallHitRate >= 55 ? '#0f0' : data.overallHitRate >= 40 ? '#f0c040' : '#f55';
+    
+    // Golden contexts
+    let gold = '';
+    (data.goldenContexts || []).forEach(c => {
+        const color = c.hitRate >= 60 ? '#0f0' : c.hitRate >= 50 ? '#f0c040' : 'var(--text-dim)';
+        gold += '<div style="font-size:9px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.03);">' +
+            '<span style="color:' + color + '; font-weight:700;">' + c.hitRate + '%</span> ' +
+            '<span style="color:var(--text-dim);">' + c.context + '</span> ' +
+            '<span style="color:var(--text-dim);">(' + c.wins + 'W/' + c.losses + 'L en ' + c.total + ')</span>' +
+            '</div>';
+    });
+    document.getElementById('analisis-golden').innerHTML = gold || '<span style="font-size:9px; color:var(--text-dim);">Sin contextos dorados aun (necesitan +55% en 20+ muestras).</span>';
+    
+    // Modes
+    let modes = '';
+    (data.modePerformance || []).forEach(m => {
+        modes += '<div style="flex:1; background:rgba(0,0,0,0.2); border-radius:6px; padding:6px; text-align:center;">' +
+            '<div style="font-size:9px; color:var(--text-dim);">' + m.label + '</div>' +
+            '<div style="font-size:1.1rem; font-weight:900; color:#fff;">' + m.hitRate + '%</div>' +
+            '<div style="font-size:8px; color:var(--text-dim);">' + m.wins + 'W/' + m.losses + 'L</div>' +
+            '</div>';
+    });
+    document.getElementById('analisis-modes').innerHTML = modes || '<span style="font-size:9px; color:var(--text-dim);">--</span>';
+    
+    // Signals
+    const sig = data.signalAnalysis || {};
+    document.getElementById('analisis-signals').innerHTML = 
+        '<div style="font-size:8px; color:var(--text-dim);">' +
+        'Ruta fuerte (DOM≥4): <b style="color:#0f0;">' + sig.strongRouteRate + '%</b> (' + sig.strongRouteWins + 'W/' + sig.strongRouteTotal + ')' +
+        ' | Mixtas: <b style="color:#f55;">' + sig.mixedRate + '%</b> (' + sig.mixedWins + 'W/' + sig.mixedTotal + ')' +
+        '</div>';
+    
+    // Auto strategies
+    let strats = '';
+    (data.autoStrategies || []).slice(0, 5).forEach(s => {
+        strats += '<div style="font-size:8px; padding:3px 6px; margin:2px 0; background:rgba(0,255,136,0.05); border-left:2px solid #0f0; border-radius:2px;">' +
+            '<b style="color:#0f0;">' + s.name + '</b> ' +
+            '<span style="color:var(--text-dim);">' + s.summary + '</span>' +
+            '</div>';
+    });
+    document.getElementById('analisis-strategies').innerHTML = strats || '<span style="font-size:9px; color:var(--text-dim);">Sin estrategias promovidas. Se necesita +55% en 20+ muestras.</span>';
+    
+    // Summary
+    document.getElementById('analisis-summary').innerText = data.summary || '';
+    
+    document.getElementById('analisis-status').innerText = 'Analisis de ' + new Date(data.generatedAt).toLocaleString();
 }
 

@@ -5,6 +5,7 @@
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
+const fs      = require('fs');
 const db      = require('./database');
 const Spin    = require('./models/Spin'); // MongoDB Model
 const predictor = require('./predictor'); // Agents 1-4
@@ -20,6 +21,8 @@ const {
 } = require('./analytics_snapshot');
 
 const forest = require('./forest_engine');
+
+const spinMethod = require('./spin_method');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
@@ -1741,6 +1744,33 @@ app.get('/api/forest/discoveries', (req, res) => {
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── Spin Method API (post-mortem analysis) ──────────────
+app.get('/api/spin-method/analyze/:tableId', async (req, res) => {
+    try {
+        const tableId = req.params.tableId;
+        const results = await spinMethod.analyze(db, tableId);
+        res.json(results);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/spin-method/results', (req, res) => {
+    try {
+        if (fs.existsSync(spinMethod.ANALYSIS_FILE)) {
+            const data = JSON.parse(fs.readFileSync(spinMethod.ANALYSIS_FILE, 'utf8'));
+            res.json(data);
+        } else {
+            res.json({ status: 'no_data', message: 'No hay analisis aun. Ejecuta /api/spin-method/analyze/:tableId' });
+        }
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Auto-run analysis every 5 minutes ──────────────────
+setInterval(async () => {
+    try {
+        await spinMethod.analyze(db, 1);
+    } catch (e) { /* silent */ }
+}, 5 * 60 * 1000);
 
 // Batch import (for manual/automatic history sync)
 app.post('/api/spin/batch', async (req, res) => {
