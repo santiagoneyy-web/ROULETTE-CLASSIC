@@ -448,8 +448,7 @@ function renderShadowPanel() {
         document.getElementById('dir-ccw-r-balls').innerHTML = '';
     }
     } catch (err) {
-        document.body.innerHTML += `<div style="color:red;z-index:9999;position:fixed;top:50px">${err.stack}</div>`;
-        console.error('Error in renderShadowPanel:', err); 
+        console.error('Error in renderShadowPanel:', err);
     }
 }
 
@@ -693,10 +692,10 @@ function renderMetricasPanel() {
     }
     
     // Confluence detector
-    renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability);
+    renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability, cards, bestId);
 }
 
-function renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability) {
+function renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability, cards, bestId) {
     const confDiv = document.getElementById('metricas-confluence');
     const confSignal = document.getElementById('met-confluence-signal');
     const confDetail = document.getElementById('met-confluence-detail');

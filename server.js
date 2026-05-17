@@ -23,6 +23,7 @@ const {
 const forest = require('./forest_engine');
 
 const spinMethod = require('./spin_method');
+const brain = require('./brain');
 
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'ofi_santi_alerts';
 const ntfyCooldowns = {}; // { tableId: remaining_spins_before_next_alert }
@@ -1244,9 +1245,9 @@ app.post('/api/ai/groq', async (req, res) => {
         const groqKey = process.env.GROQ_API_KEY;
         const autoMode = String(autoAiContext?.mode || 'SAFE').toUpperCase();
         const strategyDigest = buildStrategyDigest(tableId || 'global');
-        const learningSummary = (autoAiContext && autoMode !== 'RAW') ? await getLearningSummaryAsync(tableId || 0) : null;
-        const learningDigest = (autoAiContext && autoMode !== 'RAW') ? buildLearningDigest(learningSummary, autoMode) : '';
-        const predictionMeta = { strategyDigest, learningDigest, provider: 'llm-pending' };
+        const brainDigest = autoMode === 'RAW' ? '' : brain.buildBrainDigest(autoAiContext);
+        const strategyDigestFinal = autoMode === 'RAW' ? '' : strategyDigest;
+        const predictionMeta = { strategyDigest: strategyDigestFinal, learningDigest: brainDigest, provider: 'llm-pending' };
         if (autoAiContext && !AUTO_AI_REMOTE_ANALYSIS) {
             const localDecision = {
                 reply: formatAutoReply(fallback.n9, fallback.n4),
@@ -1274,7 +1275,7 @@ app.post('/api/ai/groq', async (req, res) => {
             });
         }
 
-        const userPrompt = autoAiContext ? buildAutoAiUserPrompt({ ...autoAiContext, strategyDigest }, strategyDigest, learningDigest) : prompt;
+        const userPrompt = autoAiContext ? buildAutoAiUserPrompt({ ...autoAiContext, strategyDigest: strategyDigestFinal }, strategyDigestFinal, brainDigest) : prompt;
         
         let systemPrompt;
         if (autoAiContext) {
