@@ -11,6 +11,7 @@ const MetricSnapshot = require('./models/MetricSnapshot');
 const AiPrediction = require('./models/AiPrediction');
 const TableStateSnapshot = require('./models/TableStateSnapshot');
 const Pattern = require('./models/Pattern');
+const brain = require('./brain');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -1062,8 +1063,6 @@ async function getTableStateSnapshots(tableId, limit, cb) {
 async function getPatternStats(tableId, seqMag, seqDir, cb) {
     if (useMongo) {
         try {
-const Pattern = require('./models/Pattern');
-const brain = require('./brain');
             const stats = await Pattern.aggregate([
                 { $match: { table_id: String(tableId), sequence_mag: seqMag, sequence_dir: seqDir } },
                 { $group: { _id: { mag: "$next_mag", dir: "$next_dir" }, count: { $sum: 1 } } },
