@@ -14,5 +14,7 @@ services:
         value: "groq"
       - key: GROQ_API_KEY
         fromSecret: groq_api_key
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: "true"
     autoDeploy: true
     healthCheckPath: "/"
