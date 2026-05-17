@@ -613,10 +613,10 @@ function renderMetricasPanel() {
         const targets = {
             'cw_n9': { target: cw, radius: 9 },
             'ccw_n9': { target: ccw, radius: 9 },
-            'cw_n4s': { target: cwN4s, radius: 2 },
-            'cw_n4b': { target: cwN4b, radius: 2 },
-            'ccw_n4s': { target: ccwN4s, radius: 2 },
-            'ccw_n4b': { target: ccwN4b, radius: 2 }
+            'cw_n4s': { target: cwN4s, radius: 4 },
+            'cw_n4b': { target: cwN4b, radius: 4 },
+            'ccw_n4s': { target: ccwN4s, radius: 4 },
+            'ccw_n4b': { target: ccwN4b, radius: 4 }
         };
         Object.entries(targets).forEach(([id, t]) => {
             if (t.target != null && typeof wheelNeighbors === 'function') {
@@ -751,7 +751,7 @@ function renderConfluence(scores, domCW, domCCW, domBig, domSmall, stability) {
     cards.forEach(c => {
         const card = document.getElementById('met-' + c.id);
         if (!card || c.val == null) return;
-        const radius = c.id.includes('n4') ? 2 : 9;
+        const radius = c.id.includes('n4') ? 4 : 9;
         if (typeof wheelNeighbors === 'function' && wheelNeighbors(c.val, radius).includes(lastN)) {
             card.style.transition = 'all 0.15s';
             card.style.boxShadow = '0 0 12px rgba(0,255,136,0.5)';
@@ -1976,7 +1976,22 @@ function renderRawHist() {
 }
 
 function evaluateRawPredictions(number) {
-    // Now server-side: sync from DB like AUTO
+    // Quick client-side hit check for immediate feedback
+    if (lastRawPredN9 && lastRawPredN9 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
+        const n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
+        if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
+        else { rawN9Losses++; rawN9History.push('loss'); }
+        if (rawN9History.length > 25) rawN9History.shift();
+    }
+    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
+        const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
+        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
+        else { rawN4Losses++; rawN4History.push('loss'); }
+        if (rawN4History.length > 25) rawN4History.shift();
+    }
+    updateRawStats();
+    
+    // Also sync from DB for accuracy
     if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
 }
 

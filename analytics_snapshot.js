@@ -163,7 +163,7 @@ function buildPerformance(history, routeKey, targetKey, limit = 8) {
     for (let i = start; i < history.length; i++) {
         const targets = getRouteTargets(history[i - 1]);
         const target = targets[routeKey][targetKey];
-        const radius = targetKey === 'n9' ? 9 : 2;
+        const radius = targetKey === 'n9' ? 9 : 4;
         marks.push(hitInRadius(target, history[i], radius) ? 'W' : 'L');
     }
 
@@ -478,7 +478,7 @@ function evaluatePredictionHit(prediction, resolvedNumber) {
     }
 
     const n9Hit = Number.isInteger(n9) && hitInRadius(n9, number, 9);
-    const n4Hit = Number.isInteger(n4) && hitInRadius(n4, number, 2);
+    const n4Hit = Number.isInteger(n4) && hitInRadius(n4, number, 4);
     const n9Result = !Number.isInteger(n9) || prediction.n9 === 'ESPERAR' ? 'skip' : (n9Hit ? 'win' : 'loss');
     const n4Result = !Number.isInteger(n4) || prediction.n4 === 'ESPERAR' ? 'skip' : (n4Hit ? 'win' : 'loss');
     const overall = (n9Result === 'win' || n4Result === 'win')

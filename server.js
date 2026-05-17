@@ -1708,11 +1708,10 @@ app.post('/api/spin', async (req, res) => {
                         const { wheelNeighbors } = require('./analytics_snapshot');
                         const metrics = [
                             { id: 'cw_n9', target: snapshot.routes.cw?.n9, radius: 9 },
-                            { id: 'cw_n4s', target: snapshot.routes.cw?.n4Small, radius: 2 },
-                            { id: 'cw_n4b', target: snapshot.routes.cw?.n4Big, radius: 2 },
-                            { id: 'ccw_n9', target: snapshot.routes.ccw?.n9, radius: 9 },
-                            { id: 'ccw_n4s', target: snapshot.routes.ccw?.n4Small, radius: 2 },
-                            { id: 'ccw_n4b', target: snapshot.routes.ccw?.n4Big, radius: 2 }
+                            { id: 'cw_n4s', target: snapshot.routes.cw?.n4Small, radius: 4 },
+                            { id: 'cw_n4b', target: snapshot.routes.cw?.n4Big, radius: 4 },
+                            { id: 'ccw_n4s', target: snapshot.routes.ccw?.n4Small, radius: 4 },
+                            { id: 'ccw_n4b', target: snapshot.routes.ccw?.n4Big, radius: 4 }
                         ];
                         metrics.forEach(m => {
                             if (m.target != null && Number.isInteger(m.target)) {
