@@ -470,9 +470,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-panel', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-panel', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-panel': 'panel-panel', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-panel'];
+    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-panel'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-panel': 'panel-panel' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });

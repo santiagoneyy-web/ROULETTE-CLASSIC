@@ -38,13 +38,10 @@
              <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                     <button class="tab-btn" id="tab-btn-metricas">METRICAS</button>
                      <button class="tab-btn" id="tab-btn-raw">RAW</button>
                      <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
-                     <button class="tab-btn" id="tab-btn-analisis">ANALISIS</button>
                      <button class="tab-btn" id="tab-btn-panel">PANEL</button>
-                     <button class="tab-btn" id="tab-btn-chat">CHAT</button>
                  </div>
                  <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                      <button id="btn-pred-dec" title="Bajar DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">-</button>
@@ -224,63 +221,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- 5. ANALISIS (Spin Method Engine) -->
-            <section class="shadow-panel" id="panel-analisis" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">&#x1F4CA;</span>
-                    <span class="agent-card-name">SPIN METHOD ANALISIS</span>
-                    <button id="btn-analisis-run" onclick="runSpinAnalysis()" style="background:rgba(0,229,200,0.12); border:1px solid rgba(0,229,200,0.3); color:#00e5c8; font-size:8px; border-radius:4px; padding:2px 6px; cursor:pointer; font-weight:700; margin-left:auto;">EJECUTAR</button>
-                </div>
-                <div style="padding: 6px 8px; max-height: 400px; overflow-y: auto;">
-                    <div id="analisis-status" style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Cargando ultimo analisis...</div>
-                    
-                    <!-- Global stats -->
-                    <div id="analisis-global" style="display:none; margin-bottom:10px; padding:6px; background:rgba(0,0,0,0.15); border-radius:6px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">TASA GLOBAL</div>
-                        <div style="font-size:1.3rem; font-weight:900;" id="analisis-rate">--%</div>
-                        <div style="font-size:9px; color:var(--text-dim);" id="analisis-counts">--</div>
-                    </div>
-                    
-                    <!-- Golden contexts -->
-                    <div style="font-size:10px; font-weight:700; color:var(--gold); margin-bottom:4px;">CONTEXTOS DORADOS (+55% en 20+ muestras)</div>
-                    <div id="analisis-golden" style="margin-bottom:8px;"></div>
-                    
-                    <!-- Mode comparison -->
-                    <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">MODOS</div>
-                    <div id="analisis-modes" style="margin-bottom:8px; display:flex; gap:6px;"></div>
-                    
-                    <!-- Signal analysis -->
-                    <div style="font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px;">SEÑALES</div>
-                    <div id="analisis-signals" style="margin-bottom:8px;"></div>
-                    
-                    <!-- Auto strategies -->
-                    <div style="font-size:10px; font-weight:700; color:#0f0; margin-bottom:4px;">ESTRATEGIAS GENERADAS</div>
-                    <div id="analisis-strategies"></div>
-                    
-                    <!-- Summary -->
-                    <div id="analisis-summary" style="margin-top:8px; padding:6px; background:rgba(0,229,200,0.05); border-radius:6px; font-size:9px; color:var(--text2);"></div>
-                </div>
-            </section>
-
-
-            <!-- 6. CHAT (Conversacion con Llama via Groq) -->
-            <section class="shadow-panel" id="panel-chat" style="display: none;">
-                <div class="agent-card-header" style="padding: 4px 10px;">
-                    <span class="agent-icon">💬</span>
-                    <span class="agent-card-name">CHAT AI</span>
-                    <span class="side-badge" id="chat-status" style="padding:1px 6px;">ONLINE</span>
-                </div>
-                <div id="chat-messages" style="padding: 8px; min-height: 180px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-                    <div style="background: rgba(0,229,200,0.08); border-radius: 10px; padding: 6px 10px; font-size: 10px; color: var(--accent); max-width: 85%; align-self: flex-start;">Hola Santi, soy tu analista AI. Preguntame lo que quieras sobre la mesa.</div>
-                </div>
-                <div style="padding: 6px 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; align-items: center;">
-                    <input id="chat-input" type="text" placeholder="Escribe aqui..." style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-size: 10px; outline: none; font-family: var(--mono);" onkeydown="if(event.key==='Enter')sendChatMessage()">
-                    <button onclick="sendChatMessage()" style="background: var(--accent); border: none; border-radius: 8px; padding: 6px 12px; color: #000; font-size: 10px; font-weight: 700; ">Enviar</button>
-                </div>
-            </section>
-
-
 
             <!-- MASTER SNIPER AI -->
             <section class="master-panel">
