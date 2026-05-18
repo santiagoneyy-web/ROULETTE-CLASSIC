@@ -1198,8 +1198,22 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         }
     }
 
-    if (!allowedN9.includes(n9)) n9 = fallback.n9;
-    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') n4 = fallback.n4;
+    // Validación final estricta: N9 Y N4 deben ser de las 6 métricas del panel DIR
+    if (!allowedN9.includes(n9)) {
+        console.warn(`[AI] N9=${n9} no está en métricas permitidas [${allowedN9.join(', ')}], usando fallback`);
+        n9 = fallback.n9;
+    }
+    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') {
+        console.warn(`[AI] N4=${n4} no está en métricas permitidas [${allowedN4.join(', ')}], usando fallback`);
+        n4 = fallback.n4;
+    }
+    // Segunda validación: si fallback también falló, forzar la mejor ruta
+    if (!allowedN9.includes(n9)) {
+        n9 = String(cw.n9); // Forzar CW N9 por defecto
+    }
+    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') {
+        n4 = String(cw.n4Small); // Forzar CW N4 Small por defecto
+    }
 
     if (!route || route === 'ESPERAR') {
         if (n9 === String(cw.n9)) route = 'CW';
