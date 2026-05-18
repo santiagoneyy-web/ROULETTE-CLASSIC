@@ -2036,16 +2036,6 @@ async function requestAutoAI() {
                     n4Small: lastSignal.targetOverCCW,
                     n4Big: lastSignal.targetUnderCCW,
                     hitRate: Number(ccwRate)
-                },
-                small: {
-                    n9: lastSignal.targetUnderCW,
-                    n4Small: lastSignal.targetUnderCW,
-                    n4Big: lastSignal.targetOverCW
-                },
-                big: {
-                    n9: lastSignal.targetOverCW,
-                    n4Small: lastSignal.targetUnderCW,
-                    n4Big: lastSignal.targetOverCW
                 }
             },
             recentNumbers: history.slice(-15)
