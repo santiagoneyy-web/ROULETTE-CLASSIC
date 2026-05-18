@@ -439,9 +439,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-sniper', 'tab-btn-panel'];
-    const allPanels = ['panel-dir', 'panel-scatter', 'panel-auto', 'panel-sniper', 'panel-panel'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-sniper': 'panel-sniper', 'tab-btn-panel': 'panel-panel' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-scatter', 'tab-btn-pattern', 'tab-btn-sniper', 'tab-btn-panel'];
+    const allPanels = ['panel-dir', 'panel-scatter', 'panel-pattern', 'panel-sniper', 'panel-panel'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-pattern': 'panel-pattern', 'tab-btn-sniper': 'panel-sniper', 'tab-btn-panel': 'panel-panel' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -451,7 +451,9 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
-        if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
+        // AUTO eliminado
+        // if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
+        if (e.target.id === 'tab-btn-pattern') { analyzePatternSequence(); }
         if (e.target.id === 'tab-btn-sniper') { renderMasterUI(); renderAnalystUI(); }
         if (e.target.id === 'tab-btn-panel') { renderAgentDashboard(); }
     }
