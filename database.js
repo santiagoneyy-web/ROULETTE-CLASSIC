@@ -11,6 +11,7 @@ const MetricSnapshot = require('./models/MetricSnapshot');
 const AiPrediction = require('./models/AiPrediction');
 const TableStateSnapshot = require('./models/TableStateSnapshot');
 const Pattern = require('./models/Pattern');
+const MetaPattern = require('./models/MetaPattern');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -1062,6 +1063,83 @@ async function getPatternStats(tableId, seqMag, seqDir, cb) {
     }
 }
 
+// --- Meta-Pattern Functions ---
+async function saveMetaPattern(tableId, data) {
+    if (!useMongo) {
+        console.log('MetaPattern: MongoDB not available, skipping save');
+        return null;
+    }
+    try {
+        const metaPattern = new MetaPattern({
+            table_id: String(tableId),
+            type: data.type,
+            wl_sequence: data.wl_sequence,
+            full_history: data.full_history || [],
+            numbers_history: data.numbers_history || [],
+            sniper_prediction: data.sniper_prediction || null,
+            detected_at: new Date()
+        });
+        await metaPattern.save();
+        console.log(`MetaPattern saved: ${data.type} for table ${tableId}`);
+        return metaPattern;
+    } catch (e) {
+        console.error('Error saving meta-pattern:', e);
+        return null;
+    }
+}
+
+async function updateMetaPatternResult(metaPatternId, result, accurate) {
+    if (!useMongo) return;
+    try {
+        await MetaPattern.findByIdAndUpdate(metaPatternId, {
+            actual_result: result,
+            prediction_accurate: accurate,
+            resolved_at: new Date()
+        });
+    } catch (e) {
+        console.error('Error updating meta-pattern result:', e);
+    }
+}
+
+async function getMetaPatternStats(tableId, type, limit = 100) {
+    if (!useMongo) return { total: 0, accurate: 0, accuracy: 0, patterns: [] };
+    try {
+        const query = { table_id: String(tableId) };
+        if (type) query.type = type;
+        
+        const patterns = await MetaPattern.find(query)
+            .sort({ detected_at: -1 })
+            .limit(limit)
+            .lean();
+        
+        const resolved = patterns.filter(p => p.actual_result !== null);
+        const accurate = resolved.filter(p => p.prediction_accurate === true);
+        
+        return {
+            total: resolved.length,
+            accurate: accurate.length,
+            accuracy: resolved.length > 0 ? (accurate.length / resolved.length * 100).toFixed(1) : 0,
+            patterns: patterns
+        };
+    } catch (e) {
+        console.error('Error getting meta-pattern stats:', e);
+        return { total: 0, accurate: 0, accuracy: 0, patterns: [] };
+    }
+}
+
+async function getUnresolvedMetaPatterns(tableId) {
+    if (!useMongo) return [];
+    try {
+        return await MetaPattern.find({ 
+            table_id: String(tableId),
+            actual_result: null 
+        }).sort({ detected_at: -1 }).lean();
+    } catch (e) {
+        console.error('Error getting unresolved meta-patterns:', e);
+        return [];
+    }
+}
+
 module.exports = { 
     initDB, getTables, addTable, deleteTable, getHistory, addSpin, 
     clearHistory, wipeAllSpins, getStats, getUseMongo: () => useMongo,
@@ -1070,6 +1148,7 @@ module.exports = {
     listStrategies, saveStrategyRecord,
     addMetricSnapshot, getMetricSnapshots,
     addAiPrediction, getAiPredictions, resolvePendingAiPredictions, getAiLearningSummary,
-    addTableStateSnapshot, getTableStateSnapshots
+    addTableStateSnapshot, getTableStateSnapshots,
+    saveMetaPattern, updateMetaPatternResult, getMetaPatternStats, getUnresolvedMetaPatterns
 };
 

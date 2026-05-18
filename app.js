@@ -19,6 +19,7 @@ let patternStats = { matches: 0, hits: 0, total: 0 }; // Estadísticas
 const sniperWLHistory = []; // Track de aciertos/fallos del Sniper: [{pred: 'CW', result: 'W', number: 14}, ...]
 let lastSniperPred = null; // Última predicción del Sniper para evaluar
 const MAX_WL_HISTORY = 20; // Mantener últimos 20 resultados
+const pendingMetaPatterns = []; // Meta-patrones pendientes de resolución (con IDs de DB)
 
 // Eliminar completamente AUTO - usar solo Sniper y Analyst
 // window.currentAIMode = 'SAFE';
@@ -2669,6 +2670,9 @@ function registerSniperResult(actualNumber) {
         }
     }
     
+    // Resolver meta-patrones pendientes con este resultado
+    resolvePendingMetaPatterns(result);
+    
     // Guardar en historial
     sniperWLHistory.push({
         pred: lastSniperPred.dir,
@@ -2705,6 +2709,24 @@ function updateMetaPatterns() {
     
     // Detectar meta-patrones
     const metaPattern = detectMetaPattern(wlSeq);
+    
+    // Guardar en DB si hay un nuevo patrón
+    if (metaPattern && currentTableId) {
+        const typeMap = {
+            '🔥 EL PICO': 'PICO',
+            '🌊 LA OLA': 'OLA',
+            '🔄 ALTERNANCIA': 'ALTERNADO',
+            '⬛ RODILLO': 'RODILLO',
+            '🎋 EL BAMBU': 'BAMBU',
+            '📈 TENDENCIA ALCISTA': 'TENDENCIA_W',
+            '📉 TENDENCIA BAJISTA': 'TENDENCIA_L'
+        };
+        const type = typeMap[metaPattern.name];
+        if (type) {
+            const numbersHistory = sniperWLHistory.map(h => h.number);
+            saveMetaPatternToDB(type, seqStr.slice(-6), wlSeq, numbersHistory);
+        }
+    }
     
     // Actualizar UI
     const wlHistoryEl = document.getElementById('meta-wl-history');
@@ -2850,5 +2872,82 @@ function detectLongPatterns(last6WL) {
         });
         longListEl.innerHTML = html;
     }
+}
+
+// Guardar meta-patrón en DB
+async function saveMetaPatternToDB(type, wlSequence, fullHistory, numbersHistory) {
+    if (!currentTableId) return null;
+    
+    try {
+        const resp = await fetch(`/api/meta-patterns/${currentTableId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: type,
+                wl_sequence: wlSequence,
+                full_history: fullHistory,
+                numbers_history: numbersHistory,
+                sniper_prediction: lastSniperPred ? (lastSniperPred.dir === 'CW' ? 'WIN' : 'LOSS') : null
+            })
+        });
+        
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.success && data.id) {
+                pendingMetaPatterns.push({
+                    id: data.id,
+                    type: type,
+                    detectedAt: Date.now()
+                });
+                console.log(`Meta-patrón ${type} guardado en DB: ${data.id}`);
+                return data.id;
+            }
+        }
+    } catch(e) {
+        console.error('Error saving meta-pattern:', e);
+    }
+    return null;
+}
+
+// Resolver meta-patrones pendientes con el resultado actual
+async function resolvePendingMetaPatterns(actualResult) {
+    if (pendingMetaPatterns.length === 0) return;
+    
+    const toResolve = [...pendingMetaPatterns];
+    pendingMetaPatterns.length = 0;
+    
+    for (const pattern of toResolve) {
+        try {
+            const accurate = (pattern.type.includes('ALCISTA') && actualResult === 'W') ||
+                           (pattern.type.includes('BAJISTA') && actualResult === 'L');
+            
+            await fetch(`/api/meta-patterns/${pattern.id}/result`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    result: actualResult,
+                    accurate: accurate
+                })
+            });
+            console.log(`Meta-patrón ${pattern.id} resuelto: ${actualResult}`);
+        } catch(e) {
+            console.error('Error resolving meta-pattern:', e);
+        }
+    }
+}
+
+// Obtener estadísticas de meta-patrones desde DB
+async function fetchMetaPatternStats(type) {
+    if (!currentTableId) return { total: 0, accurate: 0, accuracy: 0 };
+    
+    try {
+        const resp = await fetch(`/api/meta-patterns/${currentTableId}/stats?type=${type || ''}&limit=100`);
+        if (resp.ok) {
+            return await resp.json();
+        }
+    } catch(e) {
+        console.error('Error fetching meta-pattern stats:', e);
+    }
+    return { total: 0, accurate: 0, accuracy: 0 };
 }
 

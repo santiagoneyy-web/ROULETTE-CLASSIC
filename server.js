@@ -277,6 +277,54 @@ app.get('/api/patterns/:tableId', async (req, res) => {
     }
 });
 
+// ── Meta-Pattern Endpoints ──
+app.post('/api/meta-patterns/:tableId', async (req, res) => {
+    const { tableId } = req.params;
+    const data = req.body;
+    
+    try {
+        const result = await db.saveMetaPattern(tableId, data);
+        res.json({ success: true, id: result?._id || null });
+    } catch(e) {
+        res.status(500).json({ error: e.message, success: false });
+    }
+});
+
+app.patch('/api/meta-patterns/:patternId/result', async (req, res) => {
+    const { patternId } = req.params;
+    const { result, accurate } = req.body;
+    
+    try {
+        await db.updateMetaPatternResult(patternId, result, accurate);
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: e.message, success: false });
+    }
+});
+
+app.get('/api/meta-patterns/:tableId/stats', async (req, res) => {
+    const { tableId } = req.params;
+    const { type, limit } = req.query;
+    
+    try {
+        const stats = await db.getMetaPatternStats(tableId, type, parseInt(limit) || 100);
+        res.json(stats);
+    } catch(e) {
+        res.status(500).json({ error: e.message, total: 0, accurate: 0, accuracy: 0, patterns: [] });
+    }
+});
+
+app.get('/api/meta-patterns/:tableId/unresolved', async (req, res) => {
+    const { tableId } = req.params;
+    
+    try {
+        const patterns = await db.getUnresolvedMetaPatterns(tableId);
+        res.json(patterns);
+    } catch(e) {
+        res.status(500).json({ error: e.message, patterns: [] });
+    }
+});
+
 // ── Memoria local para el chat del usuario (Temporal por reinicio)
 const aiMemory = {};
 
