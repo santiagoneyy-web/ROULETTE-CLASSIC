@@ -2583,123 +2583,226 @@ async function analyzePatternSequence() {
     fetchPatternsFromServer(key);
 }
 
-// === DETECTOR DE TURBULENCIA DE DIRECCIONES (R/L) ===
-// Basado en los patrones que me pasaste: WWLL, WWWW, etc. aplicados a R/L
+// === DETECTOR AVANZADO DE TURBULENCIA (R/L) ===
+// Análisis granular: micro-turbulencia, post-secuencias, zigzag de dominancias
 function detectDirectionTurbulence() {
-    if (history.length < 6) return null;
+    if (history.length < 8) return null;
     
-    // Extraer últimas 6 direcciones
+    // Extraer últimas 10 direcciones para análisis profundo
     const dirs = [];
-    for (let i = history.length - 6; i < history.length; i++) {
-        const dist = calcDist(history[i-1], history[i]);
-        dirs.push(dist >= 0 ? 'R' : 'L');
+    const dists = [];
+    for (let i = history.length - 10; i < history.length; i++) {
+        if (i > 0) {
+            const dist = calcDist(history[i-1], history[i]);
+            dirs.push(dist >= 0 ? 'R' : 'L');
+            dists.push(Math.abs(dist));
+        }
     }
     
-    const seq = dirs.join('');
-    const last4 = dirs.slice(-4).join('');
-    const last5 = dirs.slice(-5).join('');
-    const last6 = dirs.slice(-6).join('');
+    if (dirs.length < 6) return null;
     
-    // Contar alternancias (turbulencia = muchos cambios)
+    const last10 = dirs.slice(-10).join('');
+    const last8 = dirs.slice(-8).join('');
+    const last6 = dirs.slice(-6).join('');
+    const last5 = dirs.slice(-5).join('');
+    const last4 = dirs.slice(-4).join('');
+    
+    // === MÉTRICAS DE TURBULENCIA ===
+    
+    // 1. Tasa de cambio global (0-1)
     let changes = 0;
     for (let i = 1; i < dirs.length; i++) {
         if (dirs[i] !== dirs[i-1]) changes++;
     }
-    const turbulenceLevel = changes / (dirs.length - 1); // 0 = estable, 1 = caos total
+    const turbulenceLevel = changes / (dirs.length - 1);
     
-    // Detectar patrones específicos
-    const patterns = [];
+    // 2. Longitud de racha actual
+    let currentStreak = 1;
+    let streakType = dirs[dirs.length - 1];
+    for (let i = dirs.length - 2; i >= 0; i--) {
+        if (dirs[i] === streakType) {
+            currentStreak++;
+        } else {
+            break;
+        }
+    }
     
-    // 1. ALTERNADO perfecto RLRL o LRLR (máxima turbulencia)
+    // 3. Detectar rachas previas (para zigzag de dominancias)
+    const streaks = [];
+    let currentStreakType = dirs[0];
+    let currentStreakLen = 1;
+    for (let i = 1; i < dirs.length; i++) {
+        if (dirs[i] === currentStreakType) {
+            currentStreakLen++;
+        } else {
+            streaks.push({ type: currentStreakType, len: currentStreakLen });
+            currentStreakType = dirs[i];
+            currentStreakLen = 1;
+        }
+    }
+    streaks.push({ type: currentStreakType, len: currentStreakLen });
+    
+    // 4. Detectar zigzag de dominancias (rachas cortas alternadas)
+    let zigzagCount = 0;
+    for (let i = 1; i < streaks.length; i++) {
+        if (streaks[i].len <= 2 && streaks[i-1].len <= 2 && streaks[i].type !== streaks[i-1].type) {
+            zigzagCount++;
+        }
+    }
+    
+    // === DETECCIÓN DE PATRONES ESPECÍFICOS ===
+    
+    // 1. MICRO-TURBULENCIA: RLR o LRL (3 cambios en 3 viajes)
     if (last4 === 'RLRL' || last4 === 'LRLR') {
-        patterns.push({ 
-            name: '🔄 ALTERNANCIA EXTREMA', 
-            type: 'turbulence',
+        return {
+            name: '⚡ MICRO-TURBULENCIA',
+            type: 'micro_turbulence',
             level: 'high',
-            desc: 'Cambio de dirección cada viaje',
+            desc: 'Alternancia perfecta - Caos máximo',
+            action: 'AVOID',
+            confidence: 90,
+            streakInfo: { current: currentStreak, type: streakType }
+        };
+    }
+    
+    // 2. POST-SECUENCIA LARGA: Después de 5+ iguales, viene cambio
+    if (streaks.length >= 2) {
+        const prevStreak = streaks[streaks.length - 2];
+        if (prevStreak.len >= 5 && currentStreak <= 2) {
+            return {
+                name: '🔄 RUPTURA POST-DOMINANCIA',
+                type: 'post_sequence',
+                level: 'high',
+                desc: `Racha de ${prevStreak.len} ${prevStreak.type} rota - Nueva tendencia`,
+                action: 'FOLLOW_NEW',
+                confidence: 75,
+                streakInfo: { previous: prevStreak.len, current: currentStreak }
+            };
+        }
+    }
+    
+    // 3. ZIGZAG DE DOMINANCIAS: DER-DER-IZQ-IZQ-DER-DER (rachas de 2)
+    if (zigzagCount >= 3) {
+        return {
+            name: '🔀 ZIGZAG DE DOMINANCIAS',
+            type: 'zigzag_dominance',
+            level: 'medium',
+            desc: 'Rachas cortas alternando - Inestabilidad crónica',
+            action: 'REDUCE',
+            confidence: 70,
+            streakInfo: { zigzagCount: zigzagCount }
+        };
+    }
+    
+    // 4. OLA COMPLETA: RRLLWW (2+2+2)
+    if (last6.match(/^(RRLL|LLRR|RRLLEE|LLRREE)$/)) {
+        return {
+            name: '🌊 OLA COMPLETA',
+            type: 'wave',
+            level: 'medium',
+            desc: 'Patrón 2+2 - Ciclo completado',
+            action: 'EXPECT_REVERSAL',
+            confidence: 65
+        };
+    }
+    
+    // 5. SEMI-TURBULENCIA: RRRLL (3+2) - Punto de inflexión
+    if (last5 === 'RRRLL' || last5 === 'LLLRR') {
+        return {
+            name: '⛰️ PUNTO DE INFLEXIÓN',
+            type: 'inflection',
+            level: 'medium',
+            desc: '3 iguales + 2 cambios - Decisión crítica',
+            action: 'WATCH',
+            confidence: 60
+        };
+    }
+    
+    // 6. DOMINANCIA EXTREMA: 6+ iguales (viene reversal fuerte)
+    if (currentStreak >= 6) {
+        return {
+            name: '🔥 DOMINANCIA EXTREMA',
+            type: 'extreme_dominance',
+            level: 'extreme',
+            desc: `${currentStreak} ${streakType} seguidos - Reversal inminente`,
+            action: 'PREPARE_REVERSAL',
+            confidence: 80
+        };
+    }
+    
+    // 7. TURBULENCIA MODERADA: 40-60% cambios
+    if (turbulenceLevel >= 0.4 && turbulenceLevel < 0.7) {
+        return {
+            name: '💨 TURBULENCIA MODERADA',
+            type: 'moderate_turbulence',
+            level: 'medium',
+            desc: `${Math.round(turbulenceLevel*100)}% cambios - Cautela`,
+            action: 'CAUTION',
+            confidence: 55
+        };
+    }
+    
+    // 8. CAOS TOTAL: >70% cambios
+    if (turbulenceLevel >= 0.7) {
+        return {
+            name: '🌪️ CAOS TOTAL',
+            type: 'total_chaos',
+            level: 'extreme',
+            desc: `${Math.round(turbulenceLevel*100)}% cambios - Sin dirección clara`,
             action: 'AVOID',
             confidence: 85
-        });
+        };
     }
     
-    // 2. WWLL en direcciones: RRLL o LLRR (2 iguales, 2 cambios)
-    if (last4 === 'RRLL' || last4 === 'LLRR') {
-        patterns.push({ 
-            name: '🌊 OLA DIRECCIONAL', 
-            type: 'turbulence',
-            level: 'medium',
-            desc: 'Patrón RRLL/LLRR - cambio de dirección próximo',
-            action: 'CAUTION',
-            confidence: 70
-        });
-    }
-    
-    // 3. RRRR o LLLL (estabilidad extrema - viene cambio)
-    if (last4 === 'RRRR' || last4 === 'LLLL') {
-        patterns.push({ 
-            name: '🔥 PICO DIRECCIONAL', 
-            type: 'stability',
-            level: 'extreme',
-            desc: '4+ direcciones iguales - REVERSAL inminente',
-            action: 'WAIT',
-            confidence: 75
-        });
-    }
-    
-    // 4. RRRLL o LLLRR (3 iguales, 2 cambios - BAMBU direccional)
-    if (last5 === 'RRRLL' || last5 === 'LLLRR') {
-        patterns.push({ 
-            name: '🎋 BAMBU DIRECCIONAL', 
-            type: 'transition',
-            level: 'medium',
-            desc: '3 en una dirección, 2 en otra - observar',
-            action: 'WATCH',
-            confidence: 65
-        });
-    }
-    
-    // 5. Turbulencia general (>60% cambios)
-    if (turbulenceLevel >= 0.6 && patterns.length === 0) {
-        patterns.push({ 
-            name: '⚡ TURBULENCIA GENERAL', 
-            type: 'turbulence',
-            level: 'medium',
-            desc: `${Math.round(turbulenceLevel*100)}% cambios de dirección`,
-            action: 'REDUCE',
-            confidence: 60
-        });
-    }
-    
-    return patterns.length > 0 ? patterns[0] : null;
+    return null;
 }
 
 // === ANALYST V2: Pattern Machine + Fractales/Canales + Turbulencia ===
-// V1 base + boost opcional de patrones DB + detección local de turbulencia
+// V1 base + boost opcional de patrones DB + detección avanzada de turbulencia
 function updateAnalystV2(seq, matches, patternBoost) {
-    // 0. DETECTAR TURBULENCIA PRIMERO (local, no necesita DB)
+    // 0. DETECTAR TURBULENCIA AVANZADA PRIMERO
     const turbulence = detectDirectionTurbulence();
     
-    // 1. Análisis original de Analyst (V1 - siempre funciona)
+    // 1. Análisis original de Analyst (V1)
     const travels = seq.map(s => s.dist);
     const baseAnalysis = analyzeTravelWave(travels);
     
-    // 2. Si no hay señal de fractal, intentar usar analystView global (el tradicional)
+    // 2. Inicializar display con análisis base
     let displaySignal = baseAnalysis.signal || 'ANALIZANDO...';
     let displayType = baseAnalysis.type || 'neutral';
     let displayDir = baseAnalysis.targetDir || null;
     let displaySize = baseAnalysis.size || null;
-    let displayReason = baseAnalysis.reason || 'Recopilando datos del mercado...';
+    let displayReason = baseAnalysis.reason || 'Recopilando datos...';
+    let turbulenceAlert = null;
     
-    // 2.5 SI HAY TURBULENCIA FUERTE, sobrescribir con alerta especial
-    if (turbulence && turbulence.level === 'high') {
-        displaySignal = '⚠️ TURBULENCIA';
-        displayType = 'turbulence';
-        displayDir = null; // No dirección clara en turbulencia
-        displayReason = turbulence.desc;
+    // 3. SI HAY TURBULENCIA, evaluar si damos señal o alerta
+    if (turbulence) {
+        // Guardar alerta de turbulencia
+        turbulenceAlert = turbulence;
+        
+        // Si es caos total o micro-turbulencia, NO damos dirección
+        if (turbulence.type === 'total_chaos' || turbulence.type === 'micro_turbulence') {
+            displaySignal = '🌪️ ' + turbulence.name;
+            displayType = 'chaos';
+            displayDir = null;
+            displayReason = turbulence.desc;
+        }
+        // Si es ruptura post-dominancia, seguimos la NUEVA tendencia
+        else if (turbulence.type === 'post_sequence' && !displayDir && seq.length > 0) {
+            const lastDir = seq[seq.length - 1].dir;
+            displaySignal = '🔄 RUPTURA';
+            displayType = 'breakout';
+            displayDir = lastDir === 'R' ? 'CW' : 'CCW';
+            displayReason = `Cambio de tendencia: ${turbulence.desc}`;
+        }
+        // Si es punto de inflexión, advertir pero dar señal si tenemos
+        else if (turbulence.type === 'inflection') {
+            displayReason = `⚠️ ${turbulence.name}: ${displayReason}`;
+        }
     }
     
-    // 3. Si el análisis local no dio nada, usar analystView global (si existe)
-    if (!displayDir && analystView && analystView.targetDir && !turbulence) {
+    // 4. Si no hay dirección, usar analystView global
+    if (!displayDir && analystView && analystView.targetDir) {
         displayDir = analystView.targetDir;
         displaySignal = analystView.signal || displaySignal;
         displayType = analystView.type || displayType;
@@ -2770,39 +2873,53 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
     const dirs = seq.map(s => s.dir);
     const rhythm = analyzeRhythm(dirs);
     
-    // DETECTAR TURBULENCIA (local)
+    // DETECTAR TURBULENCIA AVANZADA
     const turbulence = detectDirectionTurbulence();
     
-    // Base: Usar masterView (Sniper V1 tradicional) si existe
+    // Base
     let finalConf = 50;
     let finalDir = null;
     let reasons = [];
     
-    // 0. SI HAY TURBULENCIA EXTREMA, alertar y no entrar
-    if (turbulence && turbulence.level === 'high') {
-        finalConf = turbulence.confidence;
-        finalDir = null; // No dirección en turbulencia
-        reasons.push(turbulence.name);
-        
-        // Actualizar UI con alerta de turbulencia
-        const targetEl = document.getElementById('sniper-v2-target');
-        const confEl = document.getElementById('sniper-v2-conf');
-        const reasonsEl = document.getElementById('sniper-v2-reasons');
-        const rhythmEl = document.getElementById('sniper-v2-rhythm');
-        
-        if (targetEl) {
-            targetEl.innerText = '⚠️ TURBULENCIA';
-            targetEl.style.color = '#f55';
+    // 0. EVALUAR TURBULENCIA SEGÚN TIPO
+    if (turbulence) {
+        // Caos total o micro-turbulencia: NO entramos
+        if (turbulence.type === 'total_chaos' || turbulence.type === 'micro_turbulence') {
+            const targetEl = document.getElementById('sniper-v2-target');
+            const confEl = document.getElementById('sniper-v2-conf');
+            const reasonsEl = document.getElementById('sniper-v2-reasons');
+            
+            if (targetEl) {
+                targetEl.innerText = '🌪️ ' + turbulence.name;
+                targetEl.style.color = '#f55';
+            }
+            if (confEl) confEl.innerText = turbulence.confidence + '%';
+            if (reasonsEl) reasonsEl.innerText = turbulence.desc + ' | NO ENTRAR';
+            
+            return; // Stop aquí
         }
-        if (confEl) confEl.innerText = turbulence.confidence + '%';
-        if (reasonsEl) reasonsEl.innerText = turbulence.desc;
-        if (rhythmEl) rhythmEl.innerText = 'ALERTA';
         
-        return; // No seguir, estamos en turbulencia
+        // Ruptura post-dominancia: Seguir nueva tendencia con boost
+        if (turbulence.type === 'post_sequence') {
+            finalConf = turbulence.confidence;
+            reasons.push(turbulence.name);
+        }
+        
+        // Dominancia extrema: Preparar reversal
+        if (turbulence.type === 'extreme_dominance') {
+            finalConf = turbulence.confidence;
+            reasons.push(turbulence.name);
+        }
+        
+        // Zigzag: Reducir confianza
+        if (turbulence.type === 'zigzag_dominance') {
+            finalConf = Math.max(finalConf - 20, 30);
+            reasons.push('Zigzag -25%');
+        }
     }
     
-    // 1. Prioridad: Master View (Sniper V1)
-    if (masterView && masterView.target) {
+    // 1. Prioridad: Master View (Sniper V1) - si no se sobrescribió por turbulencia
+    if (!finalDir && masterView && masterView.target) {
         finalDir = masterView.target;
         finalConf = masterView.confidence || 60;
         reasons.push('Sniper V1');
