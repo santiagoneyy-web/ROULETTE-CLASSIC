@@ -1,4 +1,4 @@
-// Version bump 20240421
+﻿// Version bump 20240421
 
 // app.js Ã¢ÂÂ SHADOW ROULETTE UI ENGINE
 // ============================================================
@@ -340,20 +340,20 @@ function renderShadowPanel() {
         document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW ?? '--';
         document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW ?? '--';
         document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW ?? '--';
-        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'Ã¢ÂÂ HIT' : '';
-        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'Ã¢ÂÂ HIT' : '';
+        document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'OK HIT' : '';
+        document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'OK HIT' : '';
 
         // --- CCW BLOCK ---
         document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW ?? '--';
         document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW ?? '--';
         document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW ?? '--';
-        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'Ã¢ÂÂ HIT' : '';
-        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'Ã¢ÂÂ HIT' : '';
+        document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'OK HIT' : '';
+        document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'OK HIT' : '';
 
         // Shared Tendency
         if (history.length >= 2) {
             const d = calcDist(history[history.length-2], history[history.length-1]);
-            const trendTxt = `TEND: ${ d >= 0 ? 'DER Ã¢ÂÂº' : 'IZQ Ã¢ÂÂ»'}`;
+            const trendTxt = `TEND: ${ d >= 0 ? 'DER ->' : 'IZQ <-'}`;
             document.getElementById('dir-cw-trend').innerText = trendTxt;
             document.getElementById('dir-ccw-trend').innerText = trendTxt;
         }
