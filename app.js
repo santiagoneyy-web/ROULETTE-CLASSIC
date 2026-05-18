@@ -21,6 +21,12 @@ let lastSniperPred = null; // Última predicción del Sniper para evaluar
 const MAX_WL_HISTORY = 20; // Mantener últimos 20 resultados
 const pendingMetaPatterns = []; // Meta-patrones pendientes de resolución (con IDs de DB)
 
+// === V2 W/L TRACKING ===
+const analystV2History = []; // Historial de aciertos V2
+const sniperV2History = []; // Historial de aciertos V2
+let lastAnalystV2Dir = null; // Última dirección del Analyst V2
+let lastSniperV2Dir = null; // Última dirección del Sniper V2
+
 // Eliminar completamente AUTO - usar solo Sniper y Analyst
 // window.currentAIMode = 'SAFE';
 // AUTO ELIMINADO - toggleAIMode comentado
@@ -839,6 +845,20 @@ function submitNumber(val, silent = false, batch = false) {
             const dirHit = (masterView.target === 'CW' && jump >= 0) || (masterView.target === 'CCW' && jump < 0);
             lastMasterHit = dirHit;
             masterHistory.push(lastMasterHit ? 'win' : 'loss');
+        }
+
+        // Evaluate ANALYST V2 prediction
+        if (history.length >= 1 && lastAnalystV2Dir) {
+            const jump = calcDist(history[history.length - 1], n);
+            const dirHit = (lastAnalystV2Dir === 'CW' && jump >= 0) || (lastAnalystV2Dir === 'CCW' && jump < 0);
+            analystV2History.push(dirHit ? 'win' : 'loss');
+        }
+
+        // Evaluate SNIPER V2 prediction
+        if (history.length >= 1 && lastSniperV2Dir) {
+            const jump = calcDist(history[history.length - 1], n);
+            const dirHit = (lastSniperV2Dir === 'CW' && jump >= 0) || (lastSniperV2Dir === 'CCW' && jump < 0);
+            sniperV2History.push(dirHit ? 'win' : 'loss');
         }
 
         history.push(n);
@@ -2857,6 +2877,17 @@ function updateAnalystV2(seq, matches, patternBoost) {
         detailEl.innerText = displayReason;
     }
     
+    // Mostrar contador W/L
+    const wlEl = document.getElementById('analyst-v2-wl');
+    if (wlEl) {
+        const wins = analystV2History.filter(x => x === 'win').length;
+        const losses = analystV2History.filter(x => x === 'loss').length;
+        const total = wins + losses;
+        const rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+        wlEl.innerText = `W:${wins} L:${losses} ${rate}%`;
+        wlEl.style.color = rate >= 50 ? 'var(--green)' : '#f55';
+    }
+    
     if (boostEl && boostValEl) {
         if (analystDbStats) {
             boostEl.style.display = 'block';
@@ -2865,6 +2896,9 @@ function updateAnalystV2(seq, matches, patternBoost) {
             boostEl.style.display = 'none';
         }
     }
+    
+    // Guardar predicción para evaluar W/L después
+    lastAnalystV2Dir = displayDir;
 }
 
 // === SNIPER V2: Pattern Machine + Ritmo + Confluencia + Turbulencia ===
@@ -2989,6 +3023,17 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
         }
     }
     
+    // Mostrar contador W/L
+    const wlEl = document.getElementById('sniper-v2-wl');
+    if (wlEl) {
+        const wins = sniperV2History.filter(x => x === 'win').length;
+        const losses = sniperV2History.filter(x => x === 'loss').length;
+        const total = wins + losses;
+        const rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+        wlEl.innerText = `W:${wins} L:${losses} ${rate}%`;
+        wlEl.style.color = rate >= 50 ? 'var(--green)' : '#f55';
+    }
+    
     if (rhythmEl) rhythmEl.innerText = rhythm.label || 'Mixto';
     if (patternsEl) {
         if (dbStatsText) {
@@ -2999,6 +3044,9 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
             patternsEl.style.color = '#666';
         }
     }
+    
+    // Guardar predicción para evaluar W/L después
+    lastSniperV2Dir = finalDir;
 }
 
 // Helper para análisis de ritmo
