@@ -510,9 +510,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-metricas', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-metricas', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-metricas': 'panel-metricas', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -522,7 +522,6 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
-        if (e.target.id === 'tab-btn-metricas') { renderMetricasPanel(); loadForestDiscoveries(); }
         if (e.target.id === 'tab-btn-raw') { updateRawStats(); renderRawHist(); requestRawAI(); }
         if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
