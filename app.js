@@ -484,9 +484,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-panel'];
-    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-panel'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-panel': 'panel-panel' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-sniper', 'tab-btn-panel'];
+    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-sniper', 'panel-panel'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-sniper': 'panel-sniper', 'tab-btn-panel': 'panel-panel' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -508,6 +508,7 @@ document.addEventListener('click', (e) => {
         }
         if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
+        if (e.target.id === 'tab-btn-sniper') { renderMasterUI(); renderAnalystUI(); }
         if (e.target.id === 'tab-btn-panel') { renderAgentDashboard(); }
     }
     if (e.target.id !== 'tab-btn-raw' && rawRefreshInterval) {
@@ -2444,9 +2445,6 @@ function renderAgentDashboard() {
     const status = document.getElementById('panel-status');
     if (!content) return;
     if (status) status.innerText = 'ACTUALIZANDO...';
-    
-    renderMasterUI();
-    renderAnalystUI();
 
     const agents = [];
 

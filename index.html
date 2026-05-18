@@ -41,6 +41,7 @@
                      <button class="tab-btn" id="tab-btn-raw">RAW</button>
                      <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
+                     <button class="tab-btn" id="tab-btn-sniper">SNIPER</button>
                      <button class="tab-btn" id="tab-btn-panel">PANEL</button>
                  </div>
                  <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
@@ -230,11 +231,20 @@
                     <span id="panel-status" style="padding:1px 6px; font-size:9px;">ANALIZANDO...</span>
                 </div>
                 <div style="padding: 6px 8px;">
-                    <!-- Dashboard comparativo -->
-                    <div id="panel-content" style="font-size: 10px; color: var(--text2); margin-bottom: 10px;">
+                    <div id="panel-content" style="font-size: 10px; color: var(--text2);">
                         <div style="padding: 10px; text-align: center; color: var(--muted);">Esperando datos de los agentes...</div>
                     </div>
-                    <!-- SNIPER MASTER AI -->
+                </div>
+            </section>
+
+            <!-- SNIPER + ANALYST -->
+            <section class="shadow-panel" id="panel-sniper" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x1F3AF;</span>
+                    <span class="agent-card-name">SNIPER &amp; ANALYST</span>
+                    <span style="padding:1px 6px; font-size:9px;">EN VIVO</span>
+                </div>
+                <div style="padding: 6px 8px;">
                     <section class="master-panel" style="margin-bottom: 8px;">
                         <div class="master-header">
                             <span class="master-icon">&#x1F3AF;</span>
@@ -254,7 +264,6 @@
                             <span class="compact-perf" id="master-perf">--</span>
                         </div>
                     </section>
-                    <!-- ANALYST BOX (Trading Style) -->
                     <div class="analyst-box" id="analyst-panel">
                         <div class="analyst-header">
                             <span class="analyst-tag">&#x1F4C8; ANALYST AGENT</span>
@@ -274,7 +283,7 @@
                     </div>
                 </div>
             </section>
-            <!-- FIN DASHBOARD -->
+            <!-- FIN SNIPER + ANALYST -->
 
          </div><!-- /col-visual -->
  
