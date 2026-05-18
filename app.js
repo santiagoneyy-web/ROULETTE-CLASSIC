@@ -2444,6 +2444,9 @@ function renderAgentDashboard() {
     const status = document.getElementById('panel-status');
     if (!content) return;
     if (status) status.innerText = 'ACTUALIZANDO...';
+    
+    renderMasterUI();
+    renderAnalystUI();
 
     const agents = [];
 
