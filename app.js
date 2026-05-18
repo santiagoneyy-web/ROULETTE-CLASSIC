@@ -470,9 +470,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-chat'];
-    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-chat'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-chat': 'panel-chat' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-analisis', 'tab-btn-panel', 'tab-btn-chat'];
+    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-analisis', 'panel-panel', 'panel-chat'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-analisis': 'panel-analisis', 'tab-btn-panel': 'panel-panel', 'tab-btn-chat': 'panel-chat' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -494,6 +494,7 @@ document.addEventListener('click', (e) => {
         }
         if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
+        if (e.target.id === 'tab-btn-panel') { renderAgentDashboard(); }
     }
     if (e.target.id !== 'tab-btn-raw' && rawRefreshInterval) {
         clearInterval(rawRefreshInterval);
@@ -875,6 +876,16 @@ function submitNumber(val, silent = false, batch = false) {
                 const masterSignals = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
                 if (masterSignals && masterSignals.length > 0) {
                     lastSignal = masterSignals[0];
+                    
+                    // RAW: setear predicción inmediata desde las 6 métricas
+                    const rawN9El = document.getElementById('raw-pred-n9-text');
+                    const rawN4El = document.getElementById('raw-pred-n4-text');
+                    const rawAnalysisEl = document.getElementById('raw-ai-analysis');
+                    lastRawPredN9 = lastSignal.targetCW;
+                    lastRawPredN4 = lastSignal.targetUnderCW;
+                    if (rawN9El) rawN9El.innerText = lastRawPredN9;
+                    if (rawN4El) rawN4El.innerText = lastRawPredN4;
+                    if (rawAnalysisEl) rawAnalysisEl.innerText = 'RAW: primera opcion (CW base)';
                 }
                 
                 // JUGADAS Sniper automatically reads the table
@@ -2393,5 +2404,140 @@ function renderSpinAnalysis(data) {
     document.getElementById('analisis-summary').innerText = data.summary || '';
     
     document.getElementById('analisis-status').innerText = 'Analisis de ' + new Date(data.generatedAt).toLocaleString();
+}
+
+function renderAgentDashboard() {
+    const content = document.getElementById('panel-content');
+    const status = document.getElementById('panel-status');
+    if (!content) return;
+    if (status) status.innerText = 'ACTUALIZANDO...';
+
+    const agents = [];
+
+    // 1. RAW
+    const rawTotal = rawN9Wins + rawN9Losses;
+    const rawRecent = rawN9History.slice(-10);
+    const rawRecentWins = rawRecent.filter(x => x === 'win').length;
+    const rawRate = rawTotal > 0 ? Math.round((rawN9Wins / rawTotal) * 100) : 0;
+    const rawRecentRate = rawRecent.length > 0 ? Math.round((rawRecentWins / rawRecent.length) * 100) : 0;
+    agents.push({
+        name: 'RAW IA',
+        total: rawTotal,
+        wins: rawN9Wins,
+        losses: rawN9Losses,
+        rate: rawRate,
+        recentRate: rawRecentRate,
+        trend: rawRecent.length >= 5 ? (rawRecentRate > rawRate ? '📈' : rawRecentRate < rawRate ? '📉' : '➡️') : '⏳',
+        color: rawRate >= 55 ? '#0f0' : rawRate >= 40 ? '#f0c040' : '#f55'
+    });
+
+    // 2. AUTO
+    const autoTotal = (aiN9Stats?.total || 0);
+    const autoWins = (aiN9Stats?.wins || 0);
+    const autoLosses = (aiN9Stats?.losses || 0);
+    const autoRate = autoTotal > 0 ? Math.round((autoWins / autoTotal) * 100) : 0;
+    const autoRecent = aiN9History.slice(-10);
+    const autoRecentWins = autoRecent.filter(x => x === 'win').length;
+    const autoRecentRate = autoRecent.length > 0 ? Math.round((autoRecentWins / autoRecent.length) * 100) : 0;
+    agents.push({
+        name: 'AUTO AI',
+        total: autoTotal,
+        wins: autoWins,
+        losses: autoLosses,
+        rate: autoRate,
+        recentRate: autoRecentRate,
+        trend: autoRecent.length >= 5 ? (autoRecentRate > autoRate ? '📈' : autoRecentRate < autoRate ? '📉' : '➡️') : '⏳',
+        color: autoRate >= 55 ? '#0f0' : autoRate >= 40 ? '#f0c040' : '#f55'
+    });
+
+    // 3. SNIPER MASTER
+    const sniperTotal = masterHistory.filter(x => x === 'win' || x === 'loss').length;
+    const sniperWins = masterHistory.filter(x => x === 'win').length;
+    const sniperLosses = masterHistory.filter(x => x === 'loss').length;
+    const sniperRate = sniperTotal > 0 ? Math.round((sniperWins / sniperTotal) * 100) : 0;
+    const sniperRecent = masterHistory.filter(x => x === 'win' || x === 'loss').slice(-10);
+    const sniperRecentWins = sniperRecent.filter(x => x === 'win').length;
+    const sniperRecentRate = sniperRecent.length > 0 ? Math.round((sniperRecentWins / sniperRecent.length) * 100) : 0;
+    agents.push({
+        name: 'SNIPER MASTER',
+        total: sniperTotal,
+        wins: sniperWins,
+        losses: sniperLosses,
+        rate: sniperRate,
+        recentRate: sniperRecentRate,
+        trend: sniperRecent.length >= 5 ? (sniperRecentRate > sniperRate ? '📈' : sniperRecentRate < sniperRate ? '📉' : '➡️') : '⏳',
+        color: sniperRate >= 55 ? '#0f0' : sniperRate >= 40 ? '#f0c040' : '#f55'
+    });
+
+    // 4. ANALYST
+    const analystTotal = analystHistory.filter(x => x === 'win' || x === 'loss').length;
+    const analystWins = analystHistory.filter(x => x === 'win').length;
+    const analystLosses = analystHistory.filter(x => x === 'loss').length;
+    const analystRate = analystTotal > 0 ? Math.round((analystWins / analystTotal) * 100) : 0;
+    const analystRecent = analystHistory.filter(x => x === 'win' || x === 'loss').slice(-10);
+    const analystRecentWins = analystRecent.filter(x => x === 'win').length;
+    const analystRecentRate = analystRecent.length > 0 ? Math.round((analystRecentWins / analystRecent.length) * 100) : 0;
+    agents.push({
+        name: 'ANALYST',
+        total: analystTotal,
+        wins: analystWins,
+        losses: analystLosses,
+        rate: analystRate,
+        recentRate: analystRecentRate,
+        trend: analystRecent.length >= 5 ? (analystRecentRate > analystRate ? '📈' : analystRecentRate < analystRate ? '📉' : '➡️') : '⏳',
+        color: analystRate >= 55 ? '#0f0' : analystRate >= 40 ? '#f0c040' : '#f55'
+    });
+
+    // Tabla comparativa
+    let html = '<div style="margin-bottom: 10px; font-size: 9px; color: var(--muted);">Comparativa de eficacia de agentes:</div>';
+    html += '<table style="width:100%; border-collapse:collapse; font-family:var(--mono); font-size:9px;">';
+    html += '<thead><tr style="background:rgba(255,255,255,0.03);">';
+    html += '<th style="padding:4px; text-align:left; border-bottom:1px solid var(--border);">AGENTE</th>';
+    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">TOTAL</th>';
+    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">W/L</th>';
+    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">%</th>';
+    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">ÚLT 10</th>';
+    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">TEND</th>';
+    html += '</tr></thead><tbody>';
+
+    // Sort by rate desc
+    agents.sort((a, b) => b.rate - a.rate);
+
+    agents.forEach(a => {
+        const bestBadge = agents[0].name === a.name ? '<span style="color:var(--gold);font-weight:900;">👑</span>' : '';
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">';
+        html += '<td style="padding:4px; color:' + a.color + '; font-weight:700;">' + bestBadge + ' ' + a.name + '</td>';
+        html += '<td style="padding:4px; text-align:center; color:var(--text);">' + a.total + '</td>';
+        html += '<td style="padding:4px; text-align:center; color:' + a.color + ';">' + a.wins + 'W/' + a.losses + 'L</td>';
+        html += '<td style="padding:4px; text-align:center; color:' + a.color + '; font-weight:700;">' + a.rate + '%</td>';
+        html += '<td style="padding:4px; text-align:center; color:' + (a.recentRate >= 55 ? '#0f0' : a.recentRate >= 40 ? '#f0c040' : '#f55') + ';">' + a.recentRate + '%</td>';
+        html += '<td style="padding:4px; text-align:center;">' + a.trend + '</td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    // Best performer
+    const best = agents[0];
+    if (best && best.total > 0) {
+        html += '<div style="margin-top: 10px; padding: 8px; background: linear-gradient(135deg, rgba(240,192,64,0.1), transparent); border: 1px solid var(--gold); border-radius: 8px; text-align: center;">';
+        html += '<div style="font-size: 9px; color: var(--gold);">🎯 MEJOR RENDIMIENTO</div>';
+        html += '<div style="font-size: 1.1rem; font-weight: 900; color: #fff; margin: 4px 0;">' + best.name + ' — ' + best.rate + '%</div>';
+        html += '<div style="font-size: 9px; color: var(--text-dim);">' + best.wins + ' aciertos de ' + best.total + ' intentos';
+        if (best.trend === '📈') html += ' · Mejorando 📈';
+        else if (best.trend === '📉') html += ' · Cayendo 📉';
+        html += '</div></div>';
+    }
+
+    // Recommendation based on master confidence
+    if (masterView && masterView.confidence > 0) {
+        html += '<div style="margin-top: 8px; padding: 6px; background: rgba(0,229,200,0.05); border-radius: 6px; border: 1px solid rgba(0,229,200,0.15);">';
+        html += '<div style="font-size: 8px; color: var(--accent); font-weight:700;">🧠 SNIPER MASTER</div>';
+        html += '<div style="font-size: 10px; color: var(--text2);">' + (masterView.signal || '---') + '</div>';
+        html += '<div style="font-size: 8px; color: var(--muted);">Confianza: ' + masterView.confidence + '% · ' + (masterView.reasons || '') + '</div>';
+        html += '</div>';
+    }
+
+    content.innerHTML = html;
+    if (status) status.innerText = agents.length + ' AGENTES';
 }
 

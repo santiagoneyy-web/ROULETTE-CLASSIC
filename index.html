@@ -43,6 +43,7 @@
                      <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
                      <button class="tab-btn" id="tab-btn-auto">AUTO</button>
                      <button class="tab-btn" id="tab-btn-analisis">ANALISIS</button>
+                     <button class="tab-btn" id="tab-btn-panel">PANEL</button>
                      <button class="tab-btn" id="tab-btn-chat">CHAT</button>
                  </div>
                  <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
@@ -320,6 +321,21 @@
                 </div>
                 <div class="analyst-reason" id="analyst-reason">-</div>
             </div>
+
+            <!-- DASHBOARD DE AGENTES -->
+            <section class="shadow-panel" id="panel-panel" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x1F4CA;</span>
+                    <span class="agent-card-name">PANEL DE AGENTES</span>
+                    <span id="panel-status" style="padding:1px 6px; font-size:9px;">ANALIZANDO...</span>
+                </div>
+                <div style="padding: 6px 8px;">
+                    <div id="panel-content" style="font-size: 10px; color: var(--text2);">
+                        <div style="padding: 10px; text-align: center; color: var(--muted);">Esperando datos de los agentes...</div>
+                    </div>
+                </div>
+            </section>
+            <!-- FIN DASHBOARD -->
 
          </div><!-- /col-visual -->
  
