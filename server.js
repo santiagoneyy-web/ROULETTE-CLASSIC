@@ -1136,6 +1136,7 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     const ccw = context.routes.ccw;
     const small = context.routes.small || {};
     const big = context.routes.big || {};
+    const isRouletteNumber = (v) => String(v).match(/^\d+$/) && parseInt(v) >= 0 && parseInt(v) <= 36;
     const allowedN9 = [
         String(cw.n9), String(ccw.n9),
         String(cw.n4Small), String(cw.n4Big),
@@ -1158,6 +1159,9 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         else if (route === 'SMALL') n9 = String(small.n9 || fallback.n9);
         else if (route === 'BIG') n9 = String(big.n9 || fallback.n9);
         else n9 = fallback.n9;
+    }
+
+    if (!allowedN4.includes(n4)) {
         if (zone === 'SMALL') {
             n4 = (route === 'CCW') ? String(ccw.n4Small) : String(cw.n4Small);
         } else if (zone === 'BIG') {
@@ -1171,7 +1175,7 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         }
     }
 
-    // 🔥 Forced direction consistency for CW/CCW
+    // Force direction consistency: N4 must match route direction
     if (route === 'CW') {
         const cwN4s = [String(cw.n4Small), String(cw.n4Big)];
         if (!cwN4s.includes(n4)) {
@@ -1183,16 +1187,14 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
             n4 = (zone === 'BIG') ? String(ccw.n4Big) : String(ccw.n4Small);
         }
     } else if (route === 'SMALL') {
-        // SMALL N9 route must have a SMALL N4 (CW or CCW)
         const smallN4s = [String(cw.n4Small), String(ccw.n4Small)];
         if (!smallN4s.includes(n4)) {
-            n4 = (n4 === String(ccw.n4Big)) ? String(ccw.n4Small) : String(cw.n4Small);
+            n4 = smallN4s.includes(String(cw.n4Small)) ? String(cw.n4Small) : String(ccw.n4Small);
         }
     } else if (route === 'BIG') {
-        // BIG N9 route must have a BIG N4 (CW or CCW)
         const bigN4s = [String(cw.n4Big), String(ccw.n4Big)];
         if (!bigN4s.includes(n4)) {
-            n4 = (n4 === String(ccw.n4Small)) ? String(ccw.n4Big) : String(cw.n4Big);
+            n4 = bigN4s.includes(String(cw.n4Big)) ? String(cw.n4Big) : String(ccw.n4Big);
         }
     }
 
