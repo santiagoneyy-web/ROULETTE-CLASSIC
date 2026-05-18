@@ -240,22 +240,6 @@ async function syncAiPredictionState() {
         const rows = await resp.json();
         const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
 
-        aiN9History.length = 0;
-        aiN4History.length = 0;
-        aiN9Stats = getAiModeStats(predictions, 'n9_result');
-        aiN4Stats = getAiModeStats(predictions, 'n4_result');
-        lastAiPredN9 = null;
-        lastAiPredN4 = null;
-
-        predictions.forEach(item => {
-            const n9Result = item.n9_result || (isResolvedAiOutcome(item.result) ? item.result : null);
-            const n4Result = item.n4_result || (isResolvedAiOutcome(item.result) ? item.result : null);
-            if (isResolvedAiOutcome(n9Result)) aiN9History.push(n9Result);
-            if (isResolvedAiOutcome(n4Result)) aiN4History.push(n4Result);
-        });
-        if (aiN9History.length > 20) aiN9History.splice(0, aiN9History.length - 25);
-        if (aiN4History.length > 20) aiN4History.splice(0, aiN4History.length - 25);
-
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
         const current = latestPending || latestAny;
@@ -498,9 +482,22 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
-        if (e.target.id === 'tab-btn-raw') { updateRawStats(); renderRawHist(); requestRawAI(); }
+        if (e.target.id === 'tab-btn-raw') { 
+            updateRawStats(); 
+            renderRawHist(); 
+            requestRawAI(); 
+            if (rawRefreshInterval) clearInterval(rawRefreshInterval);
+            rawRefreshInterval = setInterval(() => {
+                updateRawStats();
+                requestRawAI();
+            }, 4000);
+        }
         if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
+    }
+    if (e.target.id !== 'tab-btn-raw' && rawRefreshInterval) {
+        clearInterval(rawRefreshInterval);
+        rawRefreshInterval = null;
     }
 });
 
@@ -935,6 +932,9 @@ function submitNumber(val, silent = false, batch = false) {
             
             // Evaluate RAW predictions ALWAYS (even when panel hidden)
             evaluateRawPredictions(n);
+            
+            // Evaluate AUTO AI predictions ALWAYS
+            evaluateAiPredictions(n);
             
             // Always generate new RAW prediction in background
             setTimeout(requestRawAI, 1000);
@@ -1909,6 +1909,7 @@ let lastAutoAiRequestAt = 0;
 let lastAutoAiRequestKey = '';
 const AUTO_AI_MIN_INTERVAL_MS = 12000;
 let rawLastRequestAt = 0;
+let rawRefreshInterval = null;
 
 // --- RAW AI (separate panel, own counters) ---
 const rawN9History = [];
@@ -1946,13 +1947,40 @@ function renderRawHist() {
 }
 
 function evaluateRawPredictions(number) {
-    // Quick client-side hit check for immediate feedback
     if (lastRawPredN9 && lastRawPredN9 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
         const n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
         if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
         else { rawN9Losses++; rawN9History.push('loss'); }
         if (rawN9History.length > 20) rawN9History.shift();
     }
+    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
+        const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
+        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
+        else { rawN4Losses++; rawN4History.push('loss'); }
+        if (rawN4History.length > 20) rawN4History.shift();
+    }
+    updateRawStats();
+}
+
+function evaluateAiPredictions(number) {
+    if (lastAiPredN9 && lastAiPredN9 !== 'ESPERAR' && lastAiPredN9 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
+        const n9Hit = wheelNeighbors(Number(lastAiPredN9), 9).includes(number);
+        if (n9Hit) { aiN9Stats.wins++; aiN9History.push('win'); }
+        else { aiN9Stats.losses++; aiN9History.push('loss'); }
+        aiN9Stats.total = aiN9Stats.wins + aiN9Stats.losses;
+        aiN9Stats.rate = aiN9Stats.total ? Math.round((aiN9Stats.wins / aiN9Stats.total) * 100) : 0;
+        if (aiN9History.length > 20) aiN9History.shift();
+    }
+    if (lastAiPredN4 && lastAiPredN4 !== 'ESPERAR' && lastAiPredN4 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
+        const n4Hit = wheelNeighbors(Number(lastAiPredN4), 4).includes(number);
+        if (n4Hit) { aiN4Stats.wins++; aiN4History.push('win'); }
+        else { aiN4Stats.losses++; aiN4History.push('loss'); }
+        aiN4Stats.total = aiN4Stats.wins + aiN4Stats.losses;
+        aiN4Stats.rate = aiN4Stats.total ? Math.round((aiN4Stats.wins / aiN4Stats.total) * 100) : 0;
+        if (aiN4History.length > 20) aiN4History.shift();
+    }
+    renderDirMetricHistories();
+}
     if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
         const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
         if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
