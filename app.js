@@ -876,16 +876,6 @@ function submitNumber(val, silent = false, batch = false) {
                 const masterSignals = getIAMasterSignals(prox, sig, history, { cw: currentAvgCW, ccw: currentAvgCCW, offset: predictorOffset });
                 if (masterSignals && masterSignals.length > 0) {
                     lastSignal = masterSignals[0];
-                    
-                    // RAW: setear predicción inmediata desde las 6 métricas
-                    const rawN9El = document.getElementById('raw-pred-n9-text');
-                    const rawN4El = document.getElementById('raw-pred-n4-text');
-                    const rawAnalysisEl = document.getElementById('raw-ai-analysis');
-                    lastRawPredN9 = lastSignal.targetCW;
-                    lastRawPredN4 = lastSignal.targetUnderCW;
-                    if (rawN9El) rawN9El.innerText = lastRawPredN9;
-                    if (rawN4El) rawN4El.innerText = lastRawPredN4;
-                    if (rawAnalysisEl) rawAnalysisEl.innerText = 'RAW: primera opcion (CW base)';
                 }
                 
                 // JUGADAS Sniper automatically reads the table
@@ -946,6 +936,31 @@ function submitNumber(val, silent = false, batch = false) {
             
             // Evaluate AUTO AI predictions ALWAYS
             evaluateAiPredictions(n);
+            
+            // RAW: setear predicción inmediata para la SIGUIENTE tirada
+            if (lastSignal) {
+                const rawN9El = document.getElementById('raw-pred-n9-text');
+                const rawN4El = document.getElementById('raw-pred-n4-text');
+                const rawAnalysisEl = document.getElementById('raw-ai-analysis');
+                lastRawPredN9 = lastSignal.targetCW;
+                lastRawPredN4 = lastSignal.targetUnderCW;
+                if (rawN9El) rawN9El.innerText = lastRawPredN9;
+                if (rawN4El) rawN4El.innerText = lastRawPredN4;
+                if (rawAnalysisEl) rawAnalysisEl.innerText = 'RAW: primera opcion (CW base)';
+            } else if (history.length > 0) {
+                const lastNum = history[history.length - 1];
+                const idx = WHEEL_NUMS.indexOf(lastNum);
+                if (idx !== -1) {
+                    const rawN9El = document.getElementById('raw-pred-n9-text');
+                    const rawN4El = document.getElementById('raw-pred-n4-text');
+                    const basicCW = WHEEL_NUMS[(idx + 9) % 37];
+                    const basicUnderCW = WHEEL_NUMS[(idx + 4) % 37];
+                    lastRawPredN9 = basicCW;
+                    lastRawPredN4 = basicUnderCW;
+                    if (rawN9El) rawN9El.innerText = lastRawPredN9;
+                    if (rawN4El) rawN4El.innerText = lastRawPredN4;
+                }
+            }
             
             // Always generate new RAW prediction in background
             setTimeout(requestRawAI, 1000);
