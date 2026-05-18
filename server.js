@@ -1198,21 +1198,23 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         }
     }
 
-    // Validación final estricta: N9 Y N4 deben ser de las 6 métricas del panel DIR
-    if (!allowedN9.includes(n9)) {
-        console.warn(`[AI] N9=${n9} no está en métricas permitidas [${allowedN9.join(', ')}], usando fallback`);
-        n9 = fallback.n9;
-    }
-    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') {
-        console.warn(`[AI] N4=${n4} no está en métricas permitidas [${allowedN4.join(', ')}], usando fallback`);
-        n4 = fallback.n4;
-    }
-    // Segunda validación: si fallback también falló, forzar la mejor ruta
-    if (!allowedN9.includes(n9)) {
-        n9 = String(cw.n9); // Forzar CW N9 por defecto
-    }
-    if (!allowedN4.includes(n4) && n4 !== 'ESPERAR') {
-        n4 = String(cw.n4Small); // Forzar CW N4 Small por defecto
+    // VALIDACIÓN BRUTAL: Si N9 o N4 no están en las 6 métricas del DIR, 
+    // RECHAZAMOS la respuesta de la IA y usamos el fallback local
+    const n9Valido = allowedN9.includes(n9);
+    const n4Valido = allowedN4.includes(n4) || n4 === 'ESPERAR';
+    
+    if (!n9Valido || !n4Valido) {
+        console.warn(`[AI] RECHAZADA: N9=${n9} (válido:${n9Valido}), N4=${n4} (válido:${n4Valido}). Usando fallback local.`);
+        console.warn(`[AI] Métricas permitidas N9: [${allowedN9.join(', ')}]`);
+        console.warn(`[AI] Métricas permitidas N4: [${allowedN4.join(', ')}]`);
+        // Retornar el fallback directamente, ignorando todo lo que hizo la IA
+        return {
+            reply: formatAutoReply(fallback.n9, fallback.n4),
+            route: fallback.route,
+            zone: fallback.zone,
+            analysis: `[FALLBACK] ${fallback.analysis}`,
+            provider: 'local-fallback-brutal'
+        };
     }
 
     if (!route || route === 'ESPERAR') {
