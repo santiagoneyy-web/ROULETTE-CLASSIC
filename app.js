@@ -2387,7 +2387,76 @@ function sequenceToKey(seq) {
     return seq.map(s => s.dir + s.mag).join('');
 }
 
+// Extraer patrones del historial LOCAL (sin necesidad de MongoDB)
+function extractLocalPatterns() {
+    if (history.length < 10) return; // Necesitamos al menos 10 números
+    
+    const windowSize = 4; // Ventana de 4 viajes
+    const minOccurrences = 2; // Mínimo 2 ocurrencias para considerar patrón
+    
+    // Analizar últimos 50 spins (o menos si no hay tantos)
+    const startIdx = Math.max(0, history.length - 50);
+    const patterns = {};
+    
+    // Extraer todas las secuencias de 4
+    for (let i = startIdx + windowSize; i < history.length; i++) {
+        const seq = [];
+        for (let j = 0; j < windowSize; j++) {
+            const idx = i - windowSize + j;
+            const dist = calcDist(history[idx], history[idx + 1]);
+            const dir = dist >= 0 ? 'R' : 'L';
+            const mag = Math.abs(dist) >= 10 ? 'B' : 'S';
+            seq.push({ dir, mag, dist });
+        }
+        const key = sequenceToKey(seq);
+        
+        // Ver qué pasó DESPUÉS de esta secuencia
+        if (i + 1 < history.length) {
+            const nextDist = calcDist(history[i], history[i + 1]);
+            const nextDir = nextDist >= 0 ? 'CW' : 'CCW';
+            const nextMag = Math.abs(nextDist) >= 10 ? 'B' : 'S';
+            
+            if (!patterns[key]) {
+                patterns[key] = {
+                    pattern_id: 'local_' + key + '_' + Date.now(),
+                    key: key,
+                    sequence: seq,
+                    outcomes: { total: 0, hits: 0, next_dir: { CW: 0, CCW: 0 }, next_mag: { B: 0, S: 0 } }
+                };
+            }
+            
+            patterns[key].outcomes.total++;
+            patterns[key].outcomes.next_dir[nextDir]++;
+            patterns[key].outcomes.next_mag[nextMag]++;
+        }
+    }
+    
+    // Filtrar solo patrones que ocurrieron al menos 2 veces
+    let addedCount = 0;
+    Object.values(patterns).forEach(p => {
+        if (p.outcomes.total >= minOccurrences) {
+            // Ver si ya existe
+            const exists = patternMemory.find(mp => mp.key === p.key);
+            if (!exists) {
+                patternMemory.push(p);
+                addedCount++;
+            }
+        }
+    });
+    
+    if (addedCount > 0) {
+        console.log(`[Pattern Machine] +${addedCount} patrones locales extraídos`);
+        const memEl = document.getElementById('pattern-memory-count');
+        if (memEl) memEl.innerText = patternMemory.length;
+    }
+}
+
 async function analyzePatternSequence() {
+    // PRIMERO: Extraer patrones locales si hay pocos en memoria
+    if (patternMemory.length < 5 && history.length >= 10) {
+        extractLocalPatterns();
+    }
+    
     const seq = getSequenceFromHistory(4);
     if (!seq) return;
     
@@ -2454,9 +2523,102 @@ async function analyzePatternSequence() {
     fetchPatternsFromServer(key);
 }
 
-// === ANALYST V2: Pattern Machine + Fractales/Canales ===
-// V1 base + boost opcional de patrones DB
+// === DETECTOR DE TURBULENCIA DE DIRECCIONES (R/L) ===
+// Basado en los patrones que me pasaste: WWLL, WWWW, etc. aplicados a R/L
+function detectDirectionTurbulence() {
+    if (history.length < 6) return null;
+    
+    // Extraer últimas 6 direcciones
+    const dirs = [];
+    for (let i = history.length - 6; i < history.length; i++) {
+        const dist = calcDist(history[i-1], history[i]);
+        dirs.push(dist >= 0 ? 'R' : 'L');
+    }
+    
+    const seq = dirs.join('');
+    const last4 = dirs.slice(-4).join('');
+    const last5 = dirs.slice(-5).join('');
+    const last6 = dirs.slice(-6).join('');
+    
+    // Contar alternancias (turbulencia = muchos cambios)
+    let changes = 0;
+    for (let i = 1; i < dirs.length; i++) {
+        if (dirs[i] !== dirs[i-1]) changes++;
+    }
+    const turbulenceLevel = changes / (dirs.length - 1); // 0 = estable, 1 = caos total
+    
+    // Detectar patrones específicos
+    const patterns = [];
+    
+    // 1. ALTERNADO perfecto RLRL o LRLR (máxima turbulencia)
+    if (last4 === 'RLRL' || last4 === 'LRLR') {
+        patterns.push({ 
+            name: '🔄 ALTERNANCIA EXTREMA', 
+            type: 'turbulence',
+            level: 'high',
+            desc: 'Cambio de dirección cada viaje',
+            action: 'AVOID',
+            confidence: 85
+        });
+    }
+    
+    // 2. WWLL en direcciones: RRLL o LLRR (2 iguales, 2 cambios)
+    if (last4 === 'RRLL' || last4 === 'LLRR') {
+        patterns.push({ 
+            name: '🌊 OLA DIRECCIONAL', 
+            type: 'turbulence',
+            level: 'medium',
+            desc: 'Patrón RRLL/LLRR - cambio de dirección próximo',
+            action: 'CAUTION',
+            confidence: 70
+        });
+    }
+    
+    // 3. RRRR o LLLL (estabilidad extrema - viene cambio)
+    if (last4 === 'RRRR' || last4 === 'LLLL') {
+        patterns.push({ 
+            name: '🔥 PICO DIRECCIONAL', 
+            type: 'stability',
+            level: 'extreme',
+            desc: '4+ direcciones iguales - REVERSAL inminente',
+            action: 'WAIT',
+            confidence: 75
+        });
+    }
+    
+    // 4. RRRLL o LLLRR (3 iguales, 2 cambios - BAMBU direccional)
+    if (last5 === 'RRRLL' || last5 === 'LLLRR') {
+        patterns.push({ 
+            name: '🎋 BAMBU DIRECCIONAL', 
+            type: 'transition',
+            level: 'medium',
+            desc: '3 en una dirección, 2 en otra - observar',
+            action: 'WATCH',
+            confidence: 65
+        });
+    }
+    
+    // 5. Turbulencia general (>60% cambios)
+    if (turbulenceLevel >= 0.6 && patterns.length === 0) {
+        patterns.push({ 
+            name: '⚡ TURBULENCIA GENERAL', 
+            type: 'turbulence',
+            level: 'medium',
+            desc: `${Math.round(turbulenceLevel*100)}% cambios de dirección`,
+            action: 'REDUCE',
+            confidence: 60
+        });
+    }
+    
+    return patterns.length > 0 ? patterns[0] : null;
+}
+
+// === ANALYST V2: Pattern Machine + Fractales/Canales + Turbulencia ===
+// V1 base + boost opcional de patrones DB + detección local de turbulencia
 function updateAnalystV2(seq, matches, patternBoost) {
+    // 0. DETECTAR TURBULENCIA PRIMERO (local, no necesita DB)
+    const turbulence = detectDirectionTurbulence();
+    
     // 1. Análisis original de Analyst (V1 - siempre funciona)
     const travels = seq.map(s => s.dist);
     const baseAnalysis = analyzeTravelWave(travels);
@@ -2468,8 +2630,16 @@ function updateAnalystV2(seq, matches, patternBoost) {
     let displaySize = baseAnalysis.size || null;
     let displayReason = baseAnalysis.reason || 'Recopilando datos del mercado...';
     
+    // 2.5 SI HAY TURBULENCIA FUERTE, sobrescribir con alerta especial
+    if (turbulence && turbulence.level === 'high') {
+        displaySignal = '⚠️ TURBULENCIA';
+        displayType = 'turbulence';
+        displayDir = null; // No dirección clara en turbulencia
+        displayReason = turbulence.desc;
+    }
+    
     // 3. Si el análisis local no dio nada, usar analystView global (si existe)
-    if (!displayDir && analystView && analystView.targetDir) {
+    if (!displayDir && analystView && analystView.targetDir && !turbulence) {
         displayDir = analystView.targetDir;
         displaySignal = analystView.signal || displaySignal;
         displayType = analystView.type || displayType;
@@ -2533,17 +2703,43 @@ function updateAnalystV2(seq, matches, patternBoost) {
     }
 }
 
-// === SNIPER V2: Pattern Machine + Ritmo + Confluencia ===
-// V1 base + boost opcional de patrones DB
+// === SNIPER V2: Pattern Machine + Ritmo + Confluencia + Turbulencia ===
+// V1 base + boost opcional de patrones DB + detección local de turbulencia
 function updateSniperV2(seq, matches, patternDir, patternConf) {
     // Análisis de ritmo (siempre disponible - no necesita DB)
     const dirs = seq.map(s => s.dir);
     const rhythm = analyzeRhythm(dirs);
     
+    // DETECTAR TURBULENCIA (local)
+    const turbulence = detectDirectionTurbulence();
+    
     // Base: Usar masterView (Sniper V1 tradicional) si existe
     let finalConf = 50;
     let finalDir = null;
     let reasons = [];
+    
+    // 0. SI HAY TURBULENCIA EXTREMA, alertar y no entrar
+    if (turbulence && turbulence.level === 'high') {
+        finalConf = turbulence.confidence;
+        finalDir = null; // No dirección en turbulencia
+        reasons.push(turbulence.name);
+        
+        // Actualizar UI con alerta de turbulencia
+        const targetEl = document.getElementById('sniper-v2-target');
+        const confEl = document.getElementById('sniper-v2-conf');
+        const reasonsEl = document.getElementById('sniper-v2-reasons');
+        const rhythmEl = document.getElementById('sniper-v2-rhythm');
+        
+        if (targetEl) {
+            targetEl.innerText = '⚠️ TURBULENCIA';
+            targetEl.style.color = '#f55';
+        }
+        if (confEl) confEl.innerText = turbulence.confidence + '%';
+        if (reasonsEl) reasonsEl.innerText = turbulence.desc;
+        if (rhythmEl) rhythmEl.innerText = 'ALERTA';
+        
+        return; // No seguir, estamos en turbulencia
+    }
     
     // 1. Prioridad: Master View (Sniper V1)
     if (masterView && masterView.target) {
