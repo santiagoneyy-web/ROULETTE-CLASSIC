@@ -2454,26 +2454,44 @@ async function analyzePatternSequence() {
 }
 
 // === ANALYST V2: Pattern Machine + Fractales/Canales ===
+// V1 base + boost opcional de patrones DB
 function updateAnalystV2(seq, matches, patternBoost) {
-    // Obtener análisis original de Analyst
+    // 1. Análisis original de Analyst (V1 - siempre funciona)
     const travels = seq.map(s => s.dist);
     const baseAnalysis = analyzeTravelWave(travels);
     
-    // Aplicar boost de pattern si existe
+    // 2. Si no hay señal de fractal, intentar usar analystView global (el tradicional)
+    let displaySignal = baseAnalysis.signal || 'ANALIZANDO...';
+    let displayType = baseAnalysis.type || 'neutral';
+    let displayDir = baseAnalysis.targetDir || null;
+    let displaySize = baseAnalysis.size || null;
+    let displayReason = baseAnalysis.reason || 'Recopilando datos del mercado...';
+    
+    // 3. Si el análisis local no dio nada, usar analystView global (si existe)
+    if (!displayDir && analystView && analystView.targetDir) {
+        displayDir = analystView.targetDir;
+        displaySignal = analystView.signal || displaySignal;
+        displayType = analystView.type || displayType;
+        displaySize = analystView.size || displaySize;
+        displayReason = analystView.reason || displayReason;
+    }
+    
+    // 4. Boost de pattern DB (opcional)
     let finalConfidence = 50;
-    if (baseAnalysis.type !== 'neutral') {
+    if (displayType !== 'neutral') {
         finalConfidence = 60; // Base por tener señal
         if (patternBoost > 0) {
-            finalConfidence += patternBoost; // Boost de pattern
+            finalConfidence = Math.min(finalConfidence + patternBoost, 95);
+            displayReason += ` (+${patternBoost}% DB)`;
         }
     }
     
-    // Determinar dirección final
-    let finalDir = baseAnalysis.targetDir;
-    if (matches.length > 0 && !finalDir) {
-        // Si no hay dirección de fractal pero sí de pattern
-        const cwCount = matches.filter(m => m.outcomes?.next_dir?.CW > m.outcomes?.next_dir?.CCW).length;
-        finalDir = cwCount > matches.length / 2 ? 'CW' : 'CCW';
+    // 5. Si hay patrones pero no había dirección, usar dirección del patrón
+    if (!displayDir && matches.length > 0) {
+        const cwCount = matches.filter(m => (m.outcomes?.next_dir?.CW || 0) > (m.outcomes?.next_dir?.CCW || 0)).length;
+        displayDir = cwCount > matches.length / 2 ? 'CW' : 'CCW';
+        displaySignal = 'PATTERN MATCH';
+        displayReason = `Dirección por ${matches.length} patrones históricos`;
     }
     
     // Actualizar UI de Analyst V2
@@ -2485,27 +2503,23 @@ function updateAnalystV2(seq, matches, patternBoost) {
     const boostValEl = document.getElementById('analyst-v2-boost-val');
     
     if (signalEl) {
-        signalEl.innerText = baseAnalysis.signal || 'SIN SEÑAL';
-        signalEl.style.color = baseAnalysis.type === 'bullish' ? 'var(--green)' : 
-                               baseAnalysis.type === 'bearish' ? '#f55' : 'var(--text-dim)';
+        signalEl.innerText = displaySignal;
+        signalEl.style.color = displayType === 'bullish' ? 'var(--green)' : 
+                               displayType === 'bearish' ? '#f55' : 'var(--text-dim)';
     }
     
     if (dirEl) {
-        dirEl.innerText = finalDir || '--';
-        dirEl.style.display = finalDir ? 'inline-block' : 'none';
+        dirEl.innerText = displayDir || '--';
+        dirEl.style.display = 'inline-block'; // Siempre mostrar
     }
     
     if (sizeEl) {
-        sizeEl.innerText = baseAnalysis.size || '--';
-        sizeEl.style.display = baseAnalysis.size ? 'inline-block' : 'none';
+        sizeEl.innerText = displaySize || '--';
+        sizeEl.style.display = 'inline-block'; // Siempre mostrar
     }
     
     if (detailEl) {
-        let detail = baseAnalysis.reason || 'Sin patrón detectado';
-        if (matches.length > 0) {
-            detail += ` · ${matches.length} coincidencias históricas`;
-        }
-        detailEl.innerText = detail;
+        detailEl.innerText = displayReason;
     }
     
     if (boostEl && boostValEl) {
@@ -2519,21 +2533,50 @@ function updateAnalystV2(seq, matches, patternBoost) {
 }
 
 // === SNIPER V2: Pattern Machine + Ritmo + Confluencia ===
+// V1 base + boost opcional de patrones DB
 function updateSniperV2(seq, matches, patternDir, patternConf) {
-    // Análisis de ritmo (simplificado)
+    // Análisis de ritmo (siempre disponible - no necesita DB)
     const dirs = seq.map(s => s.dir);
     const rhythm = analyzeRhythm(dirs);
     
-    // Calcular confianza final
-    let finalConf = patternConf;
-    let finalDir = patternDir;
+    // Base: Usar masterView (Sniper V1 tradicional) si existe
+    let finalConf = 50;
+    let finalDir = null;
+    let reasons = [];
     
-    // Si hay ritmo fuerte, puede override o confirmar
-    if (rhythm.strength === 'strong' && rhythm.dir) {
-        if (!finalDir || finalDir === rhythm.dir) {
-            finalDir = rhythm.dir;
-            finalConf = Math.min(finalConf + 15, 95);
+    // 1. Prioridad: Master View (Sniper V1)
+    if (masterView && masterView.target) {
+        finalDir = masterView.target;
+        finalConf = masterView.confidence || 60;
+        reasons.push('Sniper V1');
+    }
+    
+    // 2. Si hay ritmo fuerte, usarlo como alternativa o confirmación
+    if (!finalDir && rhythm.strength === 'strong' && rhythm.dir) {
+        finalDir = rhythm.dir;
+        finalConf = 55;
+        reasons.push('Ritmo fuerte');
+    }
+    
+    // 3. Boost de patrones DB (opcional - si existen)
+    if (matches.length > 0 && patternDir) {
+        // Si el patrón coincide con la dirección actual, boost
+        if (patternDir === finalDir) {
+            finalConf = Math.min(finalConf + patternConf, 95);
+            reasons.push(`DB +${patternConf}%`);
+        } else if (!finalDir) {
+            // Si no había dirección, usar la del patrón
+            finalDir = patternDir;
+            finalConf = patternConf;
+            reasons.push('Pattern DB');
         }
+    }
+    
+    // 4. Si no hay nada, mostrar análisis de ritmo
+    if (!finalDir && rhythm.dir) {
+        finalDir = rhythm.dir;
+        finalConf = 45;
+        reasons.push('Solo ritmo');
     }
     
     // Actualizar UI de Sniper V2
@@ -2556,14 +2599,23 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
     }
     
     if (reasonsEl) {
-        let reasons = [];
-        if (matches.length > 0) reasons.push(`${matches.length} patrones DB`);
-        if (rhythm.label) reasons.push(rhythm.label);
-        reasonsEl.innerText = reasons.length > 0 ? reasons.join(' + ') : 'Sin confluencia';
+        if (reasons.length === 0) {
+            reasonsEl.innerText = 'Recopilando datos...';
+        } else {
+            reasonsEl.innerText = reasons.join(' · ');
+        }
     }
     
-    if (rhythmEl) rhythmEl.innerText = rhythm.label || '--';
-    if (patternsEl) patternsEl.innerText = matches.length > 0 ? `${matches.length} matches` : 'Sin DB';
+    if (rhythmEl) rhythmEl.innerText = rhythm.label || 'Mixto';
+    if (patternsEl) {
+        if (matches.length > 0) {
+            patternsEl.innerText = `${matches.length} patterns DB`;
+            patternsEl.style.color = 'var(--accent)';
+        } else {
+            patternsEl.innerText = 'Sin datos históricos';
+            patternsEl.style.color = '#666';
+        }
+    }
 }
 
 // Helper para análisis de ritmo
