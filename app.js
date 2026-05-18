@@ -264,6 +264,15 @@ async function syncAiPredictionState() {
             if (n4El) n4El.innerText = current.n4 || 'Esperar';
             if (analysisEl) analysisEl.innerText = current.analysis || 'Analisis AI sincronizado desde la base.';
             if (statusEl) statusEl.innerText = latestPending ? 'ONLINE' : 'STANDBY';
+            
+            // Debug: mostrar las 6 métricas actuales junto al análisis
+            if (analysisEl && lastSignal) {
+                const s = lastSignal;
+                analysisEl.innerText = 
+                    'CW_N9=' + s.targetCW + ' CW_S=' + s.targetUnderCW + ' CW_B=' + s.targetOverCW + ' | ' +
+                    'CCW_N9=' + s.targetCCW + ' CCW_S=' + s.targetOverCCW + ' CCW_B=' + s.targetUnderCCW + ' | ' +
+                    (current.analysis || '');
+            }
         } else {
             if (n9El) n9El.innerText = 'Sin datos';
             if (n4El) n4El.innerText = 'Sin datos';
