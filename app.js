@@ -2775,30 +2775,9 @@ function updateAnalystV2(seq, matches, patternBoost) {
     let displayReason = baseAnalysis.reason || 'Recopilando datos...';
     let turbulenceAlert = null;
     
-    // 3. SI HAY TURBULENCIA, evaluar si damos señal o alerta
+    // 3. SI HAY TURBULENCIA, añadir como nota informativa (no reemplaza V1)
     if (turbulence) {
-        // Guardar alerta de turbulencia
-        turbulenceAlert = turbulence;
-        
-        // Si es caos total o micro-turbulencia, NO damos dirección
-        if (turbulence.type === 'total_chaos' || turbulence.type === 'micro_turbulence') {
-            displaySignal = '🌪️ ' + turbulence.name;
-            displayType = 'chaos';
-            displayDir = null;
-            displayReason = turbulence.desc;
-        }
-        // Si es ruptura post-dominancia, seguimos la NUEVA tendencia
-        else if (turbulence.type === 'post_sequence' && !displayDir && seq.length > 0) {
-            const lastDir = seq[seq.length - 1].dir;
-            displaySignal = '🔄 RUPTURA';
-            displayType = 'breakout';
-            displayDir = lastDir === 'R' ? 'CW' : 'CCW';
-            displayReason = `Cambio de tendencia: ${turbulence.desc}`;
-        }
-        // Si es punto de inflexión, advertir pero dar señal si tenemos
-        else if (turbulence.type === 'inflection') {
-            displayReason = `⚠️ ${turbulence.name}: ${displayReason}`;
-        }
+        displayReason = `[${turbulence.name}] ${displayReason}`;
     }
     
     // 4. Si no hay dirección, usar analystView global
@@ -2881,48 +2860,37 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
     let finalDir = null;
     let reasons = [];
     
-    // 0. EVALUAR TURBULENCIA SEGÚN TIPO
+    // 0. V2 usa V1 como base + sugerencias de DB
+    // La detección de turbulencia es una SUGERENCIA, no un bloqueo
+    let turbulenceBoost = 0;
+    let turbulenceNote = '';
+    
     if (turbulence) {
-        // Caos total o micro-turbulencia: NO entramos
-        if (turbulence.type === 'total_chaos' || turbulence.type === 'micro_turbulence') {
-            const targetEl = document.getElementById('sniper-v2-target');
-            const confEl = document.getElementById('sniper-v2-conf');
-            const reasonsEl = document.getElementById('sniper-v2-reasons');
-            
-            if (targetEl) {
-                targetEl.innerText = '🌪️ ' + turbulence.name;
-                targetEl.style.color = '#f55';
+        // Añadir nota sobre turbulencia detectada
+        turbulenceNote = `[${turbulence.name}] `;
+        
+        // Boost de confianza si el patrón de turbulencia coincide con V1
+        if (turbulence.type === 'extreme_dominance' && masterView?.target) {
+            // Si V1 también dice reversal, boost
+            const lastDir = seq[seq.length - 1].dir;
+            const reversalDir = lastDir === 'R' ? 'CCW' : 'CW';
+            if (masterView.target === reversalDir) {
+                turbulenceBoost = 15;
+                reasons.push('💥 DB+Reversal');
             }
-            if (confEl) confEl.innerText = turbulence.confidence + '%';
-            if (reasonsEl) reasonsEl.innerText = turbulence.desc + ' | NO ENTRAR';
-            
-            return; // Stop aquí
         }
         
-        // Ruptura post-dominancia: Seguir nueva tendencia con boost
-        if (turbulence.type === 'post_sequence') {
-            finalConf = turbulence.confidence;
-            reasons.push(turbulence.name);
-        }
-        
-        // Dominancia extrema: Preparar reversal
-        if (turbulence.type === 'extreme_dominance') {
-            finalConf = turbulence.confidence;
-            reasons.push(turbulence.name);
-        }
-        
-        // Zigzag: Reducir confianza
         if (turbulence.type === 'zigzag_dominance') {
-            finalConf = Math.max(finalConf - 20, 30);
-            reasons.push('Zigzag -25%');
+            turbulenceBoost = 5;
+            reasons.push('🔀 Zigzag detectado');
         }
     }
     
-    // 1. Prioridad: Master View (Sniper V1) - si no se sobrescribió por turbulencia
-    if (!finalDir && masterView && masterView.target) {
+    // 1. Prioridad: Master View (Sniper V1) - V2 no reemplaza, potencia
+    if (masterView && masterView.target) {
         finalDir = masterView.target;
-        finalConf = masterView.confidence || 60;
-        reasons.push('Sniper V1');
+        finalConf = (masterView.confidence || 60) + turbulenceBoost;
+        reasons.push('Sniper V1' + (turbulenceNote ? ' + ' + turbulenceNote : ''));
     }
     
     // 2. Si hay ritmo fuerte, usarlo como alternativa o confirmación
