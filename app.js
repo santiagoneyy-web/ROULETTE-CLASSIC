@@ -17,6 +17,12 @@ let lastAiPredN9 = null;
 let lastAiPredN4 = null;
 let lastAiPredMode = 'SAFE';
 
+// Separate per-mode stats for SAFE/FULL
+let aiStatsSafe = { n9: { wins:0, losses:0, total:0, rate:0 }, n4: { wins:0, losses:0, total:0, rate:0 } };
+let aiStatsFull = { n9: { wins:0, losses:0, total:0, rate:0 }, n4: { wins:0, losses:0, total:0, rate:0 } };
+let aiHistSafe = { n9: [], n4: [] };
+let aiHistFull = { n9: [], n4: [] };
+
 function isResolvedAiOutcome(value) {
     return value === 'win' || value === 'loss';
 }
@@ -168,6 +174,10 @@ function wipeData() {
             aiN9History.length=0; aiN4History.length=0;
             aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
             aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
+            aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} };
+            aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} };
+            aiHistSafe = { n9: [], n4: [] };
+            aiHistFull = { n9: [], n4: [] };
             lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0;
             lastSignal=null;
@@ -176,7 +186,7 @@ function wipeData() {
             lastRawPredN9=null; lastRawPredN4=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0; rawN9History.length=0; rawN4History.length=0; lastRawPredN9=null; lastRawPredN4=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiHistSafe = { n9: [], n4: [] }; aiHistFull = { n9: [], n4: [] }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0; rawN9History.length=0; rawN4History.length=0; lastRawPredN9=null; lastRawPredN4=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleAiHist(metricId, btn) {
@@ -315,10 +325,14 @@ function renderDirMetricHistories() {
         { id: 'ccw-n4', label: 'CCW N4', items: ccwN4History }
     ];
 
+    const mode = lastAiPredMode === 'SAFE' ? 'safe' : 'full';
+    const mStats = mode === 'safe' ? aiStatsSafe : aiStatsFull;
+    const mHist = mode === 'safe' ? aiHistSafe : aiHistFull;
+
     const aiN9List = document.getElementById('ai-hist-list-n9');
-    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(aiN9History, aiN9Stats, 20);
+    if (aiN9List) aiN9List.innerHTML = getAiPerfHtml(mHist.n9, mStats.n9, 20);
     const aiN4List = document.getElementById('ai-hist-list-n4');
-    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(aiN4History, aiN4Stats, 20);
+    if (aiN4List) aiN4List.innerHTML = getAiPerfHtml(mHist.n4, mStats.n4, 20);
 
     metrics.forEach(metric => {
         const list = document.getElementById(`dir-${metric.id}-hist-list`);
@@ -1989,21 +2003,25 @@ function evaluateRawPredictions(number) {
 }
 
 function evaluateAiPredictions(number) {
+    const mode = lastAiPredMode === 'SAFE' ? 'safe' : 'full';
+    const mStats = mode === 'safe' ? aiStatsSafe : aiStatsFull;
+    const mHist = mode === 'safe' ? aiHistSafe : aiHistFull;
+    
     if (lastAiPredN9 && lastAiPredN9 !== 'ESPERAR' && lastAiPredN9 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
         const n9Hit = wheelNeighbors(Number(lastAiPredN9), 9).includes(number);
-        if (n9Hit) { aiN9Stats.wins++; aiN9History.push('win'); }
-        else { aiN9Stats.losses++; aiN9History.push('loss'); }
-        aiN9Stats.total = aiN9Stats.wins + aiN9Stats.losses;
-        aiN9Stats.rate = aiN9Stats.total ? Math.round((aiN9Stats.wins / aiN9Stats.total) * 100) : 0;
-        if (aiN9History.length > 20) aiN9History.shift();
+        if (n9Hit) { mStats.n9.wins++; mHist.n9.push('win'); }
+        else { mStats.n9.losses++; mHist.n9.push('loss'); }
+        mStats.n9.total = mStats.n9.wins + mStats.n9.losses;
+        mStats.n9.rate = mStats.n9.total ? Math.round((mStats.n9.wins / mStats.n9.total) * 100) : 0;
+        if (mHist.n9.length > 20) mHist.n9.shift();
     }
     if (lastAiPredN4 && lastAiPredN4 !== 'ESPERAR' && lastAiPredN4 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
         const n4Hit = wheelNeighbors(Number(lastAiPredN4), 4).includes(number);
-        if (n4Hit) { aiN4Stats.wins++; aiN4History.push('win'); }
-        else { aiN4Stats.losses++; aiN4History.push('loss'); }
-        aiN4Stats.total = aiN4Stats.wins + aiN4Stats.losses;
-        aiN4Stats.rate = aiN4Stats.total ? Math.round((aiN4Stats.wins / aiN4Stats.total) * 100) : 0;
-        if (aiN4History.length > 20) aiN4History.shift();
+        if (n4Hit) { mStats.n4.wins++; mHist.n4.push('win'); }
+        else { mStats.n4.losses++; mHist.n4.push('loss'); }
+        mStats.n4.total = mStats.n4.wins + mStats.n4.losses;
+        mStats.n4.rate = mStats.n4.total ? Math.round((mStats.n4.wins / mStats.n4.total) * 100) : 0;
+        if (mHist.n4.length > 20) mHist.n4.shift();
     }
     renderDirMetricHistories();
 }
