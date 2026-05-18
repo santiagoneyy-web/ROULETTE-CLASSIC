@@ -1136,9 +1136,16 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     const ccw = context.routes.ccw;
     const small = context.routes.small || {};
     const big = context.routes.big || {};
-    const allowedN9 = [String(cw.n9), String(ccw.n9), String(small.n9), String(big.n9)].filter(v => v && v !== 'undefined' && v !== 'null');
-    const allowedN4 = [String(cw.n4Small), String(cw.n4Big), String(ccw.n4Small), String(ccw.n4Big)];
-    const isValidN9 = v => v !== '' && !isNaN(v) && Number(v) >= 0 && Number(v) <= 36;
+    const allowedN9 = [
+        String(cw.n9), String(ccw.n9),
+        String(cw.n4Small), String(cw.n4Big),
+        String(ccw.n4Small), String(ccw.n4Big)
+    ].filter(v => v && v !== 'undefined' && v !== 'null');
+    const allowedN4 = [
+        String(cw.n9), String(ccw.n9),
+        String(cw.n4Small), String(cw.n4Big),
+        String(ccw.n4Small), String(ccw.n4Big)
+    ].filter(v => v && v !== 'undefined' && v !== 'null');
 
     let route = normalizeAiRoute(parsed.route || parsed.direccion || '', cleanAutoNumber(parsed.n9), context);
     let zone = String(parsed.zone || parsed.zona || '').toUpperCase();
@@ -1146,11 +1153,12 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
     let n4 = cleanAutoNumber(parsed.n4);
     const rawAnalysis = String(parsed.analysis || parsed.reason || fallback.analysis || '').trim();
 
-    if (!isValidN9(n9)) {
-        n9 = fallback.n9;
-    }
-
-    if (!allowedN4.includes(n4)) {
+    if (!allowedN9.includes(n9)) {
+        if (route === 'CW') n9 = String(cw.n9);
+        else if (route === 'CCW') n9 = String(ccw.n9);
+        else if (route === 'SMALL') n9 = String(small.n9 || fallback.n9);
+        else if (route === 'BIG') n9 = String(big.n9 || fallback.n9);
+        else n9 = fallback.n9;
         if (zone === 'SMALL') {
             n4 = (route === 'CCW') ? String(ccw.n4Small) : String(cw.n4Small);
         } else if (zone === 'BIG') {
