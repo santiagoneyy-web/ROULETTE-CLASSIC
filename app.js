@@ -933,12 +933,6 @@ function submitNumber(val, silent = false, batch = false) {
             // Trigger new AI prediction (always, even in background)
             setTimeout(requestAutoAI, 800);
             
-            // Update metricas panel if visible
-            if (document.getElementById('panel-metricas')?.style.display !== 'none') {
-                renderMetricasPanel();
-                loadForestDiscoveries();
-            }
-            
             // Evaluate RAW predictions ALWAYS (even when panel hidden)
             evaluateRawPredictions(n);
             
@@ -1914,6 +1908,7 @@ let autoAiInFlight = false;
 let lastAutoAiRequestAt = 0;
 let lastAutoAiRequestKey = '';
 const AUTO_AI_MIN_INTERVAL_MS = 12000;
+let rawLastRequestAt = 0;
 
 // --- RAW AI (separate panel, own counters) ---
 const rawN9History = [];
@@ -1968,11 +1963,11 @@ function evaluateRawPredictions(number) {
 }
 
 async function requestRawAI() {
-    if (rawAiInFlight || !lastSignal || history.length < 3) return;
-    if (Date.now() - lastAutoAiRequestAt < 8000) return;
+    if (rawAiInFlight || !lastSignal) return;
+    if (Date.now() - rawLastRequestAt < 3000) return;
     
     rawAiInFlight = true;
-    lastAutoAiRequestAt = Date.now();
+    rawLastRequestAt = Date.now();
     
     const n9El = document.getElementById('raw-pred-n9-text');
     const n4El = document.getElementById('raw-pred-n4-text');
@@ -1982,21 +1977,16 @@ async function requestRawAI() {
     if (statusEl) statusEl.innerText = 'PENSANDO...';
     
     try {
-        // Calculate DOM8 and MOM15 properly (same as requestAutoAI)
         let der=0, izq=0, big=0, small=0;
         let der15=0, izq15=0, big15=0, small15=0;
         let dirSeq15 = [], zoneSeq15 = [];
-        let lvl = 'red';
-        let pat = {label:'Estandar'};
         
-        // DOM8: last 8 travel directions
         const nCount = Math.min(history.length - 1, 8);
         for (let i = history.length - nCount; i < history.length; i++) {
             let d = calcDist(history[i-1], history[i]);
             if (d >= 0) der++; else izq++;
             if (Math.abs(d) >= 10) big++; else small++;
         }
-        // MOM15: last 15
         const nCount15 = Math.min(history.length - 1, 15);
         for (let i = history.length - nCount15; i < history.length; i++) {
             let d = calcDist(history[i-1], history[i]);
@@ -2004,56 +1994,63 @@ async function requestRawAI() {
             if (Math.abs(d) >= 10) { big15++; zoneSeq15.push('BIG'); } else { small15++; zoneSeq15.push('SMALL'); }
         }
         
-        try {
-            pat = (typeof analyzeTravelPattern === 'function') ? analyzeTravelPattern(history) : {label:'Estandar'};
-            lvl = (typeof getStabilityLevel === 'function') ? getStabilityLevel(pat, []) : 'red';
-        } catch(e) {}
-        
         const cwRate = cwHistory.length ? Math.round((cwHistory.filter(x => x === 'win').length / cwHistory.length) * 100) : 0;
         const ccwRate = ccwHistory.length ? Math.round((ccwHistory.filter(x => x === 'win').length / ccwHistory.length) * 100) : 0;
         
-        const autoAiContext = lastSignal ? {
+        // Build 6 metrics prompt (same as AutoAI but RAW mode)
+        let mathContext = 'OPCIONES (elige SOLO de aqui):\n';
+        mathContext += 'A) ' + lastSignal.targetCW + ' (CW N9, Eff:' + cwRate + '%)\n';
+        mathContext += 'B) ' + lastSignal.targetUnderCW + ' (CW SMALL)\n';
+        mathContext += 'C) ' + lastSignal.targetOverCW + ' (CW BIG)\n';
+        mathContext += 'D) ' + lastSignal.targetCCW + ' (CCW N9, Eff:' + ccwRate + '%)\n';
+        mathContext += 'E) ' + lastSignal.targetOverCCW + ' (CCW SMALL)\n';
+        mathContext += 'F) ' + lastSignal.targetUnderCCW + ' (CCW BIG)';
+        
+        const stabilityInfo = 'DOM8: CW=' + der + ' CCW=' + izq + ' BIG=' + big + ' SMALL=' + small;
+        const p = stabilityInfo + '\n' + mathContext + '\nRAW: elige la mejor jugada. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
+        
+        const autoAiContext = {
             mode: 'RAW',
-            stabilityLevel: lvl,
-            patternLabel: pat.label || 'Estandar',
-            dominance8: { cw: der, ccw: izq, big: big, small: small },
+            dominance8: { cw: der, ccw: izq, big, small },
             momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
-            sequence15: {
-                dir: dirSeq15.join(' '),
-                zone: zoneSeq15.join(' ')
-            },
-            performance8: {
-                cwN9: getPerfText(cwHistory),
-                cwN4: getPerfText(cwN4History),
-                ccwN9: getPerfText(ccwHistory),
-                ccwN4: getPerfText(ccwN4History)
-            },
             routes: {
                 cw: { n9: lastSignal.targetCW, n4Small: lastSignal.targetUnderCW, n4Big: lastSignal.targetOverCW, hitRate: Number(cwRate) },
                 ccw: { n9: lastSignal.targetCCW, n4Small: lastSignal.targetOverCCW, n4Big: lastSignal.targetUnderCCW, hitRate: Number(ccwRate) }
             },
             recentNumbers: history.slice(-15)
-        } : null;
+        };
         
         const resp = await fetch('/api/ai/groq', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: '', tableId: currentTableId, autoAiContext })
+            body: JSON.stringify({ prompt: p, tableId: currentTableId, autoAiContext })
         });
         const data = await resp.json();
         
         if (data.reply) {
-            // Always sync from DB for proper counting (server-side normalized)
             if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
-        } else {
-            n9El.innerText = 'Error API';
-            n4El.innerText = 'Error API';
+        } else if (lastSignal) {
+            // Fallback: use first metric as prediction
+            lastRawPredN9 = lastSignal.targetCW;
+            lastRawPredN4 = lastSignal.targetUnderCW;
+            if (n9El) n9El.innerText = lastRawPredN9;
+            if (n4El) n4El.innerText = lastRawPredN4;
+            if (analysisEl) analysisEl.innerText = 'RAW FALLBACK: servidor no disponible, usando metrica base';
+            if (statusEl) statusEl.innerText = 'FALLBACK';
         }
     } catch (e) {
         console.error('RAW AI error:', e);
-        if (statusEl) statusEl.innerText = 'ERROR';
+        if (lastSignal) {
+            lastRawPredN9 = lastSignal.targetCW;
+            lastRawPredN4 = lastSignal.targetUnderCW;
+            if (n9El) n9El.innerText = lastRawPredN9;
+            if (n4El) n4El.innerText = lastRawPredN4;
+            if (analysisEl) analysisEl.innerText = 'RAW FALLBACK: error de conexion, usando metrica base';
+            if (statusEl) statusEl.innerText = 'FALLBACK';
+        }
     } finally {
         rawAiInFlight = false;
+        updateRawStats();
     }
 }
 
