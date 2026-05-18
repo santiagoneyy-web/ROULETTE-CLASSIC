@@ -1981,14 +1981,6 @@ function evaluateAiPredictions(number) {
     }
     renderDirMetricHistories();
 }
-    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
-        const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
-        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
-        else { rawN4Losses++; rawN4History.push('loss'); }
-        if (rawN4History.length > 20) rawN4History.shift();
-    }
-    updateRawStats();
-}
 
 async function requestRawAI() {
     if (rawAiInFlight || !lastSignal) return;
