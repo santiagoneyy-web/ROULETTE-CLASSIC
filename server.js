@@ -325,6 +325,43 @@ app.get('/api/meta-patterns/:tableId/unresolved', async (req, res) => {
     }
 });
 
+// ── Direction Patterns (Patrones de direcciones R/L) ──
+app.post('/api/direction-patterns/:tableId', async (req, res) => {
+    const { tableId } = req.params;
+    const data = req.body;
+    
+    try {
+        const result = await db.saveDirectionPattern(tableId, data);
+        res.json({ success: true, id: result?._id || null });
+    } catch(e) {
+        res.status(500).json({ error: e.message, success: false });
+    }
+});
+
+app.get('/api/direction-patterns/:tableId/find', async (req, res) => {
+    const { tableId } = req.params;
+    const { sequence } = req.query;
+    
+    try {
+        const patterns = await db.findDirectionPatterns(tableId, sequence);
+        res.json(patterns);
+    } catch(e) {
+        res.status(500).json({ error: e.message, patterns: [] });
+    }
+});
+
+app.get('/api/direction-patterns/:tableId/stats', async (req, res) => {
+    const { tableId } = req.params;
+    const { sequence } = req.query;
+    
+    try {
+        const stats = await db.getDirectionPatternStats(tableId, sequence);
+        res.json(stats);
+    } catch(e) {
+        res.status(500).json({ error: e.message, total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 });
+    }
+});
+
 // ── Memoria local para el chat del usuario (Temporal por reinicio)
 const aiMemory = {};
 

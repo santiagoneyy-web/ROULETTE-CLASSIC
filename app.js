@@ -2387,7 +2387,7 @@ function sequenceToKey(seq) {
     return seq.map(s => s.dir + s.mag).join('');
 }
 
-// Extraer patrones del historial LOCAL (sin necesidad de MongoDB)
+// Extraer patrones del historial LOCAL y guardar en DB
 function extractLocalPatterns() {
     if (history.length < 10) return; // Necesitamos al menos 10 números
     
@@ -2401,19 +2401,24 @@ function extractLocalPatterns() {
     // Extraer todas las secuencias de 4
     for (let i = startIdx + windowSize; i < history.length; i++) {
         const seq = [];
+        const numbers = [];
+        const distances = [];
+        
         for (let j = 0; j < windowSize; j++) {
             const idx = i - windowSize + j;
             const dist = calcDist(history[idx], history[idx + 1]);
             const dir = dist >= 0 ? 'R' : 'L';
             const mag = Math.abs(dist) >= 10 ? 'B' : 'S';
             seq.push({ dir, mag, dist });
+            numbers.push(history[idx + 1]);
+            distances.push(dist);
         }
         const key = sequenceToKey(seq);
         
         // Ver qué pasó DESPUÉS de esta secuencia
         if (i + 1 < history.length) {
             const nextDist = calcDist(history[i], history[i + 1]);
-            const nextDir = nextDist >= 0 ? 'CW' : 'CCW';
+            const nextDir = nextDist >= 0 ? 'R' : 'L'; // Usar R/L no CW/CCW
             const nextMag = Math.abs(nextDist) >= 10 ? 'B' : 'S';
             
             if (!patterns[key]) {
@@ -2421,25 +2426,33 @@ function extractLocalPatterns() {
                     pattern_id: 'local_' + key + '_' + Date.now(),
                     key: key,
                     sequence: seq,
-                    outcomes: { total: 0, hits: 0, next_dir: { CW: 0, CCW: 0 }, next_mag: { B: 0, S: 0 } }
+                    dir_sequence: key, // Secuencia R/L puro
+                    outcomes: { total: 0, hits: 0, next_dir: { CW: 0, CCW: 0 }, next_mag: { B: 0, S: 0 } },
+                    next_dir: nextDir,
+                    next_mag: nextMag,
+                    numbers: numbers,
+                    distances: distances
                 };
             }
             
             patterns[key].outcomes.total++;
-            patterns[key].outcomes.next_dir[nextDir]++;
+            patterns[key].outcomes.next_dir[nextDist >= 0 ? 'CW' : 'CCW']++;
             patterns[key].outcomes.next_mag[nextMag]++;
         }
     }
     
-    // Filtrar solo patrones que ocurrieron al menos 2 veces
+    // Filtrar solo patrones que ocurrieron al menos 2 veces y guardar en DB
     let addedCount = 0;
     Object.values(patterns).forEach(p => {
         if (p.outcomes.total >= minOccurrences) {
-            // Ver si ya existe
+            // Ver si ya existe en memoria local
             const exists = patternMemory.find(mp => mp.key === p.key);
             if (!exists) {
                 patternMemory.push(p);
                 addedCount++;
+                
+                // Guardar en DB (async, no esperamos respuesta)
+                saveDirectionPatternToDB(p.dir_sequence, p.next_dir, p.next_mag, p.numbers, p.distances);
             }
         }
     });
@@ -2449,6 +2462,53 @@ function extractLocalPatterns() {
         const memEl = document.getElementById('pattern-memory-count');
         if (memEl) memEl.innerText = patternMemory.length;
     }
+}
+
+// Guardar patrón direccional en DB
+async function saveDirectionPatternToDB(sequence, nextDir, nextMag, numbers, distances) {
+    if (!currentTableId) return;
+    
+    try {
+        await fetch(`/api/direction-patterns/${currentTableId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sequence: sequence,
+                next_direction: nextDir,
+                next_magnitude: nextMag,
+                numbers: numbers,
+                distances: distances
+            })
+        });
+        console.log(`[DB] Patrón direccional guardado: ${sequence} -> ${nextDir}`);
+    } catch(e) {
+        // Silencioso - si falla la DB, seguimos funcionando local
+    }
+}
+
+// Buscar estadísticas de un patrón direccional
+async function getDirectionPatternStatsFromDB(sequence) {
+    if (!currentTableId) return { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
+    
+    try {
+        const resp = await fetch(`/api/direction-patterns/${currentTableId}/stats?sequence=${sequence}`);
+        if (resp.ok) {
+            return await resp.json();
+        }
+    } catch(e) {
+        // Fallback: calcular desde memoria local
+        const matches = patternMemory.filter(p => p.key === sequence || p.key === sequence.split('').reverse().join(''));
+        const stats = { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
+        matches.forEach(m => {
+            stats.total++;
+            if (m.next_dir === 'R') stats.next_r++;
+            if (m.next_dir === 'L') stats.next_l++;
+            if (m.next_mag === 'B') stats.next_b++;
+            if (m.next_mag === 'S') stats.next_s++;
+        });
+        return stats;
+    }
+    return { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
 }
 
 async function analyzePatternSequence() {

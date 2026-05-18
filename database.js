@@ -12,6 +12,7 @@ const AiPrediction = require('./models/AiPrediction');
 const TableStateSnapshot = require('./models/TableStateSnapshot');
 const Pattern = require('./models/Pattern');
 const MetaPattern = require('./models/MetaPattern');
+const DirectionPattern = require('./models/DirectionPattern');
 
 const DB_FILE = path.join(__dirname, 'roulette_db.json');
 let useMongo = false;
@@ -1140,6 +1141,103 @@ async function getUnresolvedMetaPatterns(tableId) {
     }
 }
 
+// === Direction Patterns (Patrones de direcciones R/L) ===
+async function saveDirectionPattern(tableId, data) {
+    if (!useMongo) {
+        console.log('DirectionPattern: MongoDB not available, skipping save');
+        return null;
+    }
+    try {
+        // Calcular secuencia inversa para búsqueda simétrica
+        const reversed = data.sequence.split('').reverse().join('');
+        const isPalindrome = data.sequence === reversed;
+        
+        const pattern = new DirectionPattern({
+            table_id: String(tableId),
+            sequence: data.sequence,
+            length: data.sequence.length,
+            next_direction: data.next_direction || null,
+            next_magnitude: data.next_magnitude || null,
+            numbers: data.numbers || [],
+            distances: data.distances || [],
+            reversed_sequence: reversed,
+            is_palindrome: isPalindrome,
+            timestamp: new Date()
+        });
+        
+        await pattern.save();
+        console.log(`DirectionPattern saved: ${data.sequence} for table ${tableId}`);
+        return pattern;
+    } catch (e) {
+        console.error('Error saving direction pattern:', e);
+        return null;
+    }
+}
+
+async function findDirectionPatterns(tableId, sequence) {
+    if (!useMongo) return [];
+    try {
+        // Buscar la secuencia exacta O su inversa (simetría)
+        const reversed = sequence.split('').reverse().join('');
+        
+        const patterns = await DirectionPattern.find({
+            table_id: String(tableId),
+            $or: [
+                { sequence: sequence },
+                { sequence: reversed }
+            ]
+        }).sort({ timestamp: -1 }).limit(50).lean();
+        
+        return patterns;
+    } catch (e) {
+        console.error('Error finding direction patterns:', e);
+        return [];
+    }
+}
+
+async function getDirectionPatternStats(tableId, sequence) {
+    if (!useMongo) return { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
+    try {
+        const reversed = sequence.split('').reverse().join('');
+        
+        const stats = await DirectionPattern.aggregate([
+            { 
+                $match: { 
+                    table_id: String(tableId),
+                    $or: [
+                        { sequence: sequence },
+                        { sequence: reversed }
+                    ],
+                    next_direction: { $ne: null }
+                } 
+            },
+            { 
+                $group: { 
+                    _id: { 
+                        dir: "$next_direction",
+                        mag: "$next_magnitude"
+                    },
+                    count: { $sum: 1 }
+                } 
+            }
+        ]);
+        
+        const result = { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
+        stats.forEach(s => {
+            result.total += s.count;
+            if (s._id.dir === 'R') result.next_r += s.count;
+            if (s._id.dir === 'L') result.next_l += s.count;
+            if (s._id.mag === 'B') result.next_b += s.count;
+            if (s._id.mag === 'S') result.next_s += s.count;
+        });
+        
+        return result;
+    } catch (e) {
+        console.error('Error getting direction pattern stats:', e);
+        return { total: 0, next_r: 0, next_l: 0, next_b: 0, next_s: 0 };
+    }
+}
+
 module.exports = { 
     initDB, getTables, addTable, deleteTable, getHistory, addSpin, 
     clearHistory, wipeAllSpins, getStats, getUseMongo: () => useMongo,
@@ -1149,6 +1247,7 @@ module.exports = {
     addMetricSnapshot, getMetricSnapshots,
     addAiPrediction, getAiPredictions, resolvePendingAiPredictions, getAiLearningSummary,
     addTableStateSnapshot, getTableStateSnapshots,
-    saveMetaPattern, updateMetaPatternResult, getMetaPatternStats, getUnresolvedMetaPatterns
+    saveMetaPattern, updateMetaPatternResult, getMetaPatternStats, getUnresolvedMetaPatterns,
+    saveDirectionPattern, findDirectionPatterns, getDirectionPatternStats
 };
 
