@@ -336,16 +336,16 @@ function renderShadowPanel() {
     // 1. DIR (ANDROID 1717)
     if (lastSignal) {
         // --- CW BLOCK ---
-        document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW;
-        document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW;
-        document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW;
+        document.getElementById('dir-cw-c-val').innerText = lastSignal.targetCW ?? '--';
+        document.getElementById('dir-cw-l-val').innerText = lastSignal.targetUnderCW ?? '--';
+        document.getElementById('dir-cw-r-val').innerText = lastSignal.targetOverCW ?? '--';
         document.getElementById('dir-cw-l-hit').innerText = lastUnderHitCW ? 'Ã¢ÂÂ HIT' : '';
         document.getElementById('dir-cw-r-hit').innerText = lastOverHitCW ? 'Ã¢ÂÂ HIT' : '';
 
         // --- CCW BLOCK ---
-        document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW;
-        document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW;
-        document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW;
+        document.getElementById('dir-ccw-c-val').innerText = lastSignal.targetCCW ?? '--';
+        document.getElementById('dir-ccw-l-val').innerText = lastSignal.targetUnderCCW ?? '--';
+        document.getElementById('dir-ccw-r-val').innerText = lastSignal.targetOverCCW ?? '--';
         document.getElementById('dir-ccw-l-hit').innerText = lastUnderHitCCW ? 'Ã¢ÂÂ HIT' : '';
         document.getElementById('dir-ccw-r-hit').innerText = lastOverHitCCW ? 'Ã¢ÂÂ HIT' : '';
 
@@ -380,6 +380,14 @@ function renderShadowPanel() {
         document.getElementById('dir-ccw-c-balls').innerHTML = '';
         document.getElementById('dir-ccw-l-balls').innerHTML = '';
         document.getElementById('dir-ccw-r-balls').innerHTML = '';
+    } else {
+        // Si no hay lastSignal, mostrar valores por defecto
+        document.getElementById('dir-cw-c-val').innerText = '--';
+        document.getElementById('dir-cw-l-val').innerText = '--';
+        document.getElementById('dir-cw-r-val').innerText = '--';
+        document.getElementById('dir-ccw-c-val').innerText = '--';
+        document.getElementById('dir-ccw-l-val').innerText = '--';
+        document.getElementById('dir-ccw-r-val').innerText = '--';
     }
     } catch (err) {
         console.error('Error in renderShadowPanel:', err);
