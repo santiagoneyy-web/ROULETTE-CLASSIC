@@ -9,7 +9,7 @@ const AiPredictionSchema = new mongoose.Schema({
     basis: { type: String, enum: ['dominance', 'ai_analysis', 'strategy', 'hybrid'], default: 'dominance' },
     dominance_priority: { type: Boolean, default: true },
     mode: { type: String, enum: ['SAFE', 'FULL', 'RAW'], default: 'SAFE' },
-    route: { type: String, enum: ['CW', 'CCW', 'ESPERAR'], default: 'ESPERAR' },
+    route: { type: String, enum: ['CW', 'CCW', 'SMALL', 'BIG', 'ESPERAR'], default: 'ESPERAR' },
     zone: { type: String, enum: ['SMALL', 'BIG', 'ESPERAR'], default: 'ESPERAR' },
     n9: { type: String, default: 'ESPERAR' },
     n4: { type: String, default: 'ESPERAR' },

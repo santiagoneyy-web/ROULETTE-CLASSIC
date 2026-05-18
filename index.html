@@ -4,191 +4,304 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>CLASI ROULETTE</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=1018" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-</head>
+    <style>
+    /* Compact travel table */
+    .travel-section { width: 100%; max-width: 100%; }
+    .travel-table { width:100%; border-collapse:collapse; table-layout: fixed; }
+    .travel-table th, .travel-table td { padding:1px 3px; font-size:9px; }
+    .travel-table-wrap { max-height:140px; overflow-y:auto; overflow-x:hidden; }
+</style>
+
+
 <body>
 <div class="resizable-wrapper">
 <div class="app-shell">
+
+    <!-- (Top bar removed as per user request) -->
+
+    <!-- ═══ THREE-COLUMN BODY ═══ -->
     <div class="three-col-body">
+ 
+         <!-- ── COL 1: VISUAL ── -->
          <div class="col-visual">
+
+            <!-- Visual Panel (Table Image + Mini History) -->
             <section class="visual-panel-mini">
-                <div class="table-image-container">
-                    <img src="table-1.jpg" alt="Mesa de Ruleta">
+                <div class="table-image-container" style="text-align: center; margin-bottom: 10px;">
+                    <img src="table-1.jpg" alt="Mesa de Ruleta" style="width: 100%; max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                 </div>
                 <div id="history-strip-mini" class="history-strip-mini"></div>
             </section>
  
-            <div class="strategy-tabs">
-                <button class="tab-btn active" id="tab-btn-dir">DIR</button>
-                <button class="tab-btn" id="tab-btn-scatter">DIR CHART</button>
-                <button class="tab-btn" id="tab-btn-analisis">ANALISIS</button>
-                <button class="tab-btn" id="tab-btn-chat">CHAT</button>
-            </div>
+             <div style="display:flex; align-items:center; gap:6px; margin-top: 8px;">
+                 <div class="strategy-tabs" style="flex:1; margin-top:0;">
+                     <button class="tab-btn active" id="tab-btn-dir">DIR</button>
+                     <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
+                     <button class="tab-btn" id="tab-btn-auto">AUTO</button>
+                     <button class="tab-btn" id="tab-btn-sniper">SNIPER</button>
+                     <button class="tab-btn" id="tab-btn-panel">PANEL</button>
+                 </div>
+                 <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                     <button id="btn-pred-dec" title="Bajar DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">-</button>
+                     <span id="pred-offset-badge" style="font-family:var(--mono); font-size:9px; color:var(--accent); background:rgba(0,229,200,0.08); border:1px solid rgba(0,229,200,0.2); border-radius:4px; padding:1px 4px; white-space:nowrap;">0</span>
+                     <button id="btn-pred-inc" title="Subir DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">+</button>
+                     <button id="btn-wipe" title="Reiniciar todo" onclick="wipeData()" style="background:rgba(255,59,92,0.1); border:1px solid rgba(255,59,92,0.3); color:#f55; font-size:8px; border-radius:4px; padding:1px 6px; cursor:pointer; font-weight:700; white-space:nowrap; margin-left:4px;">WIPE</button>
+                 </div>
+             </div>
 
-            <!-- DIR Panel -->
+
+
+            <!-- 1. DIR (ANDROID 1717) -->
             <section class="shadow-panel" id="panel-dir">
-                <div class="dual-block">
+                <!-- CW BLOCK -->
+                <div class="dual-block" style="padding-top: 5px;">
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-cw-l-val">--</span><sup class="p-power">n4</sup>
-                                <span class="hit-text" id="dir-cw-l-hit"></span>
+                                <span class="p-val" id="dir-cw-l-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-cw-l-hit"></span>
                             </div>
+                            <div class="filtered-neighbors" id="dir-cw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
                             <div class="val-row-main">
-                                <div class="p-val-main" id="dir-cw-c-val">--</div><sup class="p-power">n9</sup>
+                                <div class="p-val-main" id="dir-cw-c-val">--</div><sup class="p-power" style="font-size:10px;">n9</sup>
                             </div>
-                            <div class="p-sub-main">DIR CW</div>
+                            <div class="p-sub-main">DIR CW &#8635;</div>
+                            <div class="p-tendency" id="dir-cw-trend" style="display:none !important;">MAIN PRED.</div>
+                            <div class="filtered-neighbors" id="dir-cw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
                             <span class="p-label">OVER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-cw-r-val">--</span><sup class="p-power">n4</sup>
-                                <span class="hit-text" id="dir-cw-r-hit"></span>
+                                <span class="p-val" id="dir-cw-r-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-cw-r-hit"></span>
                             </div>
+                            <div class="filtered-neighbors" id="dir-cw-r-balls"></div>
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span>W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
-                        <span id="dir-cw-rate">0.0%</span>
-                        <span id="dir-cw-perf">--</span>
+                        <span class="st wl-hidden">W:<span id="dir-cw-w">0</span> L:<span id="dir-cw-l">0</span></span>
+                        <span class="status-msg compact-rate"><span id="dir-cw-rate">0.0%</span></span>
+                        <span class="compact-perf" id="dir-cw-perf">--</span>
                     </div>
                 </div>
 
-                <div class="dual-block" style="border-top: 1px solid rgba(0,229,200,0.15);">
+                <!-- CCW BLOCK -->
+                <div class="dual-block" style="border-top: 1px solid rgba(0,229,200,0.15); padding-top: 5px;">
                     <div class="prediction-grid-3">
                         <div class="p-box pb-left">
                             <span class="p-label">UNDER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-ccw-l-val">--</span><sup class="p-power">n4</sup>
-                                <span class="hit-text" id="dir-ccw-l-hit"></span>
+                                <span class="p-val" id="dir-ccw-l-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-ccw-l-hit"></span>
                             </div>
+                            <div class="filtered-neighbors" id="dir-ccw-l-balls"></div>
                         </div>
                         <div class="p-box pb-center">
                             <div class="val-row-main">
-                                <div class="p-val-main" id="dir-ccw-c-val">--</div><sup class="p-power">n9</sup>
+                                <div class="p-val-main" id="dir-ccw-c-val">--</div><sup class="p-power" style="font-size:10px;">n9</sup>
                             </div>
-                            <div class="p-sub-main">DIR CCW</div>
+                            <div class="p-sub-main">DIR CCW &#8634;</div>
+                            <div class="p-tendency" id="dir-ccw-trend" style="display:none !important;">MAIN PRED.</div>
+                            <div class="filtered-neighbors" id="dir-ccw-c-balls"></div>
                         </div>
                         <div class="p-box pb-right">
                             <span class="p-label">OVER</span>
                             <div class="val-row">
-                                <span class="p-val" id="dir-ccw-r-val">--</span><sup class="p-power">n4</sup>
-                                <span class="hit-text" id="dir-ccw-r-hit"></span>
+                                <span class="p-val" id="dir-ccw-r-val">--</span><sup class="p-power">n4</sup><span class="hit-text" id="dir-ccw-r-hit"></span>
                             </div>
+                            <div class="filtered-neighbors" id="dir-ccw-r-balls"></div>
                         </div>
                     </div>
                     <div class="agent-footer-stats">
-                        <span>W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
-                        <span id="dir-ccw-rate">0.0%</span>
-                        <span id="dir-ccw-perf">--</span>
+                        <span class="st wl-hidden">W:<span id="dir-ccw-w">0</span> L:<span id="dir-ccw-l">0</span></span>
+                        <span class="status-msg compact-rate"><span id="dir-ccw-rate">0.0%</span></span>
+                        <span class="compact-perf" id="dir-ccw-perf">--</span>
                     </div>
                 </div>
             </section>
 
-            <!-- SCATTER CHART -->
+
+
+
+            <!-- 3. SCATTER CHART (Direction Dispersion) -->
             <section class="shadow-panel" id="panel-scatter" style="display: none;">
-                <div class="agent-card-header">
+                <div class="agent-card-header" style="padding: 4px 10px;">
                     <span class="agent-icon">📊</span>
                     <span class="agent-card-name">DIR CHART</span>
+                    <span class="side-badge" id="scatter-bias" style="padding:1px 6px;">--</span>
+                </div>
+                <div class="agent-strategy-label" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="scatter-trend-label" style="color: var(--gold); font-weight:bold;">TENDENCIA MMMM</span>
                 </div>
                 <div style="padding: 4px 8px;">
-                    <canvas id="scatterChart" height="200"></canvas>
-                </div>
-            </section>
-
-            <!-- ANALISIS -->
-            <section class="shadow-panel" id="panel-analisis" style="display: none;">
-                <div class="agent-card-header">
-                    <span class="agent-icon">📊</span>
-                    <span class="agent-card-name">SNIPER + ANALYST ANALISIS</span>
-                    <button id="btn-analisis-run" onclick="runSpinAnalysis()">EJECUTAR</button>
-                </div>
-                <div id="analisis-content">
-                    <div id="analisis-status">Cargando lectura de Sniper y Analyst Agent...</div>
-                    <div id="analisis-agent-summary"></div>
-                    <div id="analisis-analyst"></div>
-                    <div id="analisis-sniper"></div>
-                </div>
-            </section>
-
-            <!-- CHAT -->
-            <section class="shadow-panel" id="panel-chat" style="display: none;">
-                <div class="agent-card-header">
-                    <span class="agent-icon">💬</span>
-                    <span class="agent-card-name">CHAT</span>
-                </div>
-                <div id="chat-messages"></div>
-                <div class="chat-input-row">
-                    <input id="chat-input" type="text" placeholder="Escribe..." onkeydown="if(event.key==='Enter')sendChatMessage()">
-                    <button onclick="sendChatMessage()">Enviar</button>
-                </div>
-            </section>
-
-            <!-- MASTER SNIPER -->
-            <section class="master-panel">
-                <div class="master-header">
-                    <span class="master-icon">🎯</span>
-                    <span class="master-name">SNIPER MASTER</span>
-                    <div class="master-conf-bar"><div class="master-conf-fill" id="master-conf-fill"></div></div>
-                    <span class="master-conf-text" id="master-conf-text">0%</span>
-                </div>
-                <div class="master-body">
-                    <div class="master-main-signal" id="master-signal">SYNCHRONIZING...</div>
-                    <div class="master-details">
-                        <span class="master-target-badge" id="master-target">--</span>
-                        <span class="master-reason-text" id="master-reason">--</span>
+                    <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
+                        <canvas id="scatterChart" height="200" style="min-width: 100%;"></canvas>
                     </div>
                 </div>
-                <div class="master-footer">
-                    <span id="master-rate">0%</span>
-                    <span id="master-perf">--</span>
+            </section>
+
+                    <!-- 4. AUTO AI PREDICTOR -->
+            <section class="shadow-panel" id="panel-auto" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="bot-icon">🤅</div>
+                        <h2 class="main-title">AUTO AI PREDICTOR</h2>
+                    </div>
+                    <button id="btn-ai-mode" onclick="toggleAIMode()" style="background: rgba(240,192,64,0.15); border: 1px solid #f0c040; color: #f0c040; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">SAFE FILTRA</button>
+                    <span id="ai-status" style="padding:1px 6px;">STANDBY</span>
+                </div>
+                <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">
+                    <div id="auto-ai-mode-note" style="font-size: 9px; color: var(--muted); padding: 0 2px 2px 2px;">SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.</div>
+                    <div id="ai-pred-n9" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(0,229,200,0.2); position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
+                            <div><strong style="color:var(--accent);">🎯 N9:</strong>&nbsp;<span id="ai-pred-n9-text">Analizando mesa en vivo...</span></div>
+                            <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                        </div>
+                        <div id="ai-hist-n9" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(0,229,200,0.1); padding-top: 6px; display: none; text-align: center;">
+                            <div id="ai-hist-list-n9" style="display:flex; gap:2px; justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
+                        </div>
+                    </div>
+                    <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(255,100,100,0.2); position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
+                            <div><strong style="color:#f55;">🔥 N4:</strong>&nbsp;<span id="ai-pred-n4-text">Esperando momentum...</span></div>
+                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                        </div>
+                        <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none; text-align: center;">
+                            <div id="ai-hist-list-n4" style="display:flex; gap:2px;/justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,229,200,0.04); border-radius: 8px; border: 1px solid rgba(0,229,200,0.1);">
+                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">LECTURA AI</div>
+                        <div id="auto-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA generará señales automáticamente cada giro.</div>
+                    </div>
                 </div>
             </section>
 
-            <!-- ANALYST BOX -->
-            <div class="analyst-box" id="analyst-panel">
-                <div class="analyst-header">
-                    <span class="analyst-tag">📈 ANALYST</span>
-                    <span id="analyst-rate">0%</span>
-                    <span id="analyst-perf-string">--</span>
+            <!-- DASHBOARD DE AGENTES -->
+            <section class="shadow-panel" id="panel-panel" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x1F4CA;</span>
+                    <span class="agent-card-name">PANEL DE AGENTES</span>
+                    <span id="panel-status" style="padding:1px 6px; font-size:9px;">ANALIZANDO...</span>
                 </div>
-                <div class="analyst-main">
-                    <span class="analyst-signal" id="analyst-signal">ANALIZANDO...</span>
-                    <div class="analyst-decision">
-                        <span class="dir-badge" id="analyst-dir">--</span>
-                        <span class="mag-badge" id="analyst-size">--</span>
+                <div style="padding: 6px 8px;">
+                    <div id="panel-content" style="font-size: 10px; color: var(--text2);">
+                        <div style="padding: 10px; text-align: center; color: var(--muted);">Esperando datos de los agentes...</div>
                     </div>
                 </div>
-                <div class="analyst-reason" id="analyst-reason">-</div>
-            </div>
-         </div>
-  
+            </section>
+
+            <!-- SNIPER + ANALYST -->
+            <section class="shadow-panel" id="panel-sniper" style="display: none;">
+                <div class="agent-card-header" style="padding: 4px 10px;">
+                    <span class="agent-icon">&#x1F3AF;</span>
+                    <span class="agent-card-name">SNIPER &amp; ANALYST</span>
+                    <span style="padding:1px 6px; font-size:9px;">EN VIVO</span>
+                </div>
+                <div style="padding: 6px 8px;">
+                    <section class="master-panel" style="margin-bottom: 8px;">
+                        <div class="master-header">
+                            <span class="master-icon">&#x1F3AF;</span>
+                            <span class="master-name">SNIPER MASTER AI</span>
+                            <div class="master-conf-bar"><div class="master-conf-fill" id="master-conf-fill"></div></div>
+                            <span class="master-conf-text" id="master-conf-text">0%</span>
+                        </div>
+                        <div class="master-body">
+                            <div class="master-main-signal" id="master-signal">SYNCHRONIZING...</div>
+                            <div class="master-details">
+                                <span class="master-target-badge" id="master-target">--</span>
+                                <span class="master-reason-text" id="master-reason">Analizando flujos...</span>
+                            </div>
+                        </div>
+                        <div class="master-footer">
+                            <span class="master-stats" id="master-rate">0%</span>
+                            <span class="compact-perf" id="master-perf">--</span>
+                        </div>
+                    </section>
+                    <div class="analyst-box" id="analyst-panel">
+                        <div class="analyst-header">
+                            <span class="analyst-tag">&#x1F4C8; ANALYST AGENT</span>
+                            <div class="analyst-score">
+                                <span id="analyst-rate">0%</span>
+                                <span class="compact-perf" id="analyst-perf-string">--</span>
+                            </div>
+                        </div>
+                        <div class="analyst-main">
+                            <span class="analyst-signal" id="analyst-signal">ANALIZANDO...</span>
+                            <div class="analyst-decision">
+                                <span class="dir-badge" id="analyst-dir">--</span>
+                                <span class="mag-badge" id="analyst-size">--</span>
+                            </div>
+                        </div>
+                        <div class="analyst-reason" id="analyst-reason">-</div>
+                    </div>
+                </div>
+            </section>
+            <!-- FIN SNIPER + ANALYST -->
+
+         </div><!-- /col-visual -->
+ 
+         <!-- ── COL 3: TRAVEL DATA ── -->
          <div class="col-travel">
             <section class="travel-section">
-                <div class="travel-top-bar">
-                    <span>📊 TRAVEL</span>
-                    <select id="table-select"></select>
+                <div style="padding: 4px 8px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.12); display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--accent); font-family: var(--mono);">&#x1F4CA; TRAVEL</span>
+                        <select id="table-select" class="compact-select" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); color: #00e5c8; font-size: 9px; padding: 1px 3px; border-radius: 3px; font-weight: 600; outline: none; "></select>
+                    </div>
+                    <span class="badge badge-zone" id="travel-last-zone" style="font-size: 8px; padding: 1px 4px;">Último: --</span>
                 </div>
-                <canvas id="travelChart" height="140"></canvas>
-                <div class="travel-table-wrap">
-                    <table>
+
+                <!-- NEW: Travel Pattern Bar -->
+                <div style="background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); padding: 4px 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div id="travel-pattern-label" style="font-size: 10px; font-weight: 700; color: #fff;">Patr�n: Detectando...</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div id="travel-pattern-count" style="font-family: var(--mono); font-size: 9px; color: var(--gold); background: rgba(240,192,64,0.1); padding: 1px 4px; border-radius: 3px;">0t</div>
+                        <button id="travel-history-toggle" class="travel-history-toggle" title="Mostrar/Ocultar historial de patrones" aria-expanded="false">&#9662;</button>
+                    </div>
+                </div>
+                <div id="travel-pattern-hist" class="hidden" style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); padding: 2px 8px; max-height: 45px; overflow-y: auto;">
+                    <!-- Historial dinámico -->
+                </div>
+
+
+
+                <!-- Travel Chart Canvas (SCROLLABLE V5) -->
+                <div style="padding: 2px 0; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); overflow-x: hidden;">
+                    <canvas id="travelChart" height="140" style="width: 100%; min-width: 0; display: block;"></canvas>
+                </div>
+                
+                <div class="travel-table-wrap" id="travel-table-wrap" style="display: block; flex: 1; min-height: 140px; overflow-y: auto; overflow-x: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; font-family: var(--mono);">
                         <thead>
-                            <tr><th>N</th><th>D</th><th>DIR</th><th>ZON</th></tr>
+                            <tr style="background: rgba(255,255,255,0.03);">
+                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">N</th>
+                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">D</th>
+                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">DIR</th>
+                                <th style="padding: 4px; font-size: 9px; color: var(--muted); border-bottom: 1px solid var(--border); text-align: center;">ZON</th>
+                            </tr>
                         </thead>
-                        <tbody id="travel-tbody"></tbody>
+                        <tbody id="travel-tbody">
+                            <tr><td colspan="4" style="padding: 10px; font-size: 9px; text-align: center; color: var(--muted);">Cargando datos...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </section>
-         </div>
-     </div>
+         </div><!-- /col-travel -->
+ 
+     </div><!-- /three-col-body -->
+
 </div>
+</div>
+<div class="resizer"></div>
 </div>
 
-<script src="predictor.js"></script>
-<script src="app.js"></script>
+<script src="predictor.js?v=999"></script>
+<script src="ai_chat.js?v=5"></script>
+<script src="app.js?v=1037"></script>
 </body>
 </html>
+
+
