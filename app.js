@@ -259,7 +259,8 @@ async function syncAiPredictionState() {
         if (current) {
             lastAiPredN9 = current.n9 || null;
             lastAiPredN4 = current.n4 || null;
-            lastAiPredMode = mode;
+            // Usar modo real de la prediccion, no el del UI actual
+            if (current.mode) lastAiPredMode = String(current.mode).toUpperCase();
             if (n9El) n9El.innerText = current.n9 || 'Esperar';
             if (n4El) n4El.innerText = current.n4 || 'Esperar';
             if (analysisEl) analysisEl.innerText = current.analysis || 'Analisis AI sincronizado desde la base.';
@@ -1873,43 +1874,27 @@ let lastAutoAiRequestKey = '';
 const AUTO_AI_MIN_INTERVAL_MS = 12000;
 
 function evaluateAiPredictions(number) {
-    fetch(`/api/ai/predictions/${currentTableId}?limit=100`).then(r => r.ok ? r.json() : []).then(predictions => {
-        const rows = Array.isArray(predictions) ? predictions : [];
-        const pending = rows.filter(p => p.result === 'pending');
-        
-        pending.forEach(p => {
-            const predMode = String(p.mode || 'SAFE').toUpperCase();
-            const mode = predMode === 'SAFE' ? 'safe' : 'full';
-            const mStats = mode === 'safe' ? aiStatsSafe : aiStatsFull;
-            const mHist = mode === 'safe' ? aiHistSafe : aiHistFull;
-            
-            if (p.n9 && p.n9 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
-                const n9Hit = wheelNeighbors(Number(p.n9), 9).includes(number);
-                if (n9Hit) { mStats.n9.wins++; mHist.n9.push('win'); }
-                else { mStats.n9.losses++; mHist.n9.push('loss'); }
-                mStats.n9.total = mStats.n9.wins + mStats.n9.losses;
-                mStats.n9.rate = mStats.n9.total ? Math.round((mStats.n9.wins / mStats.n9.total) * 100) : 0;
-                if (mHist.n9.length > 20) mHist.n9.shift();
-            }
-            if (p.n4 && p.n4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
-                const n4Hit = wheelNeighbors(Number(p.n4), 4).includes(number);
-                if (n4Hit) { mStats.n4.wins++; mHist.n4.push('win'); }
-                else { mStats.n4.losses++; mHist.n4.push('loss'); }
-                mStats.n4.total = mStats.n4.wins + mStats.n4.losses;
-                mStats.n4.rate = mStats.n4.total ? Math.round((mStats.n4.wins / mStats.n4.total) * 100) : 0;
-                if (mHist.n4.length > 20) mHist.n4.shift();
-            }
-        });
-        
-        // Also update legacy counters for backwards compatibility
-        if (pending.length > 0) {
-            const last = pending[pending.length - 1];
-            lastAiPredN9 = last.n9 || null;
-            lastAiPredN4 = last.n4 || null;
-        }
-        
-        renderDirMetricHistories();
-    }).catch(() => {});
+    const mode = lastAiPredMode === 'SAFE' ? 'safe' : 'full';
+    const mStats = mode === 'safe' ? aiStatsSafe : aiStatsFull;
+    const mHist = mode === 'safe' ? aiHistSafe : aiHistFull;
+    
+    if (lastAiPredN9 && lastAiPredN9 !== 'ESPERAR' && lastAiPredN9 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
+        const n9Hit = wheelNeighbors(Number(lastAiPredN9), 9).includes(number);
+        if (n9Hit) { mStats.n9.wins++; mHist.n9.push('win'); }
+        else { mStats.n9.losses++; mHist.n9.push('loss'); }
+        mStats.n9.total = mStats.n9.wins + mStats.n9.losses;
+        mStats.n9.rate = mStats.n9.total ? Math.round((mStats.n9.wins / mStats.n9.total) * 100) : 0;
+        if (mHist.n9.length > 20) mHist.n9.shift();
+    }
+    if (lastAiPredN4 && lastAiPredN4 !== 'ESPERAR' && lastAiPredN4 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
+        const n4Hit = wheelNeighbors(Number(lastAiPredN4), 4).includes(number);
+        if (n4Hit) { mStats.n4.wins++; mHist.n4.push('win'); }
+        else { mStats.n4.losses++; mHist.n4.push('loss'); }
+        mStats.n4.total = mStats.n4.wins + mStats.n4.losses;
+        mStats.n4.rate = mStats.n4.total ? Math.round((mStats.n4.wins / mStats.n4.total) * 100) : 0;
+        if (mHist.n4.length > 20) mHist.n4.shift();
+    }
+    renderDirMetricHistories();
 }
 
 async function requestAutoAI() {
@@ -2081,7 +2066,15 @@ async function requestAutoAI() {
         }
         
         if (data.reply) {
-            // Sync from DB for proper normalized numbers + counting
+            // Guardar prediccion en memoria con el modo en que se genero
+            const parts = String(data.reply || '').split('|');
+            const n9Part = parts[0] ? parts[0].replace('N9:', '').trim() : null;
+            const n4Part = parts[1] ? parts[1].replace('N4:', '').trim() : null;
+            if (n9Part && n9Part !== 'ESPERAR') lastAiPredN9 = n9Part;
+            if (n4Part && n4Part !== 'ESPERAR') lastAiPredN4 = n4Part;
+            lastAiPredMode = String(window.currentAIMode || 'SAFE').toUpperCase();
+            
+            // Sync from DB for display only (no afecta lastAiPredMode)
             if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
         } else {
             n9El.innerText = 'Error API';
