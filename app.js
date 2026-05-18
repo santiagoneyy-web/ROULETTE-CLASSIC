@@ -181,12 +181,9 @@ function wipeData() {
             lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0;
             lastSignal=null;
-            rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0;
-            rawN9History.length=0; rawN4History.length=0;
-            lastRawPredN9=null; lastRawPredN4=null;
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiHistSafe = { n9: [], n4: [] }; aiHistFull = { n9: [], n4: [] }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; rawN9Wins=0; rawN9Losses=0; rawN4Wins=0; rawN4Losses=0; rawN9History.length=0; rawN4History.length=0; lastRawPredN9=null; lastRawPredN4=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiHistSafe = { n9: [], n4: [] }; aiHistFull = { n9: [], n4: [] }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleAiHist(metricId, btn) {
@@ -277,43 +274,6 @@ async function syncAiPredictionState() {
         renderDirMetricHistories();
     } catch (e) {
         console.error('syncAiPredictionState:', e);
-    }
-}
-
-async function syncRawPredictionState() {
-    if (!currentTableId) return;
-    try {
-        const resp = await fetch(`/api/ai/predictions/${currentTableId}?limit=5000&mode=RAW&basis=ai_analysis`);
-        if (!resp.ok) return;
-        const rows = await resp.json();
-        const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
-
-        const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
-        const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
-        const current = latestPending || latestAny;
-
-        const n9El = document.getElementById('raw-pred-n9-text');
-        const n4El = document.getElementById('raw-pred-n4-text');
-        const statusEl = document.getElementById('raw-status');
-        const analysisEl = document.getElementById('raw-ai-analysis');
-
-        if (current) {
-            lastRawPredN9 = current.n9 || null;
-            lastRawPredN4 = current.n4 || null;
-            if (n9El) n9El.innerText = current.n9 || 'Esperar';
-            if (n4El) n4El.innerText = current.n4 || 'Esperar';
-            if (analysisEl) analysisEl.innerText = current.analysis || 'RAW: lectura desde la base.';
-            if (statusEl) statusEl.innerText = latestPending ? 'ONLINE' : 'STANDBY';
-        } else {
-            if (n9El) n9El.innerText = 'Sin datos';
-            if (n4El) n4El.innerText = 'Sin datos';
-            if (analysisEl) analysisEl.innerText = 'RAW: sin historial todavia.';
-            if (statusEl) statusEl.innerText = 'STANDBY';
-        }
-
-        updateRawStats();
-    } catch (e) {
-        console.error('syncRawPredictionState:', e);
     }
 }
 
@@ -484,9 +444,9 @@ function renderWheelAndHistory() {
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ TAB LISTENERS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 document.addEventListener('click', (e) => {
-    const allTabs = ['tab-btn-dir', 'tab-btn-raw', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-sniper', 'tab-btn-panel'];
-    const allPanels = ['panel-dir', 'panel-raw', 'panel-scatter', 'panel-auto', 'panel-sniper', 'panel-panel'];
-    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-raw': 'panel-raw', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-sniper': 'panel-sniper', 'tab-btn-panel': 'panel-panel' };
+    const allTabs = ['tab-btn-dir', 'tab-btn-scatter', 'tab-btn-auto', 'tab-btn-sniper', 'tab-btn-panel'];
+    const allPanels = ['panel-dir', 'panel-scatter', 'panel-auto', 'panel-sniper', 'panel-panel'];
+    const tabMap = { 'tab-btn-dir': 'panel-dir', 'tab-btn-scatter': 'panel-scatter', 'tab-btn-auto': 'panel-auto', 'tab-btn-sniper': 'panel-sniper', 'tab-btn-panel': 'panel-panel' };
     
     if (e.target && tabMap[e.target.id]) {
         allTabs.forEach(t => { const el = document.getElementById(t); if(el) el.classList.remove('active'); });
@@ -496,24 +456,13 @@ document.addEventListener('click', (e) => {
         if (panel) panel.style.display = 'flex';
         renderShadowPanel();
         if (e.target.id === 'tab-btn-scatter') renderScatterChart();
-        if (e.target.id === 'tab-btn-raw') { 
-            updateRawStats(); 
-            renderRawHist(); 
-            requestRawAI(); 
-            if (rawRefreshInterval) clearInterval(rawRefreshInterval);
-            rawRefreshInterval = setInterval(() => {
-                updateRawStats();
-                requestRawAI();
-            }, 4000);
-        }
-        if (e.target.id === 'tab-btn-analisis') loadSpinAnalysis();
         if (e.target.id === 'tab-btn-auto' && document.getElementById('ai-pred-n9-text')?.innerText.includes('Analizando')) { requestAutoAI(); }
         if (e.target.id === 'tab-btn-sniper') { renderMasterUI(); renderAnalystUI(); }
         if (e.target.id === 'tab-btn-panel') { renderAgentDashboard(); }
     }
-    if (e.target.id !== 'tab-btn-raw' && rawRefreshInterval) {
-        clearInterval(rawRefreshInterval);
-        rawRefreshInterval = null;
+    if (e.target.id !== 'tab-btn-sniper' && e.target.id !== 'tab-btn-panel') {
+        const el = document.getElementById('ai-chat-panel');
+        if (el) el.style.display = 'none';
     }
 });
 
@@ -946,44 +895,8 @@ function submitNumber(val, silent = false, batch = false) {
             // Trigger new AI prediction (always, even in background)
             setTimeout(requestAutoAI, 800);
             
-            // Evaluate RAW predictions ALWAYS (even when panel hidden)
-            evaluateRawPredictions(n);
-            
             // Evaluate AUTO AI predictions ALWAYS
             evaluateAiPredictions(n);
-            
-            // RAW: setear predicción inmediata para la SIGUIENTE tirada
-            if (lastSignal) {
-                const rawN9El = document.getElementById('raw-pred-n9-text');
-                const rawN4El = document.getElementById('raw-pred-n4-text');
-                const rawAnalysisEl = document.getElementById('raw-ai-analysis');
-                lastRawPredN9 = lastSignal.targetCW;
-                lastRawPredN4 = lastSignal.targetUnderCW;
-                if (rawN9El) rawN9El.innerText = lastRawPredN9;
-                if (rawN4El) rawN4El.innerText = lastRawPredN4;
-                if (rawAnalysisEl) rawAnalysisEl.innerText = 'RAW: primera opcion (CW base)';
-            } else if (history.length > 0) {
-                const lastNum = history[history.length - 1];
-                const idx = WHEEL_NUMS.indexOf(lastNum);
-                if (idx !== -1) {
-                    const rawN9El = document.getElementById('raw-pred-n9-text');
-                    const rawN4El = document.getElementById('raw-pred-n4-text');
-                    const basicCW = WHEEL_NUMS[(idx + 9) % 37];
-                    const basicUnderCW = WHEEL_NUMS[(idx + 4) % 37];
-                    lastRawPredN9 = basicCW;
-                    lastRawPredN4 = basicUnderCW;
-                    if (rawN9El) rawN9El.innerText = lastRawPredN9;
-                    if (rawN4El) rawN4El.innerText = lastRawPredN4;
-                }
-            }
-            
-            // Always generate new RAW prediction in background
-            setTimeout(requestRawAI, 1000);
-            
-            // Update RAW panel if visible
-            if (document.getElementById('panel-raw')?.style.display !== 'none') {
-                updateRawStats();
-            }
         }
     }
 }
@@ -1949,175 +1862,6 @@ let autoAiInFlight = false;
 let lastAutoAiRequestAt = 0;
 let lastAutoAiRequestKey = '';
 const AUTO_AI_MIN_INTERVAL_MS = 12000;
-let rawLastRequestAt = 0;
-let rawRefreshInterval = null;
-
-// --- RAW AI (separate panel, own counters) ---
-const rawN9History = [];
-const rawN4History = [];
-let rawN9Wins = 0, rawN9Losses = 0;
-let rawN4Wins = 0, rawN4Losses = 0;
-let lastRawPredN9 = null, lastRawPredN4 = null;
-let rawAiInFlight = false;
-
-function updateRawStats() {
-    const n9Total = rawN9Wins + rawN9Losses;
-    const n4Total = rawN4Wins + rawN4Losses;
-    const eN9 = document.getElementById('raw-stats-inline-n9');
-    const eN4 = document.getElementById('raw-stats-inline-n4');
-    if (eN9) eN9.innerText = (n9Total ? Math.round((rawN9Wins / n9Total) * 100) : 0) + '% (' + rawN9Wins + 'W/' + rawN9Losses + 'L)';
-    if (eN4) eN4.innerText = (n4Total ? Math.round((rawN4Wins / n4Total) * 100) : 0) + '% (' + rawN4Wins + 'W/' + rawN4Losses + 'L)';
-}
-
-function toggleRawHist(side, btn) {
-    const panel = document.getElementById('raw-hist-' + side);
-    if (!panel) return;
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (btn) btn.innerHTML = panel.style.display === 'none' ? '&#9662;' : '&#9652;';
-    if (side === 'n9') {
-        const list = document.getElementById('raw-hist-list-n9');
-        if (list) list.innerHTML = getAiPerfHtml(rawN9History, { wins: rawN9Wins, losses: rawN9Losses, total: rawN9Wins + rawN9Losses, rate: rawN9Wins + rawN9Losses ? Math.round((rawN9Wins / (rawN9Wins + rawN9Losses)) * 100) : 0 }, 20);
-    } else {
-        const list = document.getElementById('raw-hist-list-n4');
-        if (list) list.innerHTML = getAiPerfHtml(rawN4History, { wins: rawN4Wins, losses: rawN4Losses, total: rawN4Wins + rawN4Losses, rate: rawN4Wins + rawN4Losses ? Math.round((rawN4Wins / (rawN4Wins + rawN4Losses)) * 100) : 0 }, 20);
-    }
-}
-
-function renderRawHist() {
-    // Keep for compatibility, toggleRawHist handles it now
-}
-
-function evaluateRawPredictions(number) {
-    if (lastRawPredN9 && lastRawPredN9 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
-        const n9Hit = wheelNeighbors(Number(lastRawPredN9), 9).includes(number);
-        if (n9Hit) { rawN9Wins++; rawN9History.push('win'); }
-        else { rawN9Losses++; rawN9History.push('loss'); }
-        if (rawN9History.length > 20) rawN9History.shift();
-    }
-    if (lastRawPredN4 && lastRawPredN4 !== 'ESPERAR' && typeof wheelNeighbors === 'function') {
-        const n4Hit = wheelNeighbors(Number(lastRawPredN4), 4).includes(number);
-        if (n4Hit) { rawN4Wins++; rawN4History.push('win'); }
-        else { rawN4Losses++; rawN4History.push('loss'); }
-        if (rawN4History.length > 20) rawN4History.shift();
-    }
-    updateRawStats();
-}
-
-function evaluateAiPredictions(number) {
-    const mode = lastAiPredMode === 'SAFE' ? 'safe' : 'full';
-    const mStats = mode === 'safe' ? aiStatsSafe : aiStatsFull;
-    const mHist = mode === 'safe' ? aiHistSafe : aiHistFull;
-    
-    if (lastAiPredN9 && lastAiPredN9 !== 'ESPERAR' && lastAiPredN9 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
-        const n9Hit = wheelNeighbors(Number(lastAiPredN9), 9).includes(number);
-        if (n9Hit) { mStats.n9.wins++; mHist.n9.push('win'); }
-        else { mStats.n9.losses++; mHist.n9.push('loss'); }
-        mStats.n9.total = mStats.n9.wins + mStats.n9.losses;
-        mStats.n9.rate = mStats.n9.total ? Math.round((mStats.n9.wins / mStats.n9.total) * 100) : 0;
-        if (mHist.n9.length > 20) mHist.n9.shift();
-    }
-    if (lastAiPredN4 && lastAiPredN4 !== 'ESPERAR' && lastAiPredN4 !== 'Sin datos' && typeof wheelNeighbors === 'function') {
-        const n4Hit = wheelNeighbors(Number(lastAiPredN4), 4).includes(number);
-        if (n4Hit) { mStats.n4.wins++; mHist.n4.push('win'); }
-        else { mStats.n4.losses++; mHist.n4.push('loss'); }
-        mStats.n4.total = mStats.n4.wins + mStats.n4.losses;
-        mStats.n4.rate = mStats.n4.total ? Math.round((mStats.n4.wins / mStats.n4.total) * 100) : 0;
-        if (mHist.n4.length > 20) mHist.n4.shift();
-    }
-    renderDirMetricHistories();
-}
-
-async function requestRawAI() {
-    if (rawAiInFlight || !lastSignal) return;
-    if (Date.now() - rawLastRequestAt < 3000) return;
-    
-    rawAiInFlight = true;
-    rawLastRequestAt = Date.now();
-    
-    const n9El = document.getElementById('raw-pred-n9-text');
-    const n4El = document.getElementById('raw-pred-n4-text');
-    const statusEl = document.getElementById('raw-status');
-    const analysisEl = document.getElementById('raw-ai-analysis');
-    
-    if (statusEl) statusEl.innerText = 'PENSANDO...';
-    
-    try {
-        let der=0, izq=0, big=0, small=0;
-        let der15=0, izq15=0, big15=0, small15=0;
-        let dirSeq15 = [], zoneSeq15 = [];
-        
-        const nCount = Math.min(history.length - 1, 8);
-        for (let i = history.length - nCount; i < history.length; i++) {
-            let d = calcDist(history[i-1], history[i]);
-            if (d >= 0) der++; else izq++;
-            if (Math.abs(d) >= 10) big++; else small++;
-        }
-        const nCount15 = Math.min(history.length - 1, 15);
-        for (let i = history.length - nCount15; i < history.length; i++) {
-            let d = calcDist(history[i-1], history[i]);
-            if (d >= 0) { der15++; dirSeq15.push('DER'); } else { izq15++; dirSeq15.push('IZQ'); }
-            if (Math.abs(d) >= 10) { big15++; zoneSeq15.push('BIG'); } else { small15++; zoneSeq15.push('SMALL'); }
-        }
-        
-        const cwRate = cwHistory.length ? Math.round((cwHistory.filter(x => x === 'win').length / cwHistory.length) * 100) : 0;
-        const ccwRate = ccwHistory.length ? Math.round((ccwHistory.filter(x => x === 'win').length / ccwHistory.length) * 100) : 0;
-        
-        // Build 6 metrics prompt (same as AutoAI but RAW mode)
-        let mathContext = 'OPCIONES (elige SOLO de aqui):\n';
-        mathContext += 'A) ' + lastSignal.targetCW + ' (CW N9, Eff:' + cwRate + '%)\n';
-        mathContext += 'B) ' + lastSignal.targetUnderCW + ' (CW SMALL)\n';
-        mathContext += 'C) ' + lastSignal.targetOverCW + ' (CW BIG)\n';
-        mathContext += 'D) ' + lastSignal.targetCCW + ' (CCW N9, Eff:' + ccwRate + '%)\n';
-        mathContext += 'E) ' + lastSignal.targetOverCCW + ' (CCW SMALL)\n';
-        mathContext += 'F) ' + lastSignal.targetUnderCCW + ' (CCW BIG)';
-        
-        const stabilityInfo = 'DOM8: CW=' + der + ' CCW=' + izq + ' BIG=' + big + ' SMALL=' + small;
-        const p = stabilityInfo + '\n' + mathContext + '\nRAW: elige la mejor jugada. JSON: {"n9":"NUMERO","n4":"NUMERO"}';
-        
-        const autoAiContext = {
-            mode: 'RAW',
-            dominance8: { cw: der, ccw: izq, big, small },
-            momentum15: { cw: der15, ccw: izq15, big: big15, small: small15 },
-            routes: {
-                cw: { n9: lastSignal.targetCW, n4Small: lastSignal.targetUnderCW, n4Big: lastSignal.targetOverCW, hitRate: Number(cwRate) },
-                ccw: { n9: lastSignal.targetCCW, n4Small: lastSignal.targetOverCCW, n4Big: lastSignal.targetUnderCCW, hitRate: Number(ccwRate) }
-            },
-            recentNumbers: history.slice(-15)
-        };
-        
-        const resp = await fetch('/api/ai/groq', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: p, tableId: currentTableId, autoAiContext })
-        });
-        const data = await resp.json();
-        
-        if (data.reply) {
-            if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
-        } else if (lastSignal) {
-            // Fallback: use first metric as prediction
-            lastRawPredN9 = lastSignal.targetCW;
-            lastRawPredN4 = lastSignal.targetUnderCW;
-            if (n9El) n9El.innerText = lastRawPredN9;
-            if (n4El) n4El.innerText = lastRawPredN4;
-            if (analysisEl) analysisEl.innerText = 'RAW FALLBACK: servidor no disponible, usando metrica base';
-            if (statusEl) statusEl.innerText = 'FALLBACK';
-        }
-    } catch (e) {
-        console.error('RAW AI error:', e);
-        if (lastSignal) {
-            lastRawPredN9 = lastSignal.targetCW;
-            lastRawPredN4 = lastSignal.targetUnderCW;
-            if (n9El) n9El.innerText = lastRawPredN9;
-            if (n4El) n4El.innerText = lastRawPredN4;
-            if (analysisEl) analysisEl.innerText = 'RAW FALLBACK: error de conexion, usando metrica base';
-            if (statusEl) statusEl.innerText = 'FALLBACK';
-        }
-    } finally {
-        rawAiInFlight = false;
-        updateRawStats();
-    }
-}
 
 async function requestAutoAI() {
     const n9El = document.getElementById('ai-pred-n9-text');
@@ -2448,40 +2192,28 @@ function renderAgentDashboard() {
 
     const agents = [];
 
-    // 1. RAW
-    const rawTotal = rawN9Wins + rawN9Losses;
-    const rawRecent = rawN9History.slice(-10);
-    const rawRecentWins = rawRecent.filter(x => x === 'win').length;
-    const rawRate = rawTotal > 0 ? Math.round((rawN9Wins / rawTotal) * 100) : 0;
-    const rawRecentRate = rawRecent.length > 0 ? Math.round((rawRecentWins / rawRecent.length) * 100) : 0;
+    // 1. AUTO (SAFE mode)
+    const safeStats = aiStatsSafe.n9;
     agents.push({
-        name: 'RAW IA',
-        total: rawTotal,
-        wins: rawN9Wins,
-        losses: rawN9Losses,
-        rate: rawRate,
-        recentRate: rawRecentRate,
-        trend: rawRecent.length >= 5 ? (rawRecentRate > rawRate ? '📈' : rawRecentRate < rawRate ? '📉' : '➡️') : '⏳',
-        color: rawRate >= 55 ? '#0f0' : rawRate >= 40 ? '#f0c040' : '#f55'
+        name: 'AUTO SAFE',
+        total: safeStats.total,
+        wins: safeStats.wins,
+        losses: safeStats.losses,
+        rate: safeStats.rate,
+        trend: safeStats.total >= 5 ? (safeStats.rate >= 50 ? '📈' : '📉') : '⏳',
+        color: safeStats.rate >= 55 ? '#0f0' : safeStats.rate >= 40 ? '#f0c040' : '#f55'
     });
 
-    // 2. AUTO
-    const autoTotal = (aiN9Stats?.total || 0);
-    const autoWins = (aiN9Stats?.wins || 0);
-    const autoLosses = (aiN9Stats?.losses || 0);
-    const autoRate = autoTotal > 0 ? Math.round((autoWins / autoTotal) * 100) : 0;
-    const autoRecent = aiN9History.slice(-10);
-    const autoRecentWins = autoRecent.filter(x => x === 'win').length;
-    const autoRecentRate = autoRecent.length > 0 ? Math.round((autoRecentWins / autoRecent.length) * 100) : 0;
+    // 2. AUTO (FULL mode)  
+    const fullStats = aiStatsFull.n9;
     agents.push({
-        name: 'AUTO AI',
-        total: autoTotal,
-        wins: autoWins,
-        losses: autoLosses,
-        rate: autoRate,
-        recentRate: autoRecentRate,
-        trend: autoRecent.length >= 5 ? (autoRecentRate > autoRate ? '📈' : autoRecentRate < autoRate ? '📉' : '➡️') : '⏳',
-        color: autoRate >= 55 ? '#0f0' : autoRate >= 40 ? '#f0c040' : '#f55'
+        name: 'AUTO FULL',
+        total: fullStats.total,
+        wins: fullStats.wins,
+        losses: fullStats.losses,
+        rate: fullStats.rate,
+        trend: fullStats.total >= 5 ? (fullStats.rate >= 50 ? '📈' : '📉') : '⏳',
+        color: fullStats.rate >= 55 ? '#0f0' : fullStats.rate >= 40 ? '#f0c040' : '#f55'
     });
 
     // 3. SNIPER MASTER
