@@ -186,6 +186,33 @@
                         </div>
                     </div>
                     
+                    <!-- === META-PATRONES (Rachas W/L) === -->
+                    <div style="margin-bottom: 10px; padding: 8px; background: rgba(240,192,64,0.05); border: 1px solid rgba(240,192,64,0.2); border-radius: 8px;">
+                        <div style="font-size: 10px; color: var(--gold); font-weight: 700; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                            <span>🧠 META-PATRONES</span>
+                            <span id="meta-status" style="font-size: 8px; color: var(--text-dim);">Analizando rachas...</span>
+                        </div>
+                        
+                        <!-- Historial W/L visual -->
+                        <div id="meta-wl-history" style="display: flex; gap: 2px; margin-bottom: 6px; flex-wrap: wrap; max-height: 24px; overflow: hidden;">
+                            <span style="font-size: 8px; color: #555;">Esperando resultados...</span>
+                        </div>
+                        
+                        <!-- Alerta de meta-pattern -->
+                        <div id="meta-alert" style="display: none; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; border-left: 2px solid var(--gold);">
+                            <div style="font-size: 9px; font-weight: 700; color: var(--gold); margin-bottom: 2px;" id="meta-pattern-name">--</div>
+                            <div style="font-size: 8px; color: var(--text-dim);" id="meta-alert-text">--</div>
+                        </div>
+                        
+                        <!-- Patrones largos de dominancia -->
+                        <div id="meta-long-patterns" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size: 8px; color: var(--text-dim); margin-bottom: 4px;">Patrones largos detectados:</div>
+                            <div id="meta-long-list" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                <span style="font-size: 7px; color: #444;">Sin datos suficientes</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Stats de memoria -->
                     <div style="padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 8px; color: var(--text-dim);">
                         <strong style="color: var(--accent);">DB:</strong> <span id="pattern-memory-count">0</span> patrones | 

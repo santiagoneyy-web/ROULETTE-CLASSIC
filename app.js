@@ -15,6 +15,11 @@ const patternSession = []; // Spins de la sesión actual
 let patternLastSeq = null; // Última secuencia detectada
 let patternStats = { matches: 0, hits: 0, total: 0 }; // Estadísticas
 
+// === META-PATRONES (W/L Tracking) ===
+const sniperWLHistory = []; // Track de aciertos/fallos del Sniper: [{pred: 'CW', result: 'W', number: 14}, ...]
+let lastSniperPred = null; // Última predicción del Sniper para evaluar
+const MAX_WL_HISTORY = 20; // Mantener últimos 20 resultados
+
 // Eliminar completamente AUTO - usar solo Sniper y Analyst
 // window.currentAIMode = 'SAFE';
 // AUTO ELIMINADO - toggleAIMode comentado
@@ -896,8 +901,21 @@ function submitNumber(val, silent = false, batch = false) {
             // Evaluate AUTO AI predictions ALWAYS
             // evaluateAiPredictions(n);
             
-            // 🆕 Pattern Matching - analizar secuencia actual
+            // 🆕 Pattern Matching V2 con Meta-Patrones
+            // 1. Registrar resultado del Sniper anterior (si existe)
+            if (typeof registerSniperResult === 'function') registerSniperResult(n);
+            
+            // 2. Analizar patrones y hacer nueva predicción
             if (typeof analyzePatternSequence === 'function') analyzePatternSequence();
+            
+            // 3. Guardar predicción actual para evaluar en el próximo número
+            if (typeof saveSniperPrediction === 'function' && lastSignal) {
+                const sniperPred = masterView.target || (analystView.targetDir);
+                const sniperTarget = lastSignal.targetCW || lastSignal.targetCCW;
+                if (sniperPred && sniperTarget) {
+                    saveSniperPrediction(sniperPred, sniperTarget);
+                }
+            }
         }
     }
 }
@@ -2574,5 +2592,203 @@ async function fetchPatternsFromServer(key) {
             if (memEl) memEl.innerText = patternMemory.length;
         }
     } catch(e) { /* Silencioso */ }
+}
+
+// === SISTEMA DE META-PATRONES (W/L Tracking) ===
+
+// Registrar resultado del Sniper (llamar cuando llega un número nuevo)
+function registerSniperResult(actualNumber) {
+    if (!lastSniperPred || !actualNumber) return;
+    
+    // Calcular si acertó (N9 dentro de vecinos)
+    let result = 'L';
+    if (typeof wheelNeighbors === 'function' && lastSniperPred.target) {
+        const neighbors = wheelNeighbors(Number(lastSniperPred.target), 9);
+        if (neighbors.includes(actualNumber)) {
+            result = 'W';
+        }
+    }
+    
+    // Guardar en historial
+    sniperWLHistory.push({
+        pred: lastSniperPred.dir,
+        target: lastSniperPred.target,
+        result: result,
+        number: actualNumber,
+        timestamp: Date.now()
+    });
+    
+    // Limitar tamaño
+    if (sniperWLHistory.length > MAX_WL_HISTORY) {
+        sniperWLHistory.shift();
+    }
+    
+    // Actualizar meta-patrones
+    updateMetaPatterns();
+    
+    // Guardar para próxima predicción
+    lastSniperPred = null;
+}
+
+// Guardar predicción actual del Sniper (llamar antes de que llegue el número)
+function saveSniperPrediction(dir, target) {
+    lastSniperPred = { dir, target, time: Date.now() };
+}
+
+// Detectar y mostrar meta-patrones
+function updateMetaPatterns() {
+    if (sniperWLHistory.length < 3) return;
+    
+    const wlSeq = sniperWLHistory.map(h => h.result);
+    const seqStr = wlSeq.join('');
+    const last6 = wlSeq.slice(-6);
+    
+    // Detectar meta-patrones
+    const metaPattern = detectMetaPattern(wlSeq);
+    
+    // Actualizar UI
+    const wlHistoryEl = document.getElementById('meta-wl-history');
+    const alertEl = document.getElementById('meta-alert');
+    const patternNameEl = document.getElementById('meta-pattern-name');
+    const alertTextEl = document.getElementById('meta-alert-text');
+    const statusEl = document.getElementById('meta-status');
+    
+    // Mostrar historial W/L visual
+    if (wlHistoryEl) {
+        let html = '';
+        wlSeq.slice(-12).forEach((r, i) => {
+            const color = r === 'W' ? '#0f0' : '#f55';
+            const bg = r === 'W' ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,0,0.1)';
+            html += `<span style="display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; background:${bg}; color:${color}; font-size:9px; font-weight:700; border-radius:3px; margin:1px;">${r}</span>`;
+        });
+        wlHistoryEl.innerHTML = html;
+    }
+    
+    // Mostrar alerta si hay patrón
+    if (metaPattern && alertEl && patternNameEl && alertTextEl) {
+        alertEl.style.display = 'block';
+        patternNameEl.innerText = metaPattern.name;
+        alertTextEl.innerText = metaPattern.desc;
+        
+        if (statusEl) {
+            statusEl.innerText = metaPattern.alert === 'danger' ? '⚠️ ALERTA' : '💡 SUGERENCIA';
+            statusEl.style.color = metaPattern.alert === 'danger' ? '#f55' : 'var(--gold)';
+        }
+    } else {
+        if (alertEl) alertEl.style.display = 'none';
+        if (statusEl) {
+            statusEl.innerText = 'Sin patrones claros';
+            statusEl.style.color = 'var(--text-dim)';
+        }
+    }
+    
+    // Detectar patrones largos de dominancia
+    detectLongPatterns(last6);
+}
+
+// Detector de meta-patrones (basado en tu guía)
+function detectMetaPattern(wlSeq) {
+    const seq = wlSeq.join('');
+    const last6 = wlSeq.slice(-6).join('');
+    const last5 = wlSeq.slice(-5).join('');
+    const last4 = wlSeq.slice(-4).join('');
+    
+    // 1. PICO: Larga racha W seguida de L (WWWLL o WWWWL)
+    if (seq.includes('WWWWL')) {
+        return { name: '🔥 EL PICO', desc: '4+ victorias seguidas, luego L. Esperar próxima L.', alert: 'danger', action: 'WAIT' };
+    }
+    
+    // 2. OLA: WWLL (2 buenas, 2 malas)
+    if (last4 === 'WWLL') {
+        return { name: '🌊 LA OLA', desc: 'Patrón de 2W+2L. Se repite. Alerta antes de las 2L.', alert: 'warning', action: 'REDUCE' };
+    }
+    
+    // 3. ALTERNADO perfecto: WLWL o LWLW
+    if (last4 === 'WLWL' || last4 === 'LWLW') {
+        return { name: '🔄 ALTERNANCIA', desc: 'Alternancia perfecta W-L. Alta confianza.', alert: 'info', action: 'FOLLOW' };
+    }
+    
+    // 4. DOBLE VICTORIA: WWL se repite
+    if (seq.includes('WWLWWL')) {
+        return { name: '⚡ DOBLE W', desc: 'Patrón WWL repetido. Cambiar antes de la L.', alert: 'warning', action: 'REDUCE' };
+    }
+    
+    // 5. EL RODILLO: Largas rachas L (LLLL)
+    if (last4 === 'LLLL' || seq.includes('LLLLL')) {
+        return { name: '⬛ RODILLO', desc: 'Racha extensa de L. No hay rachas largas, mantener alerta.', alert: 'danger', action: 'WAIT' };
+    }
+    
+    // 6. EL BAMBÚ: WWWLL
+    if (last5 === 'WWWLL') {
+        return { name: '🎋 EL BAMBU', desc: '3 suben, 2 bajan. Observar siguiente aumento.', alert: 'info', action: 'WATCH' };
+    }
+    
+    // 7. PATRÓN DE 5 PASOS: WWLWL exacto
+    if (last5 === 'WWLWL') {
+        return { name: '🎯 PASO 5', desc: 'Secuencia exacta WWLWL. Este patrón se repite.', alert: 'info', action: 'FOLLOW' };
+    }
+    
+    // 8. TENDENCIA ASCENDENTE: W aumentan
+    const last6W = wlSeq.slice(-6).filter(r => r === 'W').length;
+    if (last6W >= 4 && last6W < 6) {
+        return { name: '📈 TENDENCIA ALCISTA', desc: 'Victorias aumentando. Buen momento.', alert: 'success', action: 'INCREASE' };
+    }
+    
+    // 9. TENDENCIA DESCENDENTE: L aumentan
+    const last6L = wlSeq.slice(-6).filter(r => r === 'L').length;
+    if (last6L >= 4 && last6L < 6) {
+        return { name: '📉 TENDENCIA BAJISTA', desc: 'Pérdidas aumentando. Reducir exposición.', alert: 'danger', action: 'REDUCE' };
+    }
+    
+    return null;
+}
+
+// Detectar patrones largos de dominancia (más de 4 viajes)
+function detectLongPatterns(last6WL) {
+    const longListEl = document.getElementById('meta-long-list');
+    if (!longListEl) return;
+    
+    const patterns = [];
+    
+    // Contar W vs L en últimos 6
+    const wCount = last6WL.filter(r => r === 'W').length;
+    const lCount = last6WL.filter(r => r === 'L').length;
+    
+    if (wCount >= 4) {
+        patterns.push({ name: 'Dominancia W', icon: '🟢', desc: `${wCount}/6 aciertos` });
+    }
+    if (lCount >= 4) {
+        patterns.push({ name: 'Dominancia L', icon: '🔴', desc: `${lCount}/6 fallos` });
+    }
+    
+    // Detectar rachas actuales
+    let currentStreak = 1;
+    let streakType = last6WL[last6WL.length - 1];
+    for (let i = last6WL.length - 2; i >= 0; i--) {
+        if (last6WL[i] === streakType) {
+            currentStreak++;
+        } else {
+            break;
+        }
+    }
+    
+    if (currentStreak >= 3) {
+        patterns.push({ 
+            name: `Racha ${streakType}`, 
+            icon: streakType === 'W' ? '🔥' : '⚠️', 
+            desc: `${currentStreak} seguidos` 
+        });
+    }
+    
+    // Renderizar
+    if (patterns.length === 0) {
+        longListEl.innerHTML = '<span style="font-size: 7px; color: #444;">Sin patrones largos claros</span>';
+    } else {
+        let html = '';
+        patterns.forEach(p => {
+            html += `<span style="display:inline-block; padding: 2px 5px; background: rgba(0,0,0,0.2); border-radius: 3px; font-size: 8px; color: var(--text-dim); margin: 1px;">${p.icon} ${p.name}: ${p.desc}</span>`;
+        });
+        longListEl.innerHTML = html;
+    }
 }
 
