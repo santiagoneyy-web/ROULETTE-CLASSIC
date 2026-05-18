@@ -2877,15 +2877,16 @@ function updateAnalystV2(seq, matches, patternBoost) {
         detailEl.innerText = displayReason;
     }
     
-    // Mostrar contador W/L
-    const wlEl = document.getElementById('analyst-v2-wl');
-    if (wlEl) {
-        const wins = analystV2History.filter(x => x === 'win').length;
-        const losses = analystV2History.filter(x => x === 'loss').length;
-        const total = wins + losses;
-        const rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
-        wlEl.innerText = `W:${wins} L:${losses} ${rate}%`;
-        wlEl.style.color = rate >= 50 ? 'var(--green)' : '#f55';
+    // Mostrar contador W/L (formato igual a V1)
+    const rateEl = document.getElementById('analyst-v2-rate');
+    const perfEl = document.getElementById('analyst-v2-perf');
+    if (rateEl && perfEl) {
+        const last10 = analystV2History.slice(-10);
+        const wins = last10.filter(x => x === 'win').length;
+        const rate = last10.length > 0 ? ((wins / last10.length) * 100).toFixed(0) : 0;
+        
+        rateEl.innerText = `${rate}%`;
+        perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
     }
     
     if (boostEl && boostValEl) {
@@ -3023,15 +3024,16 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
         }
     }
     
-    // Mostrar contador W/L
-    const wlEl = document.getElementById('sniper-v2-wl');
-    if (wlEl) {
-        const wins = sniperV2History.filter(x => x === 'win').length;
-        const losses = sniperV2History.filter(x => x === 'loss').length;
-        const total = wins + losses;
-        const rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
-        wlEl.innerText = `W:${wins} L:${losses} ${rate}%`;
-        wlEl.style.color = rate >= 50 ? 'var(--green)' : '#f55';
+    // Mostrar contador W/L (formato igual a V1)
+    const rateEl = document.getElementById('sniper-v2-rate');
+    const perfEl = document.getElementById('sniper-v2-perf');
+    if (rateEl && perfEl) {
+        const last10 = sniperV2History.slice(-10);
+        const wins = last10.filter(x => x === 'win').length;
+        const rate = last10.length > 0 ? ((wins / last10.length) * 100).toFixed(0) : 0;
+        
+        rateEl.innerText = `${rate}%`;
+        perfEl.innerHTML = last10.map(r => `<span class="${r==='win'?'perf-w':'perf-l'}">${r==='win'?'W':'L'}</span>`).join('') || '--';
     }
     
     if (rhythmEl) rhythmEl.innerText = rhythm.label || 'Mixto';
