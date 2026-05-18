@@ -8,41 +8,26 @@ const cwHistory = [];
 const ccwHistory = [];
 const cwN4History = [];
 const ccwN4History = [];
-const aiN9History = [];
-const aiN4History = [];
-let aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
-let aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
 
-let lastAiPredN9 = null;
-let lastAiPredN4 = null;
-let lastAiPredMode = 'SAFE';
+// Pattern Matching variables
+const patternMemory = []; // Almacena patrones históricos extraídos
+const patternSession = []; // Spins de la sesión actual
+let patternLastSeq = null; // Última secuencia detectada
+let patternStats = { matches: 0, hits: 0, total: 0 }; // Estadísticas
 
-// Separate per-mode stats for SAFE/FULL
-let aiStatsSafe = { n9: { wins:0, losses:0, total:0, rate:0 }, n4: { wins:0, losses:0, total:0, rate:0 } };
-let aiStatsFull = { n9: { wins:0, losses:0, total:0, rate:0 }, n4: { wins:0, losses:0, total:0, rate:0 } };
-let aiHistSafe = { n9: [], n4: [] };
-let aiHistFull = { n9: [], n4: [] };
-
-function isResolvedAiOutcome(value) {
-    return value === 'win' || value === 'loss';
-}
-
-window.currentAIMode = 'SAFE';
-window.toggleAIMode = function() {
-    const btn = document.getElementById('btn-ai-mode');
-    const note = document.getElementById('auto-ai-mode-note');
-    if (window.currentAIMode === 'SAFE') {
-        window.currentAIMode = 'FULL';
-        if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
-        if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
-    } else {
-        window.currentAIMode = 'SAFE';
-        if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
-        if(note) note.innerText = 'SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.';
-    }
-    if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
-};
-
+// Eliminar completamente AUTO - usar solo Sniper y Analyst
+// window.currentAIMode = 'SAFE';
+// AUTO ELIMINADO - toggleAIMode comentado
+// window.toggleAIMode = function() {
+//     const btn = document.getElementById('btn-ai-mode');
+//     const note = document.getElementById('auto-ai-mode-note');
+//     if (window.currentAIMode === 'SAFE') {
+//         window.currentAIMode = 'FULL';
+//         if(btn) { btn.innerText = 'FULL ACTIVO'; btn.style.background = 'rgba(255,100,100,0.15)'; btn.style.color = '#f55'; btn.style.borderColor = '#f55'; }
+//         if(note) note.innerText = 'FULL: siempre propone una jugada, incluso si la ventaja es corta o la mesa esta mixta.';
+//     } else {
+//         window.currentAIMode = 'SAFE';
+//         if(btn) { btn.innerText = 'SAFE FILTRA'; btn.style.background = 'rgba(240,192,64,0.15)'; btn.style.color = '#f0c040'; btn.style.borderColor = '#f0c040'; }
 let lastSignal  = null;
 let currentTableId = null;
 
@@ -899,14 +884,18 @@ function submitNumber(val, silent = false, batch = false) {
             renderMasterUI();
             if (history.length > 0) fetchPatternMemory(history);
             
+            // AUTO ELIMINADO - Usando solo Sniper y Analyst
             // 🔥 Sync AI history to update W/L counters automatically
-            if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
+            // if (typeof syncAiPredictionState === 'function') syncAiPredictionState();
             
             // Trigger new AI prediction (always, even in background)
-            setTimeout(requestAutoAI, 800);
+            // setTimeout(requestAutoAI, 800);
             
             // Evaluate AUTO AI predictions ALWAYS
-            evaluateAiPredictions(n);
+            // evaluateAiPredictions(n);
+            
+            // 🆕 Pattern Matching - analizar secuencia actual
+            if (typeof analyzePatternSequence === 'function') analyzePatternSequence();
         }
     }
 }
@@ -2347,5 +2336,115 @@ function renderAgentDashboard() {
 
     content.innerHTML = html;
     if (status) status.innerText = agents.length + ' AGENTES';
+}
+
+// === PATTERN MATCHING SYSTEM ===
+// Nuevo sistema de reconocimiento de patrones históricos
+
+function getSequenceFromHistory(len = 4) {
+    if (history.length < len + 1) return null;
+    const seq = [];
+    for (let i = history.length - len; i < history.length; i++) {
+        const dist = calcDist(history[i-1], history[i]);
+        const dir = dist >= 0 ? 'R' : 'L';
+        const mag = Math.abs(dist) >= 10 ? 'B' : 'S';
+        seq.push({ dir, mag, dist });
+    }
+    return seq;
+}
+
+function sequenceToKey(seq) {
+    if (!seq || seq.length === 0) return '';
+    return seq.map(s => s.dir + s.mag).join('');
+}
+
+async function analyzePatternSequence() {
+    const seq = getSequenceFromHistory(4);
+    if (!seq) return;
+    
+    const key = sequenceToKey(seq);
+    patternLastSeq = key;
+    patternSession.push({ key, timestamp: Date.now() });
+    
+    // Actualizar UI
+    const seqEl = document.getElementById('pattern-current-seq');
+    if (seqEl) seqEl.innerText = 'Secuencia: ' + key;
+    
+    const sessionEl = document.getElementById('pattern-session-count');
+    if (sessionEl) sessionEl.innerText = patternSession.length;
+    
+    // Buscar en memoria local primero
+    const matches = patternMemory.filter(p => p.key === key);
+    
+    // Actualizar lista de matches
+    const listEl = document.getElementById('pattern-list');
+    if (listEl) {
+        if (matches.length === 0) {
+            listEl.innerHTML = '<div style="padding: 8px; text-align: center; color: var(--muted); font-size: 10px;">Patrón nuevo - sin historial</div>';
+        } else {
+            let html = '';
+            matches.slice(0, 5).forEach(m => {
+                const conf = Math.round((m.outcomes?.hits || 0) / (m.outcomes?.total || 1) * 100);
+                html += '<div style="padding: 4px 6px; margin: 2px 0; background: rgba(0,229,200,0.05); border-radius: 4px; font-size: 9px; display: flex; justify-content: space-between;">';
+                html += '<span>#' + m.pattern_id?.slice(-6) + '</span>';
+                html += '<span style="color: ' + (conf >= 60 ? '#0f0' : conf >= 40 ? '#f0c040' : '#f55') + ';">' + conf + '%</span>';
+                html += '</div>';
+            });
+            listEl.innerHTML = html;
+        }
+    }
+    
+    // Calcular predicción basada en matches
+    if (matches.length > 0) {
+        const total = matches.reduce((sum, m) => sum + (m.outcomes?.total || 0), 0);
+        const cwHits = matches.reduce((sum, m) => sum + (m.outcomes?.next_dir?.CW || 0), 0);
+        const ccwHits = matches.reduce((sum, m) => sum + (m.outcomes?.next_dir?.CCW || 0), 0);
+        
+        const cwPct = total > 0 ? Math.round(cwHits / total * 100) : 50;
+        const ccwPct = total > 0 ? Math.round(ccwHits / total * 100) : 50;
+        
+        const predDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+        const conf = Math.abs(cwPct - ccwPct) + 50;
+        
+        const predDirEl = document.getElementById('pattern-pred-dir');
+        const predConfEl = document.getElementById('pattern-pred-conf');
+        const predDetailEl = document.getElementById('pattern-pred-detail');
+        
+        if (predDirEl) predDirEl.innerText = predDir;
+        if (predConfEl) predConfEl.innerText = Math.min(conf, 95) + '%';
+        if (predDetailEl) predDetailEl.innerText = 'Basado en ' + matches.length + ' patrones históricos';
+        
+        patternStats.matches++;
+    } else {
+        const predDirEl = document.getElementById('pattern-pred-dir');
+        const predConfEl = document.getElementById('pattern-pred-conf');
+        const predDetailEl = document.getElementById('pattern-pred-detail');
+        
+        if (predDirEl) predDirEl.innerText = '--';
+        if (predConfEl) predConfEl.innerText = '0%';
+        if (predDetailEl) predDetailEl.innerText = 'Sin coincidencias - patrón nuevo';
+    }
+    
+    // Buscar en servidor (opcional, para cargar más patrones)
+    fetchPatternsFromServer(key);
+}
+
+async function fetchPatternsFromServer(key) {
+    try {
+        const resp = await fetch('/api/patterns/match?key=' + key + '&tableId=' + currentTableId);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.patterns && data.patterns.length > 0) {
+            // Fusionar con memoria local
+            data.patterns.forEach(p => {
+                if (!patternMemory.find(mp => mp.pattern_id === p.pattern_id)) {
+                    patternMemory.push(p);
+                }
+            });
+            // Actualizar contador
+            const memEl = document.getElementById('pattern-memory-count');
+            if (memEl) memEl.innerText = patternMemory.length;
+        }
+    } catch(e) { /* Silencioso */ }
 }
 

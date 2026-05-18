@@ -39,9 +39,11 @@
                  <div class="strategy-tabs" style="flex:1; margin-top:0;">
                      <button class="tab-btn active" id="tab-btn-dir">DIR</button>
                      <button class="tab-btn" id="tab-btn-scatter">&#x1F4CA;</button>
-                     <button class="tab-btn" id="tab-btn-auto">AUTO</button>
-                     <button class="tab-btn" id="tab-btn-sniper">SNIPER</button>
-                     <button class="tab-btn" id="tab-btn-panel">PANEL</button>
+                      <button class="tab-btn" id="tab-btn-pattern">PATTERN</button>
+                      <!-- AUTO eliminado - usando Sniper y Analyst -->
+                      <button class="tab-btn" id="tab-btn-auto" style="display:none !important;">AUTO</button>
+                      <button class="tab-btn" id="tab-btn-sniper">SNIPER</button>
+                      <button class="tab-btn" id="tab-btn-panel">PANEL</button>
                  </div>
                  <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                      <button id="btn-pred-dec" title="Bajar DIR" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); color:var(--text2); font-size:12px; width:20px; border-radius:4px; height:20px; cursor:pointer; font-weight:700; line-height:1;">-</button>
@@ -143,38 +145,34 @@
             </section>
 
                     <!-- 4. AUTO AI PREDICTOR -->
-            <section class="shadow-panel" id="panel-auto" style="display: none;">
+            <!-- PATTERN MATCHING PANEL -->
+            <section class="shadow-panel" id="panel-pattern" style="display: none;">
                 <div class="agent-card-header" style="padding: 4px 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="bot-icon">🤅</div>
-                        <h2 class="main-title">AUTO AI PREDICTOR</h2>
-                    </div>
-                    <button id="btn-ai-mode" onclick="toggleAIMode()" style="background: rgba(240,192,64,0.15); border: 1px solid #f0c040; color: #f0c040; font-size: 8px; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-weight: 700; margin-right: 6px;">SAFE FILTRA</button>
-                    <span id="ai-status" style="padding:1px 6px;">STANDBY</span>
+                    <span class="agent-icon">🔍</span>
+                    <span class="agent-card-name">PATTERN MATCHING</span>
+                    <span id="pattern-status" style="padding:1px 6px; font-size:9px;">Buscando...</span>
                 </div>
-                <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">
-                    <div id="auto-ai-mode-note" style="font-size: 9px; color: var(--muted); padding: 0 2px 2px 2px;">SAFE: solo entra si la ventaja se ve clara. FULL: fuerza la mejor lectura disponible.</div>
-                    <div id="ai-pred-n9" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(0,229,200,0.2); position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:var(--accent);">🎯 N9:</strong>&nbsp;<span id="ai-pred-n9-text">Analizando mesa en vivo...</span></div>
-                            <button onclick="toggleAiHist('n9', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
-                        </div>
-                        <div id="ai-hist-n9" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(0,229,200,0.1); padding-top: 6px; display: none; text-align: center;">
-                            <div id="ai-hist-list-n9" style="display:flex; gap:2px; justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
+                <div style="padding: 6px 8px;">
+                    <div id="pattern-current-seq" style="font-size: 9px; color: var(--muted); margin-bottom: 6px; font-family: var(--mono);">Secuencia actual: --</div>
+                    
+                    <div id="pattern-matches" style="margin-bottom: 8px;">
+                        <div style="font-size: 9px; color: var(--accent); margin-bottom: 4px;">PATRONES ENCONTRADOS:</div>
+                        <div id="pattern-list" style="max-height: 120px; overflow-y: auto;">
+                            <div style="padding: 8px; text-align: center; color: var(--muted); font-size: 10px;">Esperando secuencia...</div>
                         </div>
                     </div>
-                    <div id="ai-pred-n4" style="background: rgba(255,100,100,0.05); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text); border: 1px solid rgba(255,100,100,0.2); position: relative;">
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; position: relative;">
-                            <div><strong style="color:#f55;">🔥 N4:</strong>&nbsp;<span id="ai-pred-n4-text">Esperando momentum...</span></div>
-                            <button onclick="toggleAiHist('n4', this)" style="position: absolute; right: 0; background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer;">&#9662;</button>
+                    
+                    <div id="pattern-prediction" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 8px; border: 1px solid rgba(0,229,200,0.2);">
+                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">PREDICCIÓN BASADA EN PATTERNS</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 1.2rem; font-weight: 900; color: #fff;" id="pattern-pred-dir">--</span>
+                            <span style="font-size: 10px; color: var(--gold);" id="pattern-pred-conf">0%</span>
                         </div>
-                        <div id="ai-hist-n4" class="dir-hist-panel" style="width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,100,100,0.1); padding-top: 6px; display: none; text-align: center;">
-                            <div id="ai-hist-list-n4" style="display:flex; gap:2px;/justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; padding-left: 2px; width: 100%; box-sizing: border-box;"><span style="opacity:0.5">Sin datos</span></div>
-                        </div>
+                        <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px;" id="pattern-pred-detail">Sin coincidencias aún</div>
                     </div>
-                    <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,229,200,0.04); border-radius: 8px; border: 1px solid rgba(0,229,200,0.1);">
-                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">LECTURA AI</div>
-                        <div id="auto-ai-analysis" style="font-size: 10px; color: var(--text2); line-height: 1.4;">La IA generará señales automáticamente cada giro.</div>
+                    
+                    <div style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 8px; color: var(--text-dim);">
+                        <strong style="color: var(--accent);">MEMORIA:</strong> <span id="pattern-memory-count">0</span> patrones históricos | <span id="pattern-session-count">0</span> spins sesión
                     </div>
                 </div>
             </section>
