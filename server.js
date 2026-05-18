@@ -1142,7 +1142,6 @@ function normalizeAutoAiResponse(parsed, context, fallback) {
         String(ccw.n4Small), String(ccw.n4Big)
     ].filter(v => v && v !== 'undefined' && v !== 'null');
     const allowedN4 = [
-        String(cw.n9), String(ccw.n9),
         String(cw.n4Small), String(cw.n4Big),
         String(ccw.n4Small), String(ccw.n4Big)
     ].filter(v => v && v !== 'undefined' && v !== 'null');
