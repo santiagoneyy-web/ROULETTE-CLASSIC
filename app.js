@@ -2799,12 +2799,34 @@ function updateAnalystV2(seq, matches, patternBoost) {
         }
     }
     
-    // 5. Si hay patrones pero no había dirección, usar dirección del patrón
-    if (!displayDir && matches.length > 0) {
-        const cwCount = matches.filter(m => (m.outcomes?.next_dir?.CW || 0) > (m.outcomes?.next_dir?.CCW || 0)).length;
-        displayDir = cwCount > matches.length / 2 ? 'CW' : 'CCW';
-        displaySignal = 'PATTERN MATCH';
-        displayReason = `Dirección por ${matches.length} patrones históricos`;
+    // 5. Calcular stats reales de patrones DB
+    let analystDbStats = '';
+    if (matches.length > 0) {
+        let totalOcc = 0;
+        let cwCount = 0;
+        let ccwCount = 0;
+        
+        matches.forEach(m => {
+            totalOcc += m.outcomes?.total || 0;
+            cwCount += m.outcomes?.next_dir?.CW || 0;
+            ccwCount += m.outcomes?.next_dir?.CCW || 0;
+        });
+        
+        if (totalOcc > 0) {
+            const cwPct = Math.round((cwCount / totalOcc) * 100);
+            const ccwPct = Math.round((ccwCount / totalOcc) * 100);
+            const domDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+            const domPct = Math.max(cwPct, ccwPct);
+            
+            analystDbStats = `${matches.length}p | ${domDir} ${domPct}% (${totalOcc})`;
+            
+            // Si no había dirección, usar la del patrón dominante
+            if (!displayDir) {
+                displayDir = domDir;
+                displaySignal = 'PATTERN MATCH';
+                displayReason = `DB: ${domPct}% ${domDir} en ${totalOcc} casos`;
+            }
+        }
     }
     
     // Actualizar UI de Analyst V2
@@ -2836,9 +2858,9 @@ function updateAnalystV2(seq, matches, patternBoost) {
     }
     
     if (boostEl && boostValEl) {
-        if (patternBoost > 0) {
+        if (analystDbStats) {
             boostEl.style.display = 'block';
-            boostValEl.innerText = '+' + patternBoost + '%';
+            boostValEl.innerText = analystDbStats;
         } else {
             boostEl.style.display = 'none';
         }
@@ -2900,17 +2922,36 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
         reasons.push('Ritmo fuerte');
     }
     
-    // 3. Boost de patrones DB (opcional - si existen)
-    if (matches.length > 0 && patternDir) {
-        // Si el patrón coincide con la dirección actual, boost
-        if (patternDir === finalDir) {
-            finalConf = Math.min(finalConf + patternConf, 95);
-            reasons.push(`DB +${patternConf}%`);
-        } else if (!finalDir) {
-            // Si no había dirección, usar la del patrón
-            finalDir = patternDir;
-            finalConf = patternConf;
-            reasons.push('Pattern DB');
+    // 3. Análisis de patrones DB - calcular stats reales
+    let dbStatsText = '';
+    if (matches.length > 0) {
+        // Calcular éxito real de los patrones
+        let totalOccurrences = 0;
+        let cwHits = 0;
+        let ccwHits = 0;
+        
+        matches.forEach(m => {
+            totalOccurrences += m.outcomes?.total || 0;
+            cwHits += m.outcomes?.next_dir?.CW || 0;
+            ccwHits += m.outcomes?.next_dir?.CCW || 0;
+        });
+        
+        if (totalOccurrences > 0) {
+            const cwPct = Math.round((cwHits / totalOccurrences) * 100);
+            const ccwPct = Math.round((ccwHits / totalOccurrences) * 100);
+            const dominantDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+            const dominantPct = Math.max(cwPct, ccwPct);
+            
+            dbStatsText = `${matches.length} patterns | ${dominantDir} ${dominantPct}% (${totalOccurrences} casos)`;
+            
+            // Boost si coincide con V1
+            if (patternDir === finalDir && patternDir === dominantDir) {
+                const boost = Math.min(patternConf, 15);
+                finalConf = Math.min(finalConf + boost, 95);
+                reasons.push(`DB ${dominantPct}%`);
+            }
+        } else {
+            dbStatsText = `${matches.length} patterns DB (sin stats)`;
         }
     }
     
@@ -2950,8 +2991,8 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
     
     if (rhythmEl) rhythmEl.innerText = rhythm.label || 'Mixto';
     if (patternsEl) {
-        if (matches.length > 0) {
-            patternsEl.innerText = `${matches.length} patterns DB`;
+        if (dbStatsText) {
+            patternsEl.innerText = dbStatsText;
             patternsEl.style.color = 'var(--accent)';
         } else {
             patternsEl.innerText = 'Sin datos históricos';
