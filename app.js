@@ -294,30 +294,6 @@ async function syncRawPredictionState() {
         const rows = await resp.json();
         const predictions = Array.isArray(rows) ? rows.slice().reverse() : [];
 
-        rawN9History.length = 0;
-        rawN4History.length = 0;
-        rawN9Wins = 0;
-        rawN9Losses = 0;
-        rawN4Wins = 0;
-        rawN4Losses = 0;
-        lastRawPredN9 = null;
-        lastRawPredN4 = null;
-
-        predictions.forEach(item => {
-            const n9Result = item.n9_result || (isResolvedAiOutcome(item.result) ? item.result : null);
-            const n4Result = item.n4_result || (isResolvedAiOutcome(item.result) ? item.result : null);
-            if (isResolvedAiOutcome(n9Result)) {
-                rawN9History.push(n9Result);
-                if (n9Result === 'win') rawN9Wins++; else rawN9Losses++;
-            }
-            if (isResolvedAiOutcome(n4Result)) {
-                rawN4History.push(n4Result);
-                if (n4Result === 'win') rawN4Wins++; else rawN4Losses++;
-            }
-        });
-        if (rawN9History.length > 20) rawN9History.splice(0, rawN9History.length - 25);
-        if (rawN4History.length > 20) rawN4History.splice(0, rawN4History.length - 25);
-
         const latestPending = predictions.slice().reverse().find(item => item.result === 'pending') || null;
         const latestAny = predictions.length ? predictions[predictions.length - 1] : null;
         const current = latestPending || latestAny;
@@ -1989,9 +1965,6 @@ function evaluateRawPredictions(number) {
         if (rawN4History.length > 20) rawN4History.shift();
     }
     updateRawStats();
-    
-    // Also sync from DB for accuracy
-    if (typeof syncRawPredictionState === 'function') syncRawPredictionState();
 }
 
 async function requestRawAI() {
