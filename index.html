@@ -145,42 +145,56 @@
             </section>
 
                     <!-- 4. AUTO AI PREDICTOR -->
-            <!-- PATTERN MATCHING PANEL -->
+            <!-- PATTERN MATCHING PANEL - Contiene Analyst V2 y Sniper V2 -->
             <section class="shadow-panel" id="panel-pattern" style="display: none;">
                 <div class="agent-card-header" style="padding: 4px 10px;">
                     <span class="agent-icon">🔍</span>
-                    <span class="agent-card-name">PATTERN MATCHING</span>
-                    <span id="pattern-status" style="padding:1px 6px; font-size:9px;">Buscando...</span>
+                    <span class="agent-card-name">PATTERN MACHINE V2</span>
+                    <span id="pattern-status" style="padding:1px 6px; font-size:9px;">ANALIZANDO...</span>
                 </div>
                 <div style="padding: 6px 8px;">
-                    <div id="pattern-current-seq" style="font-size: 9px; color: var(--muted); margin-bottom: 6px; font-family: var(--mono);">Secuencia actual: --</div>
+                    <!-- Info de secuencia actual -->
+                    <div id="pattern-current-seq" style="font-size: 9px; color: var(--muted); margin-bottom: 8px; font-family: var(--mono);">Secuencia: --</div>
                     
-                    <div id="pattern-matches" style="margin-bottom: 8px; display: none;">
-                        <!-- Lista interna oculta - solo para debug -->
-                        <div id="pattern-list" style="max-height: 120px; overflow-y: auto;"></div>
-                    </div>
-                    
-                    <div style="font-size: 8px; color: var(--text-dim); margin-bottom: 8px; padding: 4px; background: rgba(0,0,0,0.1); border-radius: 4px;">
-                        <strong style="color: var(--accent);">⚠ NOTA:</strong> Patrones sugeridos detectados por el sistema. 
-                        Son referencias históricas similares, <strong style="color: var(--gold);">no validadas al 100%</strong>. 
-                        El detector de patrones evaluará si son oportunos.
-                    </div>
-                    
-                    <div id="pattern-prediction" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 8px; border: 1px solid rgba(0,229,200,0.2);">
-                        <div style="font-size: 9px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono);">PREDICCIÓN BASADA EN PATTERNS</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 1.2rem; font-weight: 900; color: #fff;" id="pattern-pred-dir">--</span>
-                            <span style="font-size: 10px; color: var(--gold);" id="pattern-pred-conf">0%</span>
+                    <!-- === ANALYST V2 (con Pattern Machine) === -->
+                    <div style="margin-bottom: 10px; padding: 8px; background: rgba(0,229,200,0.03); border: 1px solid rgba(0,229,200,0.15); border-radius: 8px;">
+                        <div style="font-size: 10px; color: var(--accent); font-weight: 700; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                            <span>📊 ANALYST V2</span>
+                            <span id="analyst-v2-signal" style="color: var(--text-dim);">ANALIZANDO...</span>
                         </div>
-                        <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px;" id="pattern-pred-detail">Sin coincidencias aún</div>
+                        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                            <span id="analyst-v2-dir" style="display: none; padding: 2px 6px; background: rgba(48,224,144,0.15); border-radius: 4px; font-size: 9px; color: var(--green);">--</span>
+                            <span id="analyst-v2-size" style="display: none; padding: 2px 6px; background: rgba(240,192,64,0.15); border-radius: 4px; font-size: 9px; color: var(--gold);">--</span>
+                        </div>
+                        <div id="analyst-v2-detail" style="font-size: 8px; color: var(--text-dim); margin-bottom: 4px;">Esperando datos...</div>
+                        <div id="analyst-v2-pattern-boost" style="font-size: 8px; color: var(--accent); display: none;">
+                            🔋 Boost: <span id="analyst-v2-boost-val">+0%</span> por patrón histórico
+                        </div>
                     </div>
                     
-                    <div style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 8px; color: var(--text-dim);">
-                        <strong style="color: var(--accent);">MEMORIA:</strong> <span id="pattern-memory-count">0</span> patrones históricos | <span id="pattern-session-count">0</span> spins sesión
+                    <!-- === SNIPER V2 (con Pattern Machine) === -->
+                    <div style="margin-bottom: 10px; padding: 8px; background: rgba(255,100,100,0.03); border: 1px solid rgba(255,100,100,0.15); border-radius: 8px;">
+                        <div style="font-size: 10px; color: #f55; font-weight: 700; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                            <span>🎯 SNIPER V2</span>
+                            <span id="sniper-v2-conf" style="color: var(--gold);">0%</span>
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #fff; text-align: center; margin: 6px 0;" id="sniper-v2-target">--</div>
+                        <div id="sniper-v2-reasons" style="font-size: 8px; color: var(--text-dim); margin-bottom: 4px; text-align: center;">--</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 8px; color: var(--text-dim);">
+                            <span>Ritmo: <span id="sniper-v2-rhythm">--</span></span>
+                            <span>Patterns: <span id="sniper-v2-patterns">--</span></span>
+                        </div>
                     </div>
                     
-                    <div style="margin-top: 6px; padding: 4px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 7px; color: #555; text-align: center;">
-                        Sistema complementario: trabaja junto con <strong style="color: var(--text-dim);">Analyst</strong> (fractales/canales) y <strong style="color: var(--text-dim);">Sniper</strong> (confluencia múltiple)
+                    <!-- Stats de memoria -->
+                    <div style="padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 8px; color: var(--text-dim);">
+                        <strong style="color: var(--accent);">DB:</strong> <span id="pattern-memory-count">0</span> patrones | 
+                        <strong style="color: var(--accent);">Sesión:</strong> <span id="pattern-session-count">0</span> spins
+                    </div>
+                    
+                    <!-- Debug (oculto) -->
+                    <div id="pattern-matches" style="display: none; margin-top: 6px;">
+                        <div id="pattern-list"></div>
                     </div>
                 </div>
             </section>

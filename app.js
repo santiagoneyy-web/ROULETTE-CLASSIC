@@ -2397,7 +2397,11 @@ async function analyzePatternSequence() {
         }
     }
     
-    // Calcular predicción basada en matches
+    // Calcular datos de pattern matching
+    let patternBoost = 0;
+    let patternDir = null;
+    let patternConf = 0;
+    
     if (matches.length > 0) {
         const total = matches.reduce((sum, m) => sum + (m.outcomes?.total || 0), 0);
         const cwHits = matches.reduce((sum, m) => sum + (m.outcomes?.next_dir?.CW || 0), 0);
@@ -2406,30 +2410,151 @@ async function analyzePatternSequence() {
         const cwPct = total > 0 ? Math.round(cwHits / total * 100) : 50;
         const ccwPct = total > 0 ? Math.round(ccwHits / total * 100) : 50;
         
-        const predDir = cwPct >= ccwPct ? 'CW' : 'CCW';
-        const conf = Math.abs(cwPct - ccwPct) + 50;
-        
-        const predDirEl = document.getElementById('pattern-pred-dir');
-        const predConfEl = document.getElementById('pattern-pred-conf');
-        const predDetailEl = document.getElementById('pattern-pred-detail');
-        
-        if (predDirEl) predDirEl.innerText = predDir;
-        if (predConfEl) predConfEl.innerText = Math.min(conf, 95) + '%';
-        if (predDetailEl) predDetailEl.innerText = matches.length + ' patrones similares encontrados · Sugerencia sin validar';
+        patternDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+        patternConf = Math.abs(cwPct - ccwPct);
+        patternBoost = Math.min(patternConf, 20); // Máximo +20% boost
         
         patternStats.matches++;
-    } else {
-        const predDirEl = document.getElementById('pattern-pred-dir');
-        const predConfEl = document.getElementById('pattern-pred-conf');
-        const predDetailEl = document.getElementById('pattern-pred-detail');
-        
-        if (predDirEl) predDirEl.innerText = '--';
-        if (predConfEl) predConfEl.innerText = '0%';
-        if (predDetailEl) predDetailEl.innerText = 'Sin coincidencias - patrón nuevo';
     }
+    
+    // === ANALYST V2: Pattern + Fractales/Canales ===
+    updateAnalystV2(seq, matches, patternBoost);
+    
+    // === SNIPER V2: Pattern + Ritmo + Confluencia ===
+    updateSniperV2(seq, matches, patternDir, patternConf);
     
     // Buscar en servidor (opcional, para cargar más patrones)
     fetchPatternsFromServer(key);
+}
+
+// === ANALYST V2: Pattern Machine + Fractales/Canales ===
+function updateAnalystV2(seq, matches, patternBoost) {
+    // Obtener análisis original de Analyst
+    const travels = seq.map(s => s.dist);
+    const baseAnalysis = analyzeTravelWave(travels);
+    
+    // Aplicar boost de pattern si existe
+    let finalConfidence = 50;
+    if (baseAnalysis.type !== 'neutral') {
+        finalConfidence = 60; // Base por tener señal
+        if (patternBoost > 0) {
+            finalConfidence += patternBoost; // Boost de pattern
+        }
+    }
+    
+    // Determinar dirección final
+    let finalDir = baseAnalysis.targetDir;
+    if (matches.length > 0 && !finalDir) {
+        // Si no hay dirección de fractal pero sí de pattern
+        const cwCount = matches.filter(m => m.outcomes?.next_dir?.CW > m.outcomes?.next_dir?.CCW).length;
+        finalDir = cwCount > matches.length / 2 ? 'CW' : 'CCW';
+    }
+    
+    // Actualizar UI de Analyst V2
+    const signalEl = document.getElementById('analyst-v2-signal');
+    const dirEl = document.getElementById('analyst-v2-dir');
+    const sizeEl = document.getElementById('analyst-v2-size');
+    const detailEl = document.getElementById('analyst-v2-detail');
+    const boostEl = document.getElementById('analyst-v2-pattern-boost');
+    const boostValEl = document.getElementById('analyst-v2-boost-val');
+    
+    if (signalEl) {
+        signalEl.innerText = baseAnalysis.signal || 'SIN SEÑAL';
+        signalEl.style.color = baseAnalysis.type === 'bullish' ? 'var(--green)' : 
+                               baseAnalysis.type === 'bearish' ? '#f55' : 'var(--text-dim)';
+    }
+    
+    if (dirEl) {
+        dirEl.innerText = finalDir || '--';
+        dirEl.style.display = finalDir ? 'inline-block' : 'none';
+    }
+    
+    if (sizeEl) {
+        sizeEl.innerText = baseAnalysis.size || '--';
+        sizeEl.style.display = baseAnalysis.size ? 'inline-block' : 'none';
+    }
+    
+    if (detailEl) {
+        let detail = baseAnalysis.reason || 'Sin patrón detectado';
+        if (matches.length > 0) {
+            detail += ` · ${matches.length} coincidencias históricas`;
+        }
+        detailEl.innerText = detail;
+    }
+    
+    if (boostEl && boostValEl) {
+        if (patternBoost > 0) {
+            boostEl.style.display = 'block';
+            boostValEl.innerText = '+' + patternBoost + '%';
+        } else {
+            boostEl.style.display = 'none';
+        }
+    }
+}
+
+// === SNIPER V2: Pattern Machine + Ritmo + Confluencia ===
+function updateSniperV2(seq, matches, patternDir, patternConf) {
+    // Análisis de ritmo (simplificado)
+    const dirs = seq.map(s => s.dir);
+    const rhythm = analyzeRhythm(dirs);
+    
+    // Calcular confianza final
+    let finalConf = patternConf;
+    let finalDir = patternDir;
+    
+    // Si hay ritmo fuerte, puede override o confirmar
+    if (rhythm.strength === 'strong' && rhythm.dir) {
+        if (!finalDir || finalDir === rhythm.dir) {
+            finalDir = rhythm.dir;
+            finalConf = Math.min(finalConf + 15, 95);
+        }
+    }
+    
+    // Actualizar UI de Sniper V2
+    const confEl = document.getElementById('sniper-v2-conf');
+    const targetEl = document.getElementById('sniper-v2-target');
+    const reasonsEl = document.getElementById('sniper-v2-reasons');
+    const rhythmEl = document.getElementById('sniper-v2-rhythm');
+    const patternsEl = document.getElementById('sniper-v2-patterns');
+    
+    if (confEl) confEl.innerText = finalConf + '%';
+    
+    if (targetEl) {
+        if (finalDir) {
+            targetEl.innerText = finalDir === 'CW' ? 'DERECHA' : 'IZQUIERDA';
+            targetEl.style.color = finalDir === 'CW' ? 'var(--green)' : '#d1abff';
+        } else {
+            targetEl.innerText = 'ESPERANDO...';
+            targetEl.style.color = '#fff';
+        }
+    }
+    
+    if (reasonsEl) {
+        let reasons = [];
+        if (matches.length > 0) reasons.push(`${matches.length} patrones DB`);
+        if (rhythm.label) reasons.push(rhythm.label);
+        reasonsEl.innerText = reasons.length > 0 ? reasons.join(' + ') : 'Sin confluencia';
+    }
+    
+    if (rhythmEl) rhythmEl.innerText = rhythm.label || '--';
+    if (patternsEl) patternsEl.innerText = matches.length > 0 ? `${matches.length} matches` : 'Sin DB';
+}
+
+// Helper para análisis de ritmo
+function analyzeRhythm(dirs) {
+    if (dirs.length < 3) return { strength: 'weak', dir: null, label: 'Insuficiente' };
+    
+    // Detectar patrones simples
+    const last3 = dirs.slice(-3).join('');
+    const last4 = dirs.slice(-4).join('');
+    
+    if (last4 === 'RRRR') return { strength: 'strong', dir: 'CW', label: '🔥 Racha CW' };
+    if (last4 === 'LLLL') return { strength: 'strong', dir: 'CCW', label: '🔥 Racha CCW' };
+    if (last4 === 'RLRL' || last4 === 'LRLR') return { strength: 'medium', dir: dirs[dirs.length-1] === 'R' ? 'CCW' : 'CW', label: '🔄 Zigzag' };
+    if (last3 === 'RRR') return { strength: 'medium', dir: 'CW', label: 'CW Fuerte' };
+    if (last3 === 'LLL') return { strength: 'medium', dir: 'CCW', label: 'CCW Fuerte' };
+    
+    return { strength: 'weak', dir: null, label: 'Mixto' };
 }
 
 async function fetchPatternsFromServer(key) {
