@@ -155,11 +155,15 @@
                 <div style="padding: 6px 8px;">
                     <div id="pattern-current-seq" style="font-size: 9px; color: var(--muted); margin-bottom: 6px; font-family: var(--mono);">Secuencia actual: --</div>
                     
-                    <div id="pattern-matches" style="margin-bottom: 8px;">
-                        <div style="font-size: 9px; color: var(--accent); margin-bottom: 4px;">PATRONES ENCONTRADOS:</div>
-                        <div id="pattern-list" style="max-height: 120px; overflow-y: auto;">
-                            <div style="padding: 8px; text-align: center; color: var(--muted); font-size: 10px;">Esperando secuencia...</div>
-                        </div>
+                    <div id="pattern-matches" style="margin-bottom: 8px; display: none;">
+                        <!-- Lista interna oculta - solo para debug -->
+                        <div id="pattern-list" style="max-height: 120px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div style="font-size: 8px; color: var(--text-dim); margin-bottom: 8px; padding: 4px; background: rgba(0,0,0,0.1); border-radius: 4px;">
+                        <strong style="color: var(--accent);">⚠ NOTA:</strong> Patrones sugeridos detectados por el sistema. 
+                        Son referencias históricas similares, <strong style="color: var(--gold);">no validadas al 100%</strong>. 
+                        El detector de patrones evaluará si son oportunos.
                     </div>
                     
                     <div id="pattern-prediction" style="background: rgba(0,229,200,0.05); border-radius: 8px; padding: 8px; border: 1px solid rgba(0,229,200,0.2);">
@@ -173,6 +177,10 @@
                     
                     <div style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 8px; color: var(--text-dim);">
                         <strong style="color: var(--accent);">MEMORIA:</strong> <span id="pattern-memory-count">0</span> patrones históricos | <span id="pattern-session-count">0</span> spins sesión
+                    </div>
+                    
+                    <div style="margin-top: 6px; padding: 4px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 7px; color: #555; text-align: center;">
+                        Sistema complementario: trabaja junto con <strong style="color: var(--text-dim);">Analyst</strong> (fractales/canales) y <strong style="color: var(--text-dim);">Sniper</strong> (confluencia múltiple)
                     </div>
                 </div>
             </section>

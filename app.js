@@ -2378,21 +2378,22 @@ async function analyzePatternSequence() {
     // Buscar en memoria local primero
     const matches = patternMemory.filter(p => p.key === key);
     
-    // Actualizar lista de matches
+    // Guardar matches en memoria (lista oculta - solo debug)
     const listEl = document.getElementById('pattern-list');
     if (listEl) {
-        if (matches.length === 0) {
-            listEl.innerHTML = '<div style="padding: 8px; text-align: center; color: var(--muted); font-size: 10px;">Patrón nuevo - sin historial</div>';
-        } else {
-            let html = '';
-            matches.slice(0, 5).forEach(m => {
+        // Solo mostrar en modo debug (si existe param ?debug=1)
+        const isDebug = window.location.search.includes('debug=1');
+        if (isDebug && matches.length > 0) {
+            let html = '<div style="font-size: 8px; color: var(--accent); margin-bottom: 4px;">[DEBUG] Patrones internos:</div>';
+            matches.slice(0, 3).forEach(m => {
                 const conf = Math.round((m.outcomes?.hits || 0) / (m.outcomes?.total || 1) * 100);
-                html += '<div style="padding: 4px 6px; margin: 2px 0; background: rgba(0,229,200,0.05); border-radius: 4px; font-size: 9px; display: flex; justify-content: space-between;">';
-                html += '<span>#' + m.pattern_id?.slice(-6) + '</span>';
-                html += '<span style="color: ' + (conf >= 60 ? '#0f0' : conf >= 40 ? '#f0c040' : '#f55') + ';">' + conf + '%</span>';
-                html += '</div>';
+                html += '<div style="padding: 2px 4px; margin: 1px 0; background: rgba(0,0,0,0.2); border-radius: 2px; font-size: 7px; color: #666;">';
+                html += m.pattern_id?.slice(-6) + ' : ' + conf + '%</div>';
             });
             listEl.innerHTML = html;
+            listEl.parentElement.style.display = 'block';
+        } else {
+            listEl.innerHTML = '';
         }
     }
     
@@ -2414,7 +2415,7 @@ async function analyzePatternSequence() {
         
         if (predDirEl) predDirEl.innerText = predDir;
         if (predConfEl) predConfEl.innerText = Math.min(conf, 95) + '%';
-        if (predDetailEl) predDetailEl.innerText = 'Basado en ' + matches.length + ' patrones históricos';
+        if (predDetailEl) predDetailEl.innerText = matches.length + ' patrones similares encontrados · Sugerencia sin validar';
         
         patternStats.matches++;
     } else {
