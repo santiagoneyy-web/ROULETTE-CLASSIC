@@ -2487,121 +2487,200 @@ function renderAgentDashboard() {
     if (!content) return;
     if (status) status.innerText = 'ACTUALIZANDO...';
 
-    const agents = [];
-
-    // 1. AUTO (SAFE mode)
-    const safeStats = aiStatsSafe.n9;
-    agents.push({
-        name: 'AUTO SAFE',
-        total: safeStats.total,
-        wins: safeStats.wins,
-        losses: safeStats.losses,
-        rate: safeStats.rate,
-        trend: safeStats.total >= 5 ? (safeStats.rate >= 50 ? '📈' : '📉') : '⏳',
-        color: safeStats.rate >= 55 ? '#0f0' : safeStats.rate >= 40 ? '#f0c040' : '#f55'
-    });
-
-    // 2. AUTO (FULL mode)  
-    const fullStats = aiStatsFull.n9;
-    agents.push({
-        name: 'AUTO FULL',
-        total: fullStats.total,
-        wins: fullStats.wins,
-        losses: fullStats.losses,
-        rate: fullStats.rate,
-        trend: fullStats.total >= 5 ? (fullStats.rate >= 50 ? '📈' : '📉') : '⏳',
-        color: fullStats.rate >= 55 ? '#0f0' : fullStats.rate >= 40 ? '#f0c040' : '#f55'
-    });
-
-    // 3. SNIPER MASTER
-    const sniperTotal = masterHistory.filter(x => x === 'win' || x === 'loss').length;
-    const sniperWins = masterHistory.filter(x => x === 'win').length;
-    const sniperLosses = masterHistory.filter(x => x === 'loss').length;
-    const sniperRate = sniperTotal > 0 ? Math.round((sniperWins / sniperTotal) * 100) : 0;
-    const sniperRecent = masterHistory.filter(x => x === 'win' || x === 'loss').slice(-10);
-    const sniperRecentWins = sniperRecent.filter(x => x === 'win').length;
-    const sniperRecentRate = sniperRecent.length > 0 ? Math.round((sniperRecentWins / sniperRecent.length) * 100) : 0;
-    agents.push({
-        name: 'SNIPER MASTER',
-        total: sniperTotal,
-        wins: sniperWins,
-        losses: sniperLosses,
-        rate: sniperRate,
-        recentRate: sniperRecentRate,
-        trend: sniperRecent.length >= 5 ? (sniperRecentRate > sniperRate ? '📈' : sniperRecentRate < sniperRate ? '📉' : '➡️') : '⏳',
-        color: sniperRate >= 55 ? '#0f0' : sniperRate >= 40 ? '#f0c040' : '#f55'
-    });
-
-    // 4. ANALYST
-    const analystTotal = analystHistory.filter(x => x === 'win' || x === 'loss').length;
-    const analystWins = analystHistory.filter(x => x === 'win').length;
-    const analystLosses = analystHistory.filter(x => x === 'loss').length;
-    const analystRate = analystTotal > 0 ? Math.round((analystWins / analystTotal) * 100) : 0;
-    const analystRecent = analystHistory.filter(x => x === 'win' || x === 'loss').slice(-10);
-    const analystRecentWins = analystRecent.filter(x => x === 'win').length;
-    const analystRecentRate = analystRecent.length > 0 ? Math.round((analystRecentWins / analystRecent.length) * 100) : 0;
-    agents.push({
-        name: 'ANALYST',
-        total: analystTotal,
-        wins: analystWins,
-        losses: analystLosses,
-        rate: analystRate,
-        recentRate: analystRecentRate,
-        trend: analystRecent.length >= 5 ? (analystRecentRate > analystRate ? '📈' : analystRecentRate < analystRate ? '📉' : '➡️') : '⏳',
-        color: analystRate >= 55 ? '#0f0' : analystRate >= 40 ? '#f0c040' : '#f55'
-    });
-
-    // Tabla comparativa
-    let html = '<div style="margin-bottom: 10px; font-size: 9px; color: var(--muted);">Comparativa de eficacia de agentes:</div>';
-    html += '<table style="width:100%; border-collapse:collapse; font-family:var(--mono); font-size:9px;">';
-    html += '<thead><tr style="background:rgba(255,255,255,0.03);">';
-    html += '<th style="padding:4px; text-align:left; border-bottom:1px solid var(--border);">AGENTE</th>';
-    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">TOTAL</th>';
-    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">W/L</th>';
-    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">%</th>';
-    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">ÚLT 10</th>';
-    html += '<th style="padding:4px; text-align:center; border-bottom:1px solid var(--border);">TEND</th>';
-    html += '</tr></thead><tbody>';
-
-    // Sort by rate desc
-    agents.sort((a, b) => b.rate - a.rate);
-
-    agents.forEach(a => {
-        const bestBadge = agents[0].name === a.name ? '<span style="color:var(--gold);font-weight:900;">👑</span>' : '';
-        html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">';
-        html += '<td style="padding:4px; color:' + a.color + '; font-weight:700;">' + bestBadge + ' ' + a.name + '</td>';
-        html += '<td style="padding:4px; text-align:center; color:var(--text);">' + a.total + '</td>';
-        html += '<td style="padding:4px; text-align:center; color:' + a.color + ';">' + a.wins + 'W/' + a.losses + 'L</td>';
-        html += '<td style="padding:4px; text-align:center; color:' + a.color + '; font-weight:700;">' + a.rate + '%</td>';
-        html += '<td style="padding:4px; text-align:center; color:' + (a.recentRate >= 55 ? '#0f0' : a.recentRate >= 40 ? '#f0c040' : '#f55') + ';">' + a.recentRate + '%</td>';
-        html += '<td style="padding:4px; text-align:center;">' + a.trend + '</td>';
-        html += '</tr>';
-    });
-    html += '</tbody></table>';
-
-    // Best performer
-    const best = agents[0];
-    if (best && best.total > 0) {
-        html += '<div style="margin-top: 10px; padding: 8px; background: linear-gradient(135deg, rgba(240,192,64,0.1), transparent); border: 1px solid var(--gold); border-radius: 8px; text-align: center;">';
-        html += '<div style="font-size: 9px; color: var(--gold);">🎯 MEJOR RENDIMIENTO</div>';
-        html += '<div style="font-size: 1.1rem; font-weight: 900; color: #fff; margin: 4px 0;">' + best.name + ' — ' + best.rate + '%</div>';
-        html += '<div style="font-size: 9px; color: var(--text-dim);">' + best.wins + ' aciertos de ' + best.total + ' intentos';
-        if (best.trend === '📈') html += ' · Mejorando 📈';
-        else if (best.trend === '📉') html += ' · Cayendo 📉';
-        html += '</div></div>';
+    function stats(h) {
+        const t = h.filter(x => x === 'win' || x === 'loss').length;
+        const w = h.filter(x => x === 'win').length;
+        const l = h.filter(x => x === 'loss').length;
+        const r = t > 0 ? Math.round((w / t) * 100) : 0;
+        const rc = h.filter(x => x === 'win' || x === 'loss').slice(-10);
+        const rw = rc.filter(x => x === 'win').length;
+        const rr = rc.length > 0 ? Math.round((rw / rc.length) * 100) : 0;
+        const tr = t >= 5 ? (rr > r ? 1 : rr < r ? -1 : 0) : 0;
+        return { t, w, l, r, rw, rt: rc.length, rr, tr };
     }
 
-    // Recommendation based on master confidence
-    if (masterView && masterView.confidence > 0) {
-        html += '<div style="margin-top: 8px; padding: 6px; background: rgba(0,229,200,0.05); border-radius: 6px; border: 1px solid rgba(0,229,200,0.15);">';
-        html += '<div style="font-size: 8px; color: var(--accent); font-weight:700;">🧠 SNIPER MASTER</div>';
-        html += '<div style="font-size: 10px; color: var(--text2);">' + (masterView.signal || '---') + '</div>';
-        html += '<div style="font-size: 8px; color: var(--muted);">Confianza: ' + masterView.confidence + '% · ' + (masterView.reasons || '') + '</div>';
-        html += '</div>';
+    function clr(r, th) { th = th || 50; return r >= th + 5 ? 'var(--green)' : r >= th ? 'var(--gold)' : 'var(--red)'; }
+    function delta(v1, v2) { const d = v2 - v1; return '<span style="color:' + (d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : 'var(--muted)') + ';">' + (d >= 0 ? '+' : '') + d + '%</span>'; }
+    function bar(r, c, w) { return '<div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:2px;width:' + (w || '100%') + ';"><div style="height:100%;width:' + r + '%;background:' + c + ';border-radius:2px;"></div></div>'; }
+    function winLossStr(arr, n) { const last = arr.filter(x => x === 'win' || x === 'loss').slice(-(n || 10)); return last.map(x => x === 'win' ? '<span style="color:var(--green);">W</span>' : '<span style="color:var(--red);">L</span>').join(''); }
+
+    // ── ANALYST ──
+    const a1 = stats(analystHistory);
+    const a2 = stats(analystV2History);
+    const aDelta = a2.r - a1.r;
+
+    // ── SNIPER ──
+    const s1 = stats(masterHistory);
+    const s2 = stats(sniperV2History);
+    const sDelta = s2.r - s1.r;
+
+    let html = '';
+
+    // ═══ HEADER ═══
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+    html += '<span style="font-size:9px;font-weight:700;color:var(--text);">&#128200; DASHBOARD V1 vs V2</span>';
+    html += '<span style="font-size:7px;color:var(--muted);">' + history.length + ' spins | ' + (a1.t + s1.t) + ' evaluaciones</span>';
+    html += '</div>';
+
+    // ═══ KPI SCORECARDS (4 cards) ═══
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;">';
+
+    // Analyst V1
+    html += '<div style="padding:5px;background:rgba(0,229,200,0.03);border:1px solid rgba(0,229,200,0.1);border-radius:5px;">';
+    html += '<div style="font-size:7px;color:var(--muted);">&#128202; ANALYST V1</div>';
+    html += '<div style="display:flex;align-items:baseline;gap:4px;">';
+    html += '<span style="font-size:1.2rem;font-weight:900;color:' + clr(a1.r) + ';">' + a1.r + '%</span>';
+    html += '<span style="font-size:8px;color:var(--text-dim);">' + a1.w + 'W/' + a1.l + 'L</span>';
+    html += '</div>';
+    html += '<div style="font-size:7px;color:var(--text-dim);">Total: ' + a1.t + ' | Últ 10: ' + a1.rr + '%</div>';
+    html += bar(a1.r, clr(a1.r));
+    html += '</div>';
+
+    // Analyst V2
+    html += '<div style="padding:5px;background:rgba(0,229,200,0.05);border:1px solid rgba(0,229,200,0.2);border-radius:5px;">';
+    html += '<div style="display:flex;justify-content:space-between;">';
+    html += '<span style="font-size:7px;color:var(--muted);">&#128202; ANALYST V2 +DB</span>';
+    html += '<span style="font-size:7px;">' + delta(a1.r, a2.r) + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:baseline;gap:4px;">';
+    html += '<span style="font-size:1.2rem;font-weight:900;color:' + clr(a2.r) + ';">' + a2.r + '%</span>';
+    html += '<span style="font-size:8px;color:var(--text-dim);">' + a2.w + 'W/' + a2.l + 'L</span>';
+    html += '</div>';
+    html += '<div style="font-size:7px;color:var(--text-dim);">Total: ' + a2.t + ' | Últ 10: ' + a2.rr + '%</div>';
+    html += bar(a2.r, clr(a2.r));
+    html += '</div>';
+
+    // Sniper V1
+    html += '<div style="padding:5px;background:rgba(255,100,100,0.03);border:1px solid rgba(255,100,100,0.1);border-radius:5px;">';
+    html += '<div style="font-size:7px;color:var(--muted);">&#127919; SNIPER V1</div>';
+    html += '<div style="display:flex;align-items:baseline;gap:4px;">';
+    html += '<span style="font-size:1.2rem;font-weight:900;color:' + clr(s1.r) + ';">' + s1.r + '%</span>';
+    html += '<span style="font-size:8px;color:var(--text-dim);">' + s1.w + 'W/' + s1.l + 'L</span>';
+    html += '</div>';
+    html += '<div style="font-size:7px;color:var(--text-dim);">Total: ' + s1.t + ' | Últ 10: ' + s1.rr + '%</div>';
+    html += bar(s1.r, clr(s1.r));
+    html += '</div>';
+
+    // Sniper V2
+    html += '<div style="padding:5px;background:rgba(255,100,100,0.05);border:1px solid rgba(255,100,100,0.2);border-radius:5px;">';
+    html += '<div style="display:flex;justify-content:space-between;">';
+    html += '<span style="font-size:7px;color:var(--muted);">&#127919; SNIPER V2 +DB</span>';
+    html += '<span style="font-size:7px;">' + delta(s1.r, s2.r) + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:baseline;gap:4px;">';
+    html += '<span style="font-size:1.2rem;font-weight:900;color:' + clr(s2.r) + ';">' + s2.r + '%</span>';
+    html += '<span style="font-size:8px;color:var(--text-dim);">' + s2.w + 'W/' + s2.l + 'L</span>';
+    html += '</div>';
+    html += '<div style="font-size:7px;color:var(--text-dim);">Total: ' + s2.t + ' | Últ 10: ' + s2.rr + '%</div>';
+    html += bar(s2.r, clr(s2.r));
+    html += '</div>';
+
+    html += '</div>'; // end KPI grid
+
+    // ═══ COMPARACIÓN DIRECTA A/B ═══
+    html += '<div style="margin-bottom:6px;">';
+
+    // ── ANALYST V1 vs V2 comparison row ──
+    html += '<div style="padding:5px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:5px;margin-bottom:4px;">';
+    html += '<div style="font-size:7px;color:var(--accent);font-weight:700;margin-bottom:3px;">&#128202; COMPARATIVA ANALYST</div>';
+    html += '<div style="display:flex;gap:4px;">';
+    // V1 side
+    html += '<div style="flex:1;font-size:7px;padding:3px;background:rgba(0,0,0,0.15);border-radius:3px;text-align:center;">';
+    html += '<div style="color:var(--muted);">V1</div>';
+    html += '<div style="font-weight:700;color:' + clr(a1.r) + ';font-size:11px;">' + a1.r + '%</div>';
+    html += '<div style="color:var(--text-dim);">' + a1.w + 'W/' + a1.l + 'L</div>';
+    html += '<div style="margin-top:1px;font-family:var(--mono);">' + winLossStr(analystHistory, 8) + '</div>';
+    html += '</div>';
+    // vs
+    html += '<div style="display:flex;align-items:center;font-size:7px;color:var(--gold);font-weight:700;">vs</div>';
+    // V2 side
+    html += '<div style="flex:1;font-size:7px;padding:3px;background:rgba(0,229,200,0.03);border-radius:3px;text-align:center;">';
+    html += '<div style="color:var(--accent);">V2 +DB</div>';
+    html += '<div style="font-weight:700;color:' + clr(a2.r) + ';font-size:11px;">' + a2.r + '% ' + (aDelta >= 0 ? '&#9650;' : '&#9660;') + '</div>';
+    html += '<div style="color:var(--text-dim);">' + a2.w + 'W/' + a2.l + 'L</div>';
+    html += '<div style="margin-top:1px;font-family:var(--mono);">' + winLossStr(analystV2History, 8) + '</div>';
+    html += '</div>';
+    html += '</div>';
+    // Active prediction row
+    html += '<div style="display:flex;gap:4px;margin-top:3px;font-size:7px;">';
+    html += '<div style="flex:1;color:var(--text-dim);">Señal: <span style="color:var(--text);">' + (analystView.signal || '--') + '</span></div>';
+    html += '<div style="flex:1;color:var(--text-dim);">Dir: <span style="color:' + (lastAnalystV2Dir === 'CW' ? 'var(--green)' : lastAnalystV2Dir === 'CCW' ? '#d1abff' : 'var(--muted)') + ';">' + (lastAnalystV2Dir || '--') + '</span></div>';
+    html += '</div>';
+    html += '</div>';
+
+    // ── SNIPER V1 vs V2 comparison row ──
+    html += '<div style="padding:5px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:5px;">';
+    html += '<div style="font-size:7px;color:#f55;font-weight:700;margin-bottom:3px;">&#127919; COMPARATIVA SNIPER</div>';
+    html += '<div style="display:flex;gap:4px;">';
+    // V1 side
+    html += '<div style="flex:1;font-size:7px;padding:3px;background:rgba(0,0,0,0.15);border-radius:3px;text-align:center;">';
+    html += '<div style="color:var(--muted);">V1</div>';
+    html += '<div style="font-weight:700;color:' + clr(s1.r) + ';font-size:11px;">' + s1.r + '%</div>';
+    html += '<div style="color:var(--text-dim);">' + s1.w + 'W/' + s1.l + 'L</div>';
+    html += '<div style="margin-top:1px;font-family:var(--mono);">' + winLossStr(masterHistory, 8) + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;font-size:7px;color:var(--gold);font-weight:700;">vs</div>';
+    // V2 side
+    html += '<div style="flex:1;font-size:7px;padding:3px;background:rgba(255,100,100,0.03);border-radius:3px;text-align:center;">';
+    html += '<div style="color:#f55;">V2 +DB</div>';
+    html += '<div style="font-weight:700;color:' + clr(s2.r) + ';font-size:11px;">' + s2.r + '% ' + (sDelta >= 0 ? '&#9650;' : '&#9660;') + '</div>';
+    html += '<div style="color:var(--text-dim);">' + s2.w + 'W/' + s2.l + 'L</div>';
+    html += '<div style="margin-top:1px;font-family:var(--mono);">' + winLossStr(sniperV2History, 8) + '</div>';
+    html += '</div>';
+    html += '</div>';
+    // Active prediction row
+    html += '<div style="display:flex;gap:4px;margin-top:3px;font-size:7px;">';
+    html += '<div style="flex:1;color:var(--text-dim);">Confianza: <span style="color:var(--text);">' + (masterView.confidence || 0) + '%</span></div>';
+    html += '<div style="flex:1;color:var(--text-dim);">Dir: <span style="color:' + (lastSniperV2Dir === 'CW' ? 'var(--green)' : lastSniperV2Dir === 'CCW' ? '#d1abff' : 'var(--muted)') + ';">' + (lastSniperV2Dir || '--') + '</span></div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // end comparison
+
+    // ═══ INSIGHTS AUTOMATIZADOS ═══
+    html += '<div style="padding:5px;background:rgba(240,192,64,0.03);border:1px solid rgba(240,192,64,0.1);border-radius:5px;font-size:7px;">';
+    html += '<div style="color:var(--gold);font-weight:700;margin-bottom:4px;">&#128161; INSIGHTS AUTOMATIZADOS</div>';
+
+    const insights = [];
+
+    // Analyst comparison insight
+    if (a1.t >= 5 && a2.t >= 5) {
+        if (aDelta > 3) insights.push({ t: 'ok', m: 'Analyst V2 supera a V1 por +' + aDelta + '% con DB patterns.' });
+        else if (aDelta < -3) insights.push({ t: 'warn', m: 'Analyst V2 cae ' + Math.abs(aDelta) + '% vs V1. Revisar DB patterns.' });
+        else insights.push({ t: 'neutral', m: 'Analyst V1 y V2 rinden similar (dif ' + aDelta + '%).' });
     }
+
+    // Sniper comparison insight
+    if (s1.t >= 5 && s2.t >= 5) {
+        if (sDelta > 3) insights.push({ t: 'ok', m: 'Sniper V2 supera a V1 por +' + sDelta + '%. DB potencia bien.' });
+        else if (sDelta < -3) insights.push({ t: 'warn', m: 'Sniper V2 cae ' + Math.abs(sDelta) + '% vs V1. Ruido en DB?' });
+        else insights.push({ t: 'neutral', m: 'Sniper V1 y V2 rinden similar (dif ' + sDelta + '%).' });
+    }
+
+    // Trend insight
+    if (a2.tr === 1) insights.push({ t: 'ok', m: 'Analyst V2 en tendencia alcista (+' + (a2.rr - a2.r) + '% últ 10).' });
+    if (a2.tr === -1) insights.push({ t: 'warn', m: 'Analyst V2 en tendencia bajista (' + (a2.rr - a2.r) + '% últ 10).' });
+    if (s2.tr === 1) insights.push({ t: 'ok', m: 'Sniper V2 en tendencia alcista (+' + (s2.rr - s2.r) + '% últ 10).' });
+    if (s2.tr === -1) insights.push({ t: 'warn', m: 'Sniper V2 en tendencia bajista (' + (s2.rr - s2.r) + '% últ 10).' });
+
+    // Best agent insight
+    const all = [{ n: 'Analyst V1', r: a1.r, t: a1.t }, { n: 'Analyst V2', r: a2.r, t: a2.t }, { n: 'Sniper V1', r: s1.r, t: s1.t }, { n: 'Sniper V2', r: s2.r, t: s2.t }];
+    all.sort((a, b) => b.r - a.r);
+    if (all[0].t > 0) insights.push({ t: 'star', m: 'Mejor agente: ' + all[0].n + ' (' + all[0].r + '%). Peor: ' + all[3].n + ' (' + all[3].r + '%).' });
+
+    if (insights.length === 0) {
+        html += '<div style="color:var(--muted);">Esperando suficientes datos para generar insights...</div>';
+    } else {
+        insights.forEach(ins => {
+            const icon = ins.t === 'ok' ? '&#9989;' : ins.t === 'warn' ? '&#9888;&#65039;' : ins.t === 'star' ? '&#11088;' : '&#8505;&#65039;';
+            const cl = ins.t === 'ok' ? 'var(--green)' : ins.t === 'warn' ? 'var(--gold)' : ins.t === 'star' ? 'var(--accent)' : 'var(--muted)';
+            html += '<div style="margin-bottom:2px;color:' + cl + ';">' + icon + ' ' + ins.m + '</div>';
+        });
+    }
+    html += '</div>';
 
     content.innerHTML = html;
-    if (status) status.innerText = agents.length + ' AGENTES';
+    if (status) status.innerText = '4 AGENTES | V1 vs V2';
 }
 
 // === PATTERN MATCHING SYSTEM ===
@@ -2811,7 +2890,7 @@ async function analyzePatternSequence() {
     }
     
     // === ANALYST V2: Pattern + Fractales/Canales ===
-    updateAnalystV2(seq, matches, patternBoost);
+    updateAnalystV2(seq, matches, patternBoost, patternDir, patternConf);
     
     // === SNIPER V2: Pattern + Ritmo + Confluencia ===
     updateSniperV2(seq, matches, patternDir, patternConf);
@@ -2996,28 +3075,23 @@ function detectDirectionTurbulence() {
 
 // === ANALYST V2: Pattern Machine + Fractales/Canales + Turbulencia ===
 // V1 base + boost opcional de patrones DB + detección avanzada de turbulencia
-function updateAnalystV2(seq, matches, patternBoost) {
-    // 0. DETECTAR TURBULENCIA AVANZADA PRIMERO
+function updateAnalystV2(seq, matches, patternBoost, patternDir, patternConf) {
     const turbulence = detectDirectionTurbulence();
-    
-    // 1. Análisis original de Analyst (V1)
+
     const travels = seq.map(s => s.dist);
     const baseAnalysis = analyzeTravelWave(travels);
-    
-    // 2. Inicializar display con análisis base
+
     let displaySignal = baseAnalysis.signal || 'ANALIZANDO...';
     let displayType = baseAnalysis.type || 'neutral';
     let displayDir = baseAnalysis.targetDir || null;
     let displaySize = baseAnalysis.size || null;
     let displayReason = baseAnalysis.reason || 'Recopilando datos...';
-    let turbulenceAlert = null;
-    
-    // 3. SI HAY TURBULENCIA, añadir como nota informativa (no reemplaza V1)
+
     if (turbulence) {
         displayReason = `[${turbulence.name}] ${displayReason}`;
     }
-    
-    // 4. Si no hay dirección, usar analystView global
+
+    // Fallback a analystView global si V1 no tiene direccion
     if (!displayDir && analystView && analystView.targetDir) {
         displayDir = analystView.targetDir;
         displaySignal = analystView.signal || displaySignal;
@@ -3025,43 +3099,64 @@ function updateAnalystV2(seq, matches, patternBoost) {
         displaySize = analystView.size || displaySize;
         displayReason = analystView.reason || displayReason;
     }
-    
-    // 4. Boost de pattern DB (opcional)
-    let finalConfidence = 50;
-    if (displayType !== 'neutral') {
-        finalConfidence = 60; // Base por tener señal
-        if (patternBoost > 0) {
-            finalConfidence = Math.min(finalConfidence + patternBoost, 95);
-            displayReason += ` (+${patternBoost}% DB)`;
-        }
-    }
-    
-    // 5. Calcular stats reales de patrones DB
+
+    // Calcular stats reales de patrones DB
     let analystDbStats = '';
+    let dbDominantDir = null;
+    let dbDominantPct = 0;
+
     if (matches.length > 0) {
         let totalOcc = 0;
         let cwCount = 0;
         let ccwCount = 0;
-        
+
         matches.forEach(m => {
             totalOcc += m.outcomes?.total || 0;
             cwCount += m.outcomes?.next_dir?.CW || 0;
             ccwCount += m.outcomes?.next_dir?.CCW || 0;
         });
-        
+
         if (totalOcc > 0) {
             const cwPct = Math.round((cwCount / totalOcc) * 100);
             const ccwPct = Math.round((ccwCount / totalOcc) * 100);
-            const domDir = cwPct >= ccwPct ? 'CW' : 'CCW';
-            const domPct = Math.max(cwPct, ccwPct);
-            
-            analystDbStats = `${matches.length}p | ${domDir} ${domPct}% (${totalOcc})`;
-            
-            // Si no había dirección, usar la del patrón dominante
-            if (!displayDir) {
-                displayDir = domDir;
+            dbDominantDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+            dbDominantPct = Math.max(cwPct, ccwPct);
+
+            analystDbStats = `${matches.length}p | ${dbDominantDir} ${dbDominantPct}% (${totalOcc})`;
+
+            // ═══ DB INFLUENCE LOGIC ═══
+            // patternConf es la diferencia entre CW% y CCW% (0-100)
+            const dbConf = patternConf || Math.abs(cwPct - ccwPct);
+            const dbDir = patternDir || dbDominantDir;
+
+            if (displayDir) {
+                // V1 tiene direccion. Si DB tiene evidencia FUERTE (>15% diff) y VA EN CONTRA, cambiar
+                if (dbDir !== displayDir && dbConf >= 15 && totalOcc >= 10) {
+                    displayDir = dbDir;
+                    displaySignal = 'DB OVERRIDE';
+                    displayReason = `DB: ${dbDominantPct}% ${dbDir} (${totalOcc} casos) vs V1: ${displayDir}`;
+                    displayType = dbDir === 'CW' ? 'bullish' : 'bearish';
+                } else if (dbDir === displayDir && dbConf >= 10) {
+                    // DB confirma V1 - boost
+                    displayReason += ` | DB OK: ${dbDominantPct}% ${dbDir}`;
+                }
+            } else {
+                // V1 no tiene direccion - usar DB
+                displayDir = dbDir;
                 displaySignal = 'PATTERN MATCH';
-                displayReason = `DB: ${domPct}% ${domDir} en ${totalOcc} casos`;
+                displayReason = `DB: ${dbDominantPct}% ${dbDir} en ${totalOcc} casos`;
+            }
+        }
+    }
+
+    // Boost de pattern DB
+    let finalConfidence = 50;
+    if (displayType !== 'neutral') {
+        finalConfidence = 60;
+        if (patternBoost > 0) {
+            finalConfidence = Math.min(finalConfidence + patternBoost, 95);
+            if (!displayReason.includes('DB OK') && !displayReason.includes('DB OVERRIDE')) {
+                displayReason += ` (+${patternBoost}% DB)`;
             }
         }
     }
@@ -3177,30 +3272,44 @@ function updateSniperV2(seq, matches, patternDir, patternConf) {
     // 3. Análisis de patrones DB - calcular stats reales
     let dbStatsText = '';
     if (matches.length > 0) {
-        // Calcular éxito real de los patrones
         let totalOccurrences = 0;
         let cwHits = 0;
         let ccwHits = 0;
-        
+
         matches.forEach(m => {
             totalOccurrences += m.outcomes?.total || 0;
             cwHits += m.outcomes?.next_dir?.CW || 0;
             ccwHits += m.outcomes?.next_dir?.CCW || 0;
         });
-        
+
         if (totalOccurrences > 0) {
             const cwPct = Math.round((cwHits / totalOccurrences) * 100);
             const ccwPct = Math.round((ccwHits / totalOccurrences) * 100);
-            const dominantDir = cwPct >= ccwPct ? 'CW' : 'CCW';
-            const dominantPct = Math.max(cwPct, ccwPct);
-            
-            dbStatsText = `${matches.length} patterns | ${dominantDir} ${dominantPct}% (${totalOccurrences} casos)`;
-            
-            // Boost si coincide con V1
-            if (patternDir === finalDir && patternDir === dominantDir) {
-                const boost = Math.min(patternConf, 15);
-                finalConf = Math.min(finalConf + boost, 95);
-                reasons.push(`DB ${dominantPct}%`);
+            const dbDomDir = cwPct >= ccwPct ? 'CW' : 'CCW';
+            const dbDomPct = Math.max(cwPct, ccwPct);
+            const dbDiff = Math.abs(cwPct - ccwPct);
+
+            dbStatsText = `${matches.length}p | ${dbDomDir} ${dbDomPct}% (${totalOccurrences})`;
+
+            // ═══ DB INFLUENCE LOGIC ═══
+            if (finalDir) {
+                // V1 tiene direccion
+                if (dbDomDir !== finalDir && dbDiff >= 15 && totalOccurrences >= 10) {
+                    // DB fuerte en contra de V1 → override
+                    finalDir = dbDomDir;
+                    finalConf = Math.min(55 + Math.round(dbDiff / 2), 85);
+                    reasons = [`DB OVERRIDE: ${dbDomPct}% ${dbDomDir} (${totalOccurrences})`];
+                } else if (dbDomDir === finalDir && dbDiff >= 8) {
+                    // DB confirma V1 → boost fuerte
+                    const boost = Math.min(Math.round(dbDiff), 20);
+                    finalConf = Math.min(finalConf + boost, 95);
+                    reasons.push(`DB OK: ${dbDomPct}%`);
+                }
+            } else {
+                // V1 no tiene direccion → usar DB
+                finalDir = dbDomDir;
+                finalConf = Math.min(50 + Math.round(dbDiff / 2), 75);
+                reasons.push(`DB: ${dbDomPct}% ${dbDomDir}`);
             }
         } else {
             dbStatsText = `${matches.length} patterns DB (sin stats)`;
