@@ -1704,8 +1704,50 @@ async function syncData() {
             renderWheelAndHistory();
             renderMasterUI();
             saveSessionToLocalStorage();
-        } else if (serverCount === 0 && localCount === 0) {
-            // Fresh start - nothing to do
+        } else if (serverCount < localCount) {
+            // Server has LESS data than localStorage — server was wiped.
+            // Clear EVERYTHING locally and reload fresh from server.
+            clearSessionStorage(currentTableId);
+            history.length = 0; cwHistory.length = 0; ccwHistory.length = 0;
+            cwN4History.length = 0; ccwN4History.length = 0;
+            zoneOverHistory.length = 0; zoneUnderHistory.length = 0;
+            jugHistory.length = 0; analystHistory.length = 0; masterHistory.length = 0;
+            analystV2History.length = 0; sniperV2History.length = 0;
+            sniperWLHistory.length = 0; travelPatternHistory.length = 0;
+            patternMemory.length = 0; patternSession.length = 0;
+            pendingMetaPatterns.length = 0;
+            aiN9History.length = 0; aiN4History.length = 0;
+            aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
+            aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 };
+            aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} };
+            aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} };
+            aiHistSafe = { n9: [], n4: [] };
+            aiHistFull = { n9: [], n4: [] };
+            lastAiPredN9 = null; lastAiPredN4 = null;
+            lastSignal = null; masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
+            lastMasterHit = false; jugView = null;
+            for (const k in metricaScoresHistory) delete metricaScoresHistory[k];
+            metricaLastScores = {};
+            for (const k in metricaHitCounts) delete metricaHitCounts[k];
+            patternStatsCache = null;
+
+            // Now inject whatever the server has (could be 0)
+            for (const s of spins) submitNumber(s.number, false, true);
+
+            if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+                try {
+                    const sig  = computeDealerSignature(history);
+                    const prox = projectNextRound(history, {});
+                    const masterSignals = getIAMasterSignals(prox, sig, history);
+                    if (masterSignals && masterSignals.length > 0) lastSignal = masterSignals[0];
+                    if (typeof predictZonePattern === 'function') jugView = predictZonePattern(history, patternStatsCache);
+                    if (history.length > 0) fetchPatternMemory(history);
+                } catch(e) { console.error('Predict error after wipe sync:', e); }
+            }
+
+            renderShadowPanel(); renderTravelPanel(); applyUniformScale();
+            renderWheelAndHistory(); renderMasterUI();
+            saveSessionToLocalStorage();
         } else if (serverCount === localCount) {
             // Data is synced; update W/L history arrays if they were lost on reload
             // W/L arrays are already loaded from localStorage, just ensure predictions are computed
