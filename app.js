@@ -76,6 +76,89 @@ const masterHistory = [];
 let masterView = { signal: 'SYNCHRONIZING...', target: null, confidence: 0, reasons: '-', type: 'neutral' };
 let lastMasterHit = false;
 
+// ===== LOCALSTORAGE PERSISTENCE (24/7 DATA SURVIVAL) =====
+function getLSKey(tableId) {
+    return 'clasi_roulette_session_' + (tableId || 'default');
+}
+
+function saveSessionToLocalStorage() {
+    try {
+        const state = {
+            tableId: currentTableId,
+            history: history.slice(),
+            cwHistory: cwHistory.slice(),
+            ccwHistory: ccwHistory.slice(),
+            cwN4History: cwN4History.slice(),
+            ccwN4History: ccwN4History.slice(),
+            zoneOverHistory: zoneOverHistory.slice(),
+            zoneUnderHistory: zoneUnderHistory.slice(),
+            jugHistory: jugHistory.slice(),
+            analystHistory: analystHistory.slice(),
+            masterHistory: masterHistory.slice(),
+            analystV2History: analystV2History.slice(),
+            sniperV2History: sniperV2History.slice(),
+            sniperWLHistory: sniperWLHistory.slice(),
+            metricaScoresHistory: metricaScoresHistory,
+            metricaLastScores: metricaLastScores,
+            metricaHitCounts: metricaHitCounts,
+            travelPatternHistory: travelPatternHistory.slice(),
+            patternMemory: patternMemory.slice(),
+            patternSession: patternSession.slice(),
+            pendingMetaPatterns: pendingMetaPatterns.slice(),
+            predictorOffset: predictorOffset,
+            savedAt: Date.now()
+        };
+        localStorage.setItem(getLSKey(currentTableId), JSON.stringify(state));
+    } catch(e) { /* quota exceeded or localStorage disabled */ }
+}
+
+function loadSessionFromLocalStorage(tableIdOverride) {
+    try {
+        const tid = tableIdOverride || currentTableId;
+        const raw = localStorage.getItem(getLSKey(tid));
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        if (!state || !state.history || !Array.isArray(state.history) || state.history.length === 0) return false;
+
+        if (state.tableId) currentTableId = state.tableId;
+        history.length = 0; cwHistory.length = 0; ccwHistory.length = 0;
+        cwN4History.length = 0; ccwN4History.length = 0;
+        zoneOverHistory.length = 0; zoneUnderHistory.length = 0;
+        jugHistory.length = 0; analystHistory.length = 0; masterHistory.length = 0;
+        analystV2History.length = 0; sniperV2History.length = 0;
+        sniperWLHistory.length = 0; travelPatternHistory.length = 0;
+        patternMemory.length = 0; patternSession.length = 0;
+        pendingMetaPatterns.length = 0;
+
+        history.push(...(state.history || []));
+        cwHistory.push(...(state.cwHistory || []));
+        ccwHistory.push(...(state.ccwHistory || []));
+        cwN4History.push(...(state.cwN4History || []));
+        ccwN4History.push(...(state.ccwN4History || []));
+        zoneOverHistory.push(...(state.zoneOverHistory || []));
+        zoneUnderHistory.push(...(state.zoneUnderHistory || []));
+        jugHistory.push(...(state.jugHistory || []));
+        analystHistory.push(...(state.analystHistory || []));
+        masterHistory.push(...(state.masterHistory || []));
+        analystV2History.push(...(state.analystV2History || []));
+        sniperV2History.push(...(state.sniperV2History || []));
+        sniperWLHistory.push(...(state.sniperWLHistory || []));
+        if (state.metricaScoresHistory) { for (const k in metricaScoresHistory) delete metricaScoresHistory[k]; Object.assign(metricaScoresHistory, state.metricaScoresHistory); }
+        if (state.metricaLastScores) { metricaLastScores = {}; Object.assign(metricaLastScores, state.metricaLastScores); }
+        if (state.metricaHitCounts) { for (const k in metricaHitCounts) delete metricaHitCounts[k]; Object.assign(metricaHitCounts, state.metricaHitCounts); }
+        travelPatternHistory.push(...(state.travelPatternHistory || []));
+        patternMemory.push(...(state.patternMemory || []));
+        patternSession.push(...(state.patternSession || []));
+        pendingMetaPatterns.push(...(state.pendingMetaPatterns || []));
+        if (state.predictorOffset !== undefined) predictorOffset = state.predictorOffset;
+        return true;
+    } catch(e) { return false; }
+}
+
+function clearSessionStorage(tableId) {
+    try { localStorage.removeItem(getLSKey(tableId)); } catch(e) {}
+}
+
 // Pattern memory fetcher
 async function fetchPatternMemory(historyArr) {
     if (historyArr.length < 5) return;
@@ -163,6 +246,7 @@ function renderShadowPanelNeighborsOnly() {
 }
 function wipeData() {
     if (!confirm('\u{26A0} WIPE ALL DATA?')) return;
+    const savedTableId = currentTableId;
     fetch('/api/wipe-all', { method: 'DELETE' })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(() => {
@@ -177,10 +261,16 @@ function wipeData() {
             aiHistFull = { n9: [], n4: [] };
             lastAiPredN9 = null; lastAiPredN4 = null;
             zoneOverHistory.length=0; zoneUnderHistory.length=0;
+            jugHistory.length=0; analystHistory.length=0; masterHistory.length=0;
+            analystV2History.length=0; sniperV2History.length=0;
+            sniperWLHistory.length=0; travelPatternHistory.length=0;
+            patternMemory.length=0; patternSession.length=0;
+            pendingMetaPatterns.length=0;
             lastSignal=null;
+            clearSessionStorage(savedTableId);
             renderShadowPanel(); renderWheelAndHistory();
             alert('\u{2705} Base de datos operativa borrada.');
-        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiHistSafe = { n9: [], n4: [] }; aiHistFull = { n9: [], n4: [] }; lastAiPredN9 = null; lastAiPredN4 = null; lastSignal=null; renderShadowPanel(); renderWheelAndHistory(); });
+        }).catch(() => { history.length=0; cwHistory.length=0; ccwHistory.length=0; cwN4History.length=0; ccwN4History.length=0; aiN9History.length=0; aiN4History.length=0; aiN9Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiN4Stats = { wins: 0, losses: 0, total: 0, rate: 0 }; aiStatsSafe = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiStatsFull = { n9: {wins:0,losses:0,total:0,rate:0}, n4: {wins:0,losses:0,total:0,rate:0} }; aiHistSafe = { n9: [], n4: [] }; aiHistFull = { n9: [], n4: [] }; lastAiPredN9 = null; lastAiPredN4 = null; zoneOverHistory.length=0; zoneUnderHistory.length=0; jugHistory.length=0; analystHistory.length=0; masterHistory.length=0; analystV2History.length=0; sniperV2History.length=0; sniperWLHistory.length=0; travelPatternHistory.length=0; patternMemory.length=0; patternSession.length=0; pendingMetaPatterns.length=0; lastSignal=null; clearSessionStorage(savedTableId); renderShadowPanel(); renderWheelAndHistory(); });
 }
 
 function toggleAiHist(metricId, btn) {
@@ -945,6 +1035,8 @@ function submitNumber(val, silent = false, batch = false) {
                     saveSniperPrediction(sniperPred, sniperTarget);
                 }
             }
+
+            saveSessionToLocalStorage();
         }
     }
 }
@@ -1579,22 +1671,15 @@ async function syncData() {
         const r = await fetch(`/api/history/${currentTableId}`);
         if (!r.ok) return;
         const spins = await r.json();
-        if (spins.length !== history.length) {
-            history.length = 0;
-            cwHistory.length = 0;
-            ccwHistory.length = 0;
-            cwN4History.length = 0;
-            ccwN4History.length = 0;
-            aiN9History.length = 0;
-            aiN4History.length = 0;
-            lastAiPredN9 = null;
-            lastAiPredN4 = null;
-            lastSignal = null;
-            
-            // 1. Inyectar datos en lote
-            for (const s of spins) submitNumber(s.number, true, true);
-            
-            // 2. Correr la IA una sola vez sobre todo el history ya armado
+        const serverCount = spins.length;
+        const localCount = history.length;
+
+        if (serverCount > localCount) {
+            // Only inject NEW spins that arrived since last localStorage save
+            const newSpins = spins.slice(localCount);
+            for (const s of newSpins) submitNumber(s.number, false, true);
+
+            // Compute fresh predictions on the full history
             if (typeof computeDealerSignature === 'function' && history.length >= 3) {
                 try {
                     const sig  = computeDealerSignature(history);
@@ -1612,12 +1697,39 @@ async function syncData() {
                 } catch(e) { console.error('Predict error on sync:', e); }
             }
 
-            // 3. Renderizar vista final una sola vez
+            // Re-render
             renderShadowPanel();
-    renderTravelPanel();
-    applyUniformScale();
+            renderTravelPanel();
+            applyUniformScale();
             renderWheelAndHistory();
             renderMasterUI();
+            saveSessionToLocalStorage();
+        } else if (serverCount === 0 && localCount === 0) {
+            // Fresh start - nothing to do
+        } else if (serverCount === localCount) {
+            // Data is synced; update W/L history arrays if they were lost on reload
+            // W/L arrays are already loaded from localStorage, just ensure predictions are computed
+            if (typeof computeDealerSignature === 'function' && history.length >= 3 && !lastSignal) {
+                try {
+                    const sig  = computeDealerSignature(history);
+                    const prox = projectNextRound(history, {});
+                    const masterSignals = getIAMasterSignals(prox, sig, history);
+                    if (masterSignals && masterSignals.length > 0) {
+                        lastSignal = masterSignals[0];
+                    }
+                    if (typeof predictZonePattern === 'function') {
+                        jugView = predictZonePattern(history, patternStatsCache);
+                    }
+                    if (history.length > 0) {
+                        fetchPatternMemory(history);
+                    }
+                    renderShadowPanel();
+                    renderTravelPanel();
+                    applyUniformScale();
+                    renderWheelAndHistory();
+                    renderMasterUI();
+                } catch(e) { console.error('Predict error on sync:', e); }
+            }
         }
         await syncAiPredictionState();
     } catch(e) {}
@@ -1656,10 +1768,7 @@ function applyUniformScale() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Neural Initialization V5
     if (typeof AIChat !== 'undefined') AIChat.init();
-    
-    // (Live clock interval removed)
 
     renderShadowPanel();
     renderTravelPanel();
@@ -1690,6 +1799,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             tableSelect.onchange = async () => {
+                saveSessionToLocalStorage();
                 currentTableId = tableSelect.value;
                 const tImg = document.querySelector('.table-image-container img');
                 if (tImg) tImg.src = currentTableId == "1" ? 'table-1.jpg' : 'table-2.jpg';
@@ -1704,7 +1814,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                 lastAiPredN9 = null;
                 lastAiPredN4 = null;
                 lastSignal = null;
+                zoneOverHistory.length = 0;
+                zoneUnderHistory.length = 0;
+                jugHistory.length = 0;
+                analystHistory.length = 0;
+                masterHistory.length = 0;
+                analystV2History.length = 0;
+                sniperV2History.length = 0;
+                sniperWLHistory.length = 0;
+                travelPatternHistory.length = 0;
+                patternMemory.length = 0;
+                patternSession.length = 0;
+                pendingMetaPatterns.length = 0;
+                for (const k in metricaScoresHistory) delete metricaScoresHistory[k];
+                metricaLastScores = {};
+                for (const k in metricaHitCounts) delete metricaHitCounts[k];
+
                 renderWheelAndHistory();
+
+                // Try loading from localStorage for the new table first
+                const loaded = loadSessionFromLocalStorage(currentTableId);
+                if (loaded) {
+                    if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+                        try {
+                            const sig  = computeDealerSignature(history);
+                            const prox = projectNextRound(history, {});
+                            const masterSignals = getIAMasterSignals(prox, sig, history);
+                            if (masterSignals && masterSignals.length > 0) {
+                                lastSignal = masterSignals[0];
+                            }
+                            if (typeof predictZonePattern === 'function') {
+                                jugView = predictZonePattern(history, patternStatsCache);
+                            }
+                            if (history.length > 0) fetchPatternMemory(history);
+                        } catch(e) { console.error('Predict error on tab switch:', e); }
+                    }
+                    renderShadowPanel();
+                    renderTravelPanel();
+                    applyUniformScale();
+                    renderWheelAndHistory();
+                    renderMasterUI();
+                }
+
                 await syncData();
                 connectSSE(currentTableId);
             };
@@ -1714,6 +1865,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             tableSelect.value = currentTableId;
             const tImgInit = document.querySelector('.table-image-container img');
             if (tImgInit) tImgInit.src = currentTableId == "1" ? 'table-1.jpg' : 'table-2.jpg';
+
+            // Load from localStorage FIRST for instant display
+            const loaded = loadSessionFromLocalStorage(currentTableId);
+            if (loaded) {
+                if (typeof computeDealerSignature === 'function' && history.length >= 3) {
+                    try {
+                        const sig  = computeDealerSignature(history);
+                        const prox = projectNextRound(history, {});
+                        const masterSignals = getIAMasterSignals(prox, sig, history);
+                        if (masterSignals && masterSignals.length > 0) {
+                            lastSignal = masterSignals[0];
+                        }
+                        if (typeof predictZonePattern === 'function') {
+                            jugView = predictZonePattern(history, patternStatsCache);
+                        }
+                        if (history.length > 0) fetchPatternMemory(history);
+                    } catch(e) { console.error('Predict error on load:', e); }
+                }
+                renderShadowPanel();
+                renderTravelPanel();
+                applyUniformScale();
+                renderWheelAndHistory();
+                renderMasterUI();
+            }
 
             await syncData();
             connectSSE(currentTableId);
